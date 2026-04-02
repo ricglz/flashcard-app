@@ -1,0 +1,117 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+
+export const list = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    return await ctx.db
+      .query("flashcardSets")
+      .withIndex("by_ownerId", (q) => q.eq("ownerId", identity.tokenIdentifier))
+      .take(100);
+  },
+});
+
+export const get = query({
+  args: { id: v.id("flashcardSets") },
+  handler: async (ctx, args) => {
+    const set = await ctx.db.get(args.id);
+    if (!set) return null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || set.ownerId !== identity.tokenIdentifier) return null;
+    return set;
+  },
+});
+
+export const create = mutation({
+  args: {
+    name: v.string(),
+    description: v.optional(v.string()),
+    language: v.string(),
+    fieldDefinitions: v.array(
+      v.object({
+        name: v.string(),
+        role: v.union(
+          v.literal("primary"),
+          v.literal("pronunciation"),
+          v.literal("definition"),
+          v.literal("note")
+        ),
+        metadata: v.record(v.string(), v.any()),
+        order: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    return await ctx.db.insert("flashcardSets", {
+      ...args,
+      ownerId: identity.tokenIdentifier,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("flashcardSets"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    language: v.optional(v.string()),
+    fieldDefinitions: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          role: v.union(
+            v.literal("primary"),
+            v.literal("pronunciation"),
+            v.literal("definition"),
+            v.literal("note")
+          ),
+          metadata: v.record(v.string(), v.any()),
+          order: v.number(),
+        })
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const set = await ctx.db.get(args.id);
+    if (!set || set.ownerId !== identity.tokenIdentifier)
+      throw new Error("Not found");
+    const { id, ...updates } = args;
+    const filtered = Object.fromEntries(
+      Object.entries(updates).filter(([, v]) => v !== undefined)
+    );
+    await ctx.db.patch(id, filtered);
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("flashcardSets") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const set = await ctx.db.get(args.id);
+    if (!set || set.ownerId !== identity.tokenIdentifier)
+      throw new Error("Not found");
+    // Delete cards in batches
+    let batch = await ctx.db
+      .query("flashcards")
+      .withIndex("by_setId", (q) => q.eq("setId", args.id))
+      .take(500);
+    while (batch.length > 0) {
+      for (const card of batch) {
+        await ctx.db.delete(card._id);
+      }
+      batch = await ctx.db
+        .query("flashcards")
+        .withIndex("by_setId", (q) => q.eq("setId", args.id))
+        .take(500);
+    }
+    await ctx.db.delete(args.id);
+  },
+});
