@@ -29,6 +29,12 @@ convex/            # Convex backend (schema, functions)
 - **Single source of truth types**: `FieldRole`, `FieldMetadata`, `SessionStatus` in `src/lib/types.ts`
 - **Metadata pattern**: feature-specific config (e.g., TTS) lives in `FieldMetadata` typed blocks — presence = enabled
 
+## Progress Tracking
+- **PROGRESS.md** tracks current status, forward-looking tasks, and completed items for the active phase only — once a phase is done, remove its completed items (git has the record)
+- When a phase is completed, create a commit marking the phase as done (update PROGRESS.md to clear completed items and advance status)
+- Git history is the authoritative record of what was built and when
+- Test plans live in `docs/testing-plan.md` until replaced by actual test code
+
 ## Product Decisions
 Full product context: `~/.claude/context/flashcard-app-product-decisions.md`
 
