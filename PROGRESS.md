@@ -1,7 +1,7 @@
 # Flashcard App — Progress
 
 > Initial plan: `docs/initial-plan.md`
-> Product decisions: `~/.claude/context/flashcard-app-product-decisions.md`
+> Product decisions: `docs/product-decisions.md`
 
 ## Phase 1 — MVP (code complete, auth configured, ready for manual testing)
 
@@ -13,12 +13,21 @@
 - [x] Pages & components (dashboard, set CRUD, CSV importer, study session, results)
 - [x] Study session flow (state machine with cardOrder/currentIndex, resume, cross-device)
 - [x] Clerk + Convex auth integration
+- [x] Remove `language` field from schema and UI
+- [x] Set creation wizard (replaces single-form creation page)
+
+### Next: UI Polish (Priority)
+- [ ] Replace accent colors (current blue/green/red are harsh and not very readable)
+- [ ] UI/UX issues discovered during testing
+- [ ] Mobile responsiveness (should work as PWA target)
 
 ### Next: Manual Testing
 - [ ] Verify sign-in/sign-out flow works
-- [ ] Create a Chinese flashcard set manually (Character, Pinyin, Meaning fields)
+- [ ] Create a Chinese flashcard set via wizard — manual path (Character, Pinyin, Meaning fields)
+- [ ] Create a set via wizard — CSV path (import 100 common characters CSV)
+- [ ] Verify wizard navigation (back/next, validation, step indicator)
+- [ ] Verify field metadata configuration (roles, TTS toggle, card preview)
 - [ ] Add a few cards manually via the edit page
-- [ ] Import the 100 common characters CSV
 - [ ] Study session: configure front/back fields, toggle shuffle
 - [ ] Study session: flip through cards, verify TTS plays for pinyin fields
 - [ ] Study session: rate cards, verify progress bar advances

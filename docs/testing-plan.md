@@ -10,7 +10,7 @@ Test files go inside `convex/` directory.
 - Install vitest + convex-test + @edge-runtime/vm
 
 ### `convex/__tests__/flashcardSets.test.ts` — CRUD operations
-- Create a set, verify it appears in list
+- Create a set (name, description, fieldDefinitions), verify it appears in list
 - Update set name/description/fieldDefinitions
 - Delete set cascades to delete cards
 - Unauthenticated users get empty results
@@ -38,6 +38,34 @@ Test files go inside `convex/` directory.
 - Install Playwright
 
 ### Test cases
+
+#### Set creation wizard — CSV path
+- Navigate to /sets/new
+- Enter set name and description
+- Select "Import CSV" source method
+- Upload a CSV file → verify field definitions are inferred from headers
+- Proceed to Step 3 → verify field roles are pre-filled with heuristic defaults
+- Modify a role or toggle TTS → verify card preview updates
+- Proceed to Step 4 → verify review shows correct set info, fields, and cards
+- Click "Create Set" → verify redirect to set detail page with all cards
+
+#### Set creation wizard — Manual path
+- Navigate to /sets/new
+- Enter set name
+- Select "Add Manually" source method
+- Optionally pick a preset → verify field definitions are pre-filled
+- Define field names (or use preset defaults)
+- Add a few cards via the card form → verify they appear in the table
+- Remove a card → verify it disappears
+- Proceed to Step 3 → configure field roles and TTS
+- Proceed to Step 4 → review and create
+- Verify redirect to set detail page with correct cards
+
+#### Set creation wizard — Navigation
+- Verify "Next" is disabled when step validation fails (no name, no source method, no cards)
+- Verify "Back" returns to previous step with state preserved
+- Verify "Back" is disabled on Step 1
+
+#### Study session (unchanged)
 - Happy path: sign in → create set → add cards → study → complete → view results
-- CSV import: upload file → preview → confirm → cards appear in set
 - Session resume: start session → navigate away → return → resume prompt shown

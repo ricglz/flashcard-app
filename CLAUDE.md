@@ -35,8 +35,10 @@ convex/            # Convex backend (schema, functions)
 - Git history is the authoritative record of what was built and when
 - Test plans live in `docs/testing-plan.md` until replaced by actual test code
 
-## Product Decisions
-Full product context: `~/.claude/context/flashcard-app-product-decisions.md`
+## Documentation
+- **Product decisions**: `docs/product-decisions.md` — vision, feature specs, data model, differentiation, development phases
+- **Testing plan**: `docs/testing-plan.md` — manual and automated test cases
+- **Initial plan**: `docs/initial-plan.md` — original project plan
 
 @AGENTS.md
 
