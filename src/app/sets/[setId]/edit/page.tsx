@@ -158,18 +158,16 @@ function SetInfoEditor({
   fieldDefinitions,
   onSave,
 }: {
-  set: { name: string; description?: string; language: string };
+  set: { name: string; description?: string };
   fieldDefinitions: FieldDefinition[];
   onSave: (updates: {
     name?: string;
     description?: string;
-    language?: string;
     fieldDefinitions?: FieldDefinition[];
   }) => Promise<void>;
 }) {
   const [name, setName] = useState(set.name);
   const [description, setDescription] = useState(set.description ?? "");
-  const [language, setLanguage] = useState(set.language);
   const [fds, setFds] = useState(fieldDefinitions);
 
   return (
@@ -192,22 +190,12 @@ function SetInfoEditor({
           rows={2}
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Language</label>
-        <input
-          type="text"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="w-full px-3 py-2 border rounded"
-        />
-      </div>
       <FieldDefinitionEditor value={fds} onChange={setFds} />
       <button
         onClick={() =>
           onSave({
             name,
             description: description || undefined,
-            language,
             fieldDefinitions: fds,
           })
         }

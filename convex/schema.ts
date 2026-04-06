@@ -17,7 +17,6 @@ export default defineSchema({
   flashcardSets: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
-    language: v.string(),
     ownerId: v.string(),
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),

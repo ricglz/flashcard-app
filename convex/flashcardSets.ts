@@ -28,7 +28,6 @@ export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    language: v.string(),
     fieldDefinitions: v.array(
       v.object({
         name: v.string(),
@@ -47,7 +46,9 @@ export const create = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     return await ctx.db.insert("flashcardSets", {
-      ...args,
+      name: args.name,
+      description: args.description,
+      fieldDefinitions: args.fieldDefinitions,
       ownerId: identity.tokenIdentifier,
       createdAt: Date.now(),
     });
@@ -59,7 +60,6 @@ export const update = mutation({
     id: v.id("flashcardSets"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
-    language: v.optional(v.string()),
     fieldDefinitions: v.optional(
       v.array(
         v.object({

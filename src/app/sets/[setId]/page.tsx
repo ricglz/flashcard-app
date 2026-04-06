@@ -72,8 +72,7 @@ export default function SetDetailPage({
           <p className="text-gray-500 mb-4">{set.description}</p>
         )}
         <p className="text-sm text-gray-400 mb-6">
-          {set.language} &middot; {cards.length} card
-          {cards.length !== 1 ? "s" : ""}
+          {cards.length} card{cards.length !== 1 ? "s" : ""}
         </p>
 
         {cards.length === 0 ? (

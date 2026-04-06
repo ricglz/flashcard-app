@@ -8,14 +8,12 @@ import { FieldDefinition } from "./types";
 
 export type LanguagePreset = {
   label: string;
-  language: string;
   fieldDefinitions: FieldDefinition[];
 };
 
 export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
   chinese: {
     label: "Chinese (Mandarin)",
-    language: "zh-CN",
     fieldDefinitions: [
       {
         name: "Character",
@@ -39,7 +37,6 @@ export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
   },
   spanish: {
     label: "Spanish",
-    language: "es",
     fieldDefinitions: [
       {
         name: "Spanish",
@@ -57,7 +54,6 @@ export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
   },
   japanese: {
     label: "Japanese",
-    language: "ja",
     fieldDefinitions: [
       {
         name: "Kanji",
@@ -81,7 +77,6 @@ export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
   },
   custom: {
     label: "Custom",
-    language: "en",
     fieldDefinitions: [
       {
         name: "Front",

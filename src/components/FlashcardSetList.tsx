@@ -47,8 +47,6 @@ export default function FlashcardSetList() {
                 </p>
               )}
               <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span>{set.language}</span>
-                <span>&middot;</span>
                 <span>
                   {set.fieldDefinitions.length} field
                   {set.fieldDefinitions.length !== 1 ? "s" : ""}
