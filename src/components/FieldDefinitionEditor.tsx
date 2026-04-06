@@ -6,9 +6,16 @@ import { FieldDefinition, FIELD_ROLES, FIELD_ROLE_LABELS } from "@/lib/types";
 type Props = {
   value: FieldDefinition[];
   onChange: (fields: FieldDefinition[]) => void;
+  readOnlyNames?: boolean;
+  allowAddRemove?: boolean;
 };
 
-export default function FieldDefinitionEditor({ value, onChange }: Props) {
+export default function FieldDefinitionEditor({
+  value,
+  onChange,
+  readOnlyNames = false,
+  allowAddRemove = true,
+}: Props) {
   const [newFieldName, setNewFieldName] = useState("");
 
   const addField = () => {
@@ -56,13 +63,19 @@ export default function FieldDefinitionEditor({ value, onChange }: Props) {
           key={index}
           className="flex items-center gap-2 p-2 border rounded"
         >
-          <input
-            type="text"
-            value={field.name}
-            onChange={(e) => updateField(index, { name: e.target.value })}
-            className="flex-1 px-2 py-1 border rounded text-sm"
-            placeholder="Field name"
-          />
+          {readOnlyNames ? (
+            <span className="flex-1 px-2 py-1 text-sm font-medium">
+              {field.name}
+            </span>
+          ) : (
+            <input
+              type="text"
+              value={field.name}
+              onChange={(e) => updateField(index, { name: e.target.value })}
+              className="flex-1 px-2 py-1 border rounded text-sm"
+              placeholder="Field name"
+            />
+          )}
           <select
             value={field.role}
             onChange={(e) =>
@@ -102,30 +115,34 @@ export default function FieldDefinitionEditor({ value, onChange }: Props) {
               placeholder="lang"
             />
           )}
-          <button
-            onClick={() => removeField(index)}
-            className="text-red-500 hover:text-red-700 text-sm px-1"
-          >
-            X
-          </button>
+          {allowAddRemove && (
+            <button
+              onClick={() => removeField(index)}
+              className="text-red-500 hover:text-red-700 text-sm px-1"
+            >
+              X
+            </button>
+          )}
         </div>
       ))}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={newFieldName}
-          onChange={(e) => setNewFieldName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addField()}
-          className="flex-1 px-3 py-2 border rounded text-sm"
-          placeholder="New field name..."
-        />
-        <button
-          onClick={addField}
-          className="px-3 py-2 bg-gray-100 border rounded text-sm hover:bg-gray-200"
-        >
-          Add Field
-        </button>
-      </div>
+      {allowAddRemove && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newFieldName}
+            onChange={(e) => setNewFieldName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addField()}
+            className="flex-1 px-3 py-2 border rounded text-sm"
+            placeholder="New field name..."
+          />
+          <button
+            onClick={addField}
+            className="px-3 py-2 bg-gray-100 border rounded text-sm hover:bg-gray-200"
+          >
+            Add Field
+          </button>
+        </div>
+      )}
     </div>
   );
 }
