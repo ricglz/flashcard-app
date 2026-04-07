@@ -34,7 +34,7 @@ export default function StudyConfigPage({
   if (set === undefined || cards === undefined || activeSession === undefined) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function StudyConfigPage({
   if (set === null) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Set not found.</p>
+        <p className="text-muted">Set not found.</p>
       </div>
     );
   }
@@ -88,18 +88,18 @@ export default function StudyConfigPage({
   return (
     <div className="min-h-screen">
       <header className="border-b px-6 py-4">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Back
         </Link>
       </header>
 
       <main className="max-w-md mx-auto p-6 space-y-6">
         <h1 className="text-2xl font-bold">Study: {set.name}</h1>
-        <p className="text-sm text-gray-500">{cards.length} cards</p>
+        <p className="text-sm text-muted">{cards.length} cards</p>
 
         {/* Resume existing session */}
         {activeSession && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="p-4 bg-info-surface border border-info-edge rounded-lg">
             <p className="text-sm font-medium mb-2">
               You have an active session ({activeSession.currentIndex}/
               {activeSession.cardOrder.length} cards done)
@@ -111,13 +111,13 @@ export default function StudyConfigPage({
                     `/study/${setId}/session?sessionId=${activeSession._id}`
                   )
                 }
-                className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
               >
                 Resume
               </button>
               <Link
                 href={`/study/${setId}/results?sessionId=${activeSession._id}`}
-                className="px-4 py-2 border rounded text-sm hover:bg-gray-50"
+                className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
               >
                 View Results So Far
               </Link>
@@ -128,34 +128,34 @@ export default function StudyConfigPage({
         {/* Field selection */}
         <div className="space-y-4">
           <h2 className="font-semibold">Study Direction</h2>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted">
             Choose which fields to show (front) and which to recall (back).
           </p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="text-sm font-medium mb-2 text-green-700">
+              <h3 className="text-sm font-medium mb-2 text-accent">
                 Front (shown)
               </h3>
               {frontFields.map((name) => (
                 <button
                   key={name}
                   onClick={() => toggleField(name, "front")}
-                  className="block w-full text-left px-3 py-2 mb-1 text-sm bg-green-50 border border-green-200 rounded hover:bg-green-100"
+                  className="block w-full text-left px-3 py-2 mb-1 text-sm bg-info-surface border border-info-edge rounded-lg hover:bg-surface-hover transition-colors"
                 >
                   {name} &rarr;
                 </button>
               ))}
             </div>
             <div>
-              <h3 className="text-sm font-medium mb-2 text-blue-700">
+              <h3 className="text-sm font-medium mb-2 text-accent">
                 Back (recall)
               </h3>
               {backFields.map((name) => (
                 <button
                   key={name}
                   onClick={() => toggleField(name, "back")}
-                  className="block w-full text-left px-3 py-2 mb-1 text-sm bg-blue-50 border border-blue-200 rounded hover:bg-blue-100"
+                  className="block w-full text-left px-3 py-2 mb-1 text-sm bg-info-surface border border-info-edge rounded-lg hover:bg-surface-hover transition-colors"
                 >
                   &larr; {name}
                 </button>
@@ -183,7 +183,7 @@ export default function StudyConfigPage({
             backFields.length === 0 ||
             cards.length === 0
           }
-          className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+          className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
         >
           Start New Session
         </button>

@@ -53,22 +53,22 @@ export default function CsvImporter({
           type="file"
           accept=".csv"
           onChange={handleFile}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-info-surface file:text-foreground hover:file:bg-surface-hover"
         />
       </div>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       {preview && (
         <div className="border rounded p-4 space-y-3">
           <h4 className="font-medium">Preview</h4>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted">
             {preview.cards.length} cards with{" "}
             {preview.fieldDefinitions.length} fields
           </p>
 
           {preview.errors.length > 0 && (
-            <div className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded">
+            <div className="text-sm text-warning bg-warning-surface p-2 rounded-lg">
               <p className="font-medium">Warnings:</p>
               {preview.errors.map((e, i) => (
                 <p key={i}>{e}</p>
@@ -83,7 +83,7 @@ export default function CsvImporter({
                   {preview.fieldDefinitions.map((fd) => (
                     <th
                       key={fd.name}
-                      className="border px-2 py-1 text-left bg-gray-50"
+                      className="border px-2 py-1 text-left bg-raised"
                     >
                       {fd.name}
                     </th>
@@ -104,7 +104,7 @@ export default function CsvImporter({
                   <tr>
                     <td
                       colSpan={preview.fieldDefinitions.length}
-                      className="border px-2 py-1 text-gray-400 text-center"
+                      className="border px-2 py-1 text-muted text-center"
                     >
                       ...and {preview.cards.length - 5} more
                     </td>
@@ -117,7 +117,7 @@ export default function CsvImporter({
           <div className="flex gap-2">
             <button
               onClick={handleConfirm}
-              className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
             >
               Import {preview.cards.length} Cards
             </button>
@@ -126,7 +126,7 @@ export default function CsvImporter({
                 setPreview(null);
                 if (fileInputRef.current) fileInputRef.current.value = "";
               }}
-              className="px-4 py-2 border rounded text-sm hover:bg-gray-50"
+              className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
             >
               Cancel
             </button>

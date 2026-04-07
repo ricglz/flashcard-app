@@ -13,7 +13,7 @@ export default function StepConfigureFields({ state, dispatch }: Props) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted">
         Configure the role and TTS settings for each field. The preview on the
         right shows how your cards will look.
       </p>
@@ -35,7 +35,7 @@ export default function StepConfigureFields({ state, dispatch }: Props) {
         <div className="lg:col-span-2">
           <label className="block text-sm font-medium mb-2">Card Preview</label>
           {sampleCards.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No cards to preview</p>
+            <p className="text-sm text-muted italic">No cards to preview</p>
           ) : (
             <div className="space-y-4">
               {sampleCards.map((card, i) => (
@@ -63,14 +63,14 @@ function CardPreview({
   const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="bg-white border-2 rounded-xl p-8 shadow-sm">
+    <div className="bg-card-bg border-2 border-card-border rounded-xl p-8 shadow-sm">
       <div className="space-y-4">
         {sorted.map((fd) => {
           const value = card[fd.name] ?? "";
           const ttsConfig = getTtsConfig(fd);
           return (
             <div key={fd.name} className="text-center">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+              <p className="text-xs text-muted uppercase tracking-wider mb-1">
                 {fd.name}
               </p>
               <div className="flex items-center justify-center gap-2">
@@ -81,7 +81,7 @@ function CardPreview({
                       : fd.role === "pronunciation"
                         ? "text-2xl"
                         : fd.role === "note"
-                          ? "text-lg text-gray-500"
+                          ? "text-lg text-muted"
                           : "text-2xl"
                   }
                 >

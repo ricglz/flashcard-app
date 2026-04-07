@@ -32,7 +32,7 @@ export default function StudyCard({
   return (
     <div className="w-full max-w-lg mx-auto">
       {/* Front */}
-      <div className="bg-white border-2 rounded-xl p-8 shadow-sm">
+      <div className="bg-card-bg border-2 border-card-border rounded-xl p-8 shadow-sm">
         <div className="space-y-4">
           {frontFields.map((fieldName) => {
             const fd = fieldDefsMap.get(fieldName);
@@ -41,7 +41,7 @@ export default function StudyCard({
 
             return (
               <div key={fieldName} className="text-center">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                <p className="text-xs text-muted uppercase tracking-wider mb-1">
                   {fieldName}
                 </p>
                 <div className="flex items-center justify-center gap-2">
@@ -75,7 +75,7 @@ export default function StudyCard({
 
                 return (
                   <div key={fieldName} className="text-center">
-                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+                    <p className="text-xs text-muted uppercase tracking-wider mb-1">
                       {fieldName}
                     </p>
                     <div className="flex items-center justify-center gap-2">
@@ -101,7 +101,7 @@ export default function StudyCard({
           <div className="mt-6 text-center">
             <button
               onClick={handleReveal}
-              className="px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium"
+              className="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm font-medium transition-colors"
             >
               Reveal Answer
             </button>

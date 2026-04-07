@@ -14,7 +14,7 @@ export default function TtsButton({ text, lang, className = "" }: Props) {
   return (
     <button
       onClick={() => speak(text, lang)}
-      className={`inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors ${className}`}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-hover transition-colors ${className}`}
       title={`Listen (${lang})`}
       aria-label={`Listen to pronunciation`}
     >

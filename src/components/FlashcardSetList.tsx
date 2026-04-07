@@ -11,7 +11,7 @@ export default function FlashcardSetList() {
   if (sets === undefined) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -19,10 +19,10 @@ export default function FlashcardSetList() {
   if (sets.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 mb-4">No flashcard sets yet.</p>
+        <p className="text-muted mb-4">No flashcard sets yet.</p>
         <Link
           href="/sets/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
         >
           Create Your First Set
         </Link>
@@ -42,11 +42,11 @@ export default function FlashcardSetList() {
             <Link href={`/sets/${set._id}`} className="block">
               <h3 className="font-semibold text-lg mb-1">{set.name}</h3>
               {set.description && (
-                <p className="text-gray-500 text-sm mb-2">
+                <p className="text-muted text-sm mb-2">
                   {set.description}
                 </p>
               )}
-              <div className="flex items-center gap-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2 text-xs text-muted">
                 <span>
                   {set.fieldDefinitions.length} field
                   {set.fieldDefinitions.length !== 1 ? "s" : ""}
@@ -56,13 +56,13 @@ export default function FlashcardSetList() {
             <div className="mt-3 flex gap-2">
               <Link
                 href={`/study/${set._id}`}
-                className="text-sm px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                className="text-sm px-3 py-1.5 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Study
               </Link>
               <Link
                 href={`/sets/${set._id}/edit`}
-                className="text-sm px-3 py-1 border rounded hover:bg-gray-50"
+                className="text-sm px-3 py-1.5 border border-edge text-foreground rounded-lg hover:bg-surface-hover transition-colors"
               >
                 Edit
               </Link>
@@ -72,7 +72,7 @@ export default function FlashcardSetList() {
                     removeSet({ id: set._id });
                   }
                 }}
-                className="text-sm px-3 py-1 text-red-600 hover:bg-red-50 rounded"
+                className="text-sm px-3 py-1.5 text-muted rounded-lg hover:text-danger hover:bg-danger-surface transition-colors"
               >
                 Delete
               </button>

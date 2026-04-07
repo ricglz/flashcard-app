@@ -16,7 +16,7 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
       <div>
         <h3 className="text-lg font-semibold">{state.name}</h3>
         {state.description && (
-          <p className="text-gray-500 text-sm mt-1">{state.description}</p>
+          <p className="text-muted text-sm mt-1">{state.description}</p>
         )}
       </div>
 
@@ -26,10 +26,10 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
         <div className="border rounded overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left px-3 py-2 text-xs text-gray-500">Name</th>
-                <th className="text-left px-3 py-2 text-xs text-gray-500">Role</th>
-                <th className="text-left px-3 py-2 text-xs text-gray-500">TTS</th>
+              <tr className="bg-raised">
+                <th className="text-left px-3 py-2 text-xs text-muted">Name</th>
+                <th className="text-left px-3 py-2 text-xs text-muted">Role</th>
+                <th className="text-left px-3 py-2 text-xs text-muted">TTS</th>
               </tr>
             </thead>
             <tbody>
@@ -38,8 +38,8 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
                 return (
                   <tr key={fd.name} className="border-t">
                     <td className="px-3 py-2">{fd.name}</td>
-                    <td className="px-3 py-2 text-gray-600">{fd.role}</td>
-                    <td className="px-3 py-2 text-gray-600">
+                    <td className="px-3 py-2 text-muted">{fd.role}</td>
+                    <td className="px-3 py-2 text-muted">
                       {tts ? tts.lang : "—"}
                     </td>
                   </tr>
@@ -58,12 +58,12 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
         <div className="border rounded overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50">
-                <th className="text-left px-3 py-2 text-xs text-gray-500">#</th>
+              <tr className="bg-raised">
+                <th className="text-left px-3 py-2 text-xs text-muted">#</th>
                 {sorted.map((fd) => (
                   <th
                     key={fd.name}
-                    className="text-left px-3 py-2 text-xs text-gray-500"
+                    className="text-left px-3 py-2 text-xs text-muted"
                   >
                     {fd.name}
                   </th>
@@ -73,7 +73,7 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
             <tbody>
               {state.cards.slice(0, 10).map((card, i) => (
                 <tr key={i} className="border-t">
-                  <td className="px-3 py-2 text-gray-400">{i + 1}</td>
+                  <td className="px-3 py-2 text-muted">{i + 1}</td>
                   {sorted.map((fd) => (
                     <td key={fd.name} className="px-3 py-2">
                       {card[fd.name] ?? ""}
@@ -85,7 +85,7 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
                 <tr>
                   <td
                     colSpan={sorted.length + 1}
-                    className="px-3 py-2 text-center text-gray-400 border-t"
+                    className="px-3 py-2 text-center text-muted border-t"
                   >
                     ...and {state.cards.length - 10} more
                   </td>
@@ -100,7 +100,7 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
       <button
         onClick={onSubmit}
         disabled={isSubmitting}
-        className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+        className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
       >
         {isSubmitting ? "Creating..." : "Create Set"}
       </button>

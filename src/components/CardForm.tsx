@@ -59,7 +59,7 @@ export default function CardForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+          className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
         >
           {submitLabel}
         </button>
@@ -67,7 +67,7 @@ export default function CardForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border rounded text-sm hover:bg-gray-50"
+            className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
           >
             Cancel
           </button>

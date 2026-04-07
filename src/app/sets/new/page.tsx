@@ -7,7 +7,7 @@ export default function NewSetPage() {
   return (
     <div className="min-h-screen">
       <header className="border-b px-6 py-4">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Back
         </Link>
       </header>

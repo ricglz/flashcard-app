@@ -32,7 +32,7 @@ export default function EditSetPage({
   if (set === undefined || cards === undefined) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -40,7 +40,7 @@ export default function EditSetPage({
   if (set === null) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Set not found.</p>
+        <p className="text-muted">Set not found.</p>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function EditSetPage({
       <header className="border-b px-6 py-4">
         <Link
           href={`/sets/${setId}`}
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-muted hover:text-foreground"
         >
           &larr; Back to Set
         </Link>
@@ -67,7 +67,7 @@ export default function EditSetPage({
             <h1 className="text-2xl font-bold">Edit: {set.name}</h1>
             <button
               onClick={() => setEditingSet(!editingSet)}
-              className="text-sm px-3 py-1 border rounded hover:bg-gray-50"
+              className="text-sm px-3 py-1 border border-edge rounded-lg hover:bg-surface-hover transition-colors"
             >
               {editingSet ? "Done" : "Edit Set Info"}
             </button>
@@ -100,17 +100,17 @@ export default function EditSetPage({
                 className="flex items-center justify-between p-3 border rounded mb-2"
               >
                 <div className="flex gap-4 text-sm">
-                  <span className="text-gray-400 w-6">{idx + 1}</span>
+                  <span className="text-muted w-6">{idx + 1}</span>
                   {sortedFieldDefs.map((fd) => (
                     <span key={fd.name}>
-                      <span className="text-gray-400">{fd.name}: </span>
+                      <span className="text-muted">{fd.name}: </span>
                       {card.fields[fd.name] ?? ""}
                     </span>
                   ))}
                 </div>
                 <button
                   onClick={() => removeCard({ id: card._id })}
-                  className="text-red-500 hover:text-red-700 text-sm"
+                  className="text-danger hover:text-danger-hover text-sm transition-colors"
                 >
                   Remove
                 </button>
@@ -199,7 +199,7 @@ function SetInfoEditor({
             fieldDefinitions: fds,
           })
         }
-        className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+        className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
       >
         Save Changes
       </button>

@@ -3,24 +3,113 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-surface: #e0e7ff;
+  --accent-surface-text: #4338ca;
+  --raised: #f9fafb;
+  --surface-hover: #f3f4f6;
+  --muted: #6b7280;
+  --edge: #e5e7eb;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-surface: #fef2f2;
+  --info-surface: #eff6ff;
+  --info-edge: #bfdbfe;
+  --warning: #a16207;
+  --warning-surface: #fefce8;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --rating-wrong-bg: #fee2e2;
+  --rating-wrong-text: #b91c1c;
+  --rating-hard-bg: #ffedd5;
+  --rating-hard-text: #c2410c;
+  --rating-good-bg: #dbeafe;
+  --rating-good-text: #1d4ed8;
+  --rating-easy-bg: #dcfce7;
+  --rating-easy-text: #15803d;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --accent-surface: #312e81;
+    --accent-surface-text: #a5b4fc;
+    --raised: #1a1a1a;
+    --surface-hover: #262626;
+    --muted: #9ca3af;
+    --edge: #374151;
+    --danger: #f87171;
+    --danger-hover: #ef4444;
+    --danger-surface: #1c0a0a;
+    --info-surface: #0c1529;
+    --info-edge: #1e3a5f;
+    --warning: #fbbf24;
+    --warning-surface: #1a1700;
+    --card-bg: #1a1a1a;
+    --card-border: #374151;
+    --rating-wrong-bg: #450a0a;
+    --rating-wrong-text: #fca5a5;
+    --rating-hard-bg: #431407;
+    --rating-hard-text: #fdba74;
+    --rating-good-bg: #172554;
+    --rating-good-text: #93c5fd;
+    --rating-easy-bg: #052e16;
+    --rating-easy-text: #86efac;
   }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-surface-text: var(--accent-surface-text);
+  --color-raised: var(--raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-muted: var(--muted);
+  --color-edge: var(--edge);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-surface: var(--danger-surface);
+  --color-info-surface: var(--info-surface);
+  --color-info-edge: var(--info-edge);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-rating-wrong-bg: var(--rating-wrong-bg);
+  --color-rating-wrong-text: var(--rating-wrong-text);
+  --color-rating-hard-bg: var(--rating-hard-bg);
+  --color-rating-hard-text: var(--rating-hard-text);
+  --color-rating-good-bg: var(--rating-good-bg);
+  --color-rating-good-text: var(--rating-good-text);
+  --color-rating-easy-bg: var(--rating-easy-bg);
+  --color-rating-easy-text: var(--rating-easy-text);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+*,
+::before,
+::after {
+  border-color: var(--edge);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+input,
+textarea,
+select {
+  background: var(--card-bg);
+  color: var(--foreground);
+  border-color: var(--edge);
 }

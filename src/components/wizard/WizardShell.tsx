@@ -58,7 +58,7 @@ export default function WizardShell() {
               {i > 0 && (
                 <div
                   className={`h-px w-8 ${
-                    isCompleted ? "bg-blue-600" : "bg-gray-200"
+                    isCompleted ? "bg-accent" : "bg-edge"
                   }`}
                 />
               )}
@@ -66,10 +66,10 @@ export default function WizardShell() {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                     isCurrent
-                      ? "bg-blue-600 text-white"
+                      ? "bg-accent text-white"
                       : isCompleted
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-400"
+                        ? "bg-accent-surface text-accent-surface-text"
+                        : "bg-raised text-muted"
                   }`}
                 >
                   {stepNum}
@@ -77,10 +77,10 @@ export default function WizardShell() {
                 <span
                   className={`text-sm hidden sm:inline ${
                     isCurrent
-                      ? "font-medium text-gray-900"
+                      ? "font-medium text-foreground"
                       : isCompleted
-                        ? "text-gray-600"
-                        : "text-gray-400"
+                        ? "text-muted"
+                        : "text-muted"
                   }`}
                 >
                   {label}
@@ -118,7 +118,7 @@ export default function WizardShell() {
             type="button"
             onClick={() => dispatch({ type: "PREV_STEP" })}
             disabled={state.step === 1}
-            className="px-4 py-2 border rounded text-sm hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Back
           </button>
@@ -126,7 +126,7 @@ export default function WizardShell() {
             type="button"
             onClick={() => dispatch({ type: "NEXT_STEP" })}
             disabled={!canProceed(state)}
-            className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Next
           </button>

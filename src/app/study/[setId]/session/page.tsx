@@ -63,10 +63,10 @@ export default function StudySessionPage({
   if (!sessionId) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No session specified.</p>
+        <p className="text-muted">No session specified.</p>
         <Link
           href={`/study/${setId}`}
-          className="text-blue-600 hover:underline"
+          className="text-accent hover:underline"
         >
           Start a new session
         </Link>
@@ -81,7 +81,7 @@ export default function StudySessionPage({
   ) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -89,7 +89,7 @@ export default function StudySessionPage({
   if (!session || !set) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Session not found.</p>
+        <p className="text-muted">Session not found.</p>
       </div>
     );
   }
@@ -107,7 +107,7 @@ export default function StudySessionPage({
   if (!currentCard) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Card not found.</p>
+        <p className="text-muted">Card not found.</p>
       </div>
     );
   }
@@ -118,11 +118,11 @@ export default function StudySessionPage({
         <div className="flex items-center gap-4">
           <Link
             href={`/study/${setId}`}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-muted hover:text-foreground"
           >
             &larr; Back
           </Link>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-muted">
             {session.currentIndex + 1} / {session.cardOrder.length}
           </span>
         </div>
@@ -133,16 +133,16 @@ export default function StudySessionPage({
               router.push(`/study/${setId}`);
             }
           }}
-          className="text-sm text-red-500 hover:text-red-700"
+          className="text-sm text-danger hover:text-danger-hover transition-colors"
         >
           Abandon
         </button>
       </header>
 
       {/* Progress bar */}
-      <div className="h-1 bg-gray-100">
+      <div className="h-1 bg-raised">
         <div
-          className="h-full bg-green-500 transition-all"
+          className="h-full bg-accent transition-all"
           style={{
             width: `${(session.currentIndex / session.cardOrder.length) * 100}%`,
           }}
@@ -160,7 +160,7 @@ export default function StudySessionPage({
 
         {revealed && (
           <div className="mt-8">
-            <p className="text-center text-sm text-gray-400 mb-3">
+            <p className="text-center text-sm text-muted mb-3">
               How did you do?
             </p>
             <CardRatingButtons

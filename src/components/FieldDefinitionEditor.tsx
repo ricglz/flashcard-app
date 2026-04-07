@@ -118,7 +118,7 @@ export default function FieldDefinitionEditor({
           {allowAddRemove && (
             <button
               onClick={() => removeField(index)}
-              className="text-red-500 hover:text-red-700 text-sm px-1"
+              className="text-danger hover:text-danger-hover text-sm px-1 transition-colors"
             >
               X
             </button>
@@ -137,7 +137,7 @@ export default function FieldDefinitionEditor({
           />
           <button
             onClick={addField}
-            className="px-3 py-2 bg-gray-100 border rounded text-sm hover:bg-gray-200"
+            className="px-3 py-2 bg-raised border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
           >
             Add Field
           </button>

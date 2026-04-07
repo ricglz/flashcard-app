@@ -14,7 +14,7 @@ export default function Home() {
           <Authenticated>
             <Link
               href="/sets/new"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
             >
               New Set
             </Link>
@@ -22,7 +22,7 @@ export default function Home() {
           </Authenticated>
           <Unauthenticated>
             <SignInButton mode="modal">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors">
                 Sign In
               </button>
             </SignInButton>
@@ -33,7 +33,7 @@ export default function Home() {
       <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
         <AuthLoading>
           <div className="flex justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+            <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
           </div>
         </AuthLoading>
 
@@ -42,12 +42,12 @@ export default function Home() {
             <h2 className="text-3xl font-bold mb-4">
               Learn with Flashcards
             </h2>
-            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            <p className="text-muted mb-8 max-w-md mx-auto">
               Create custom flashcard sets, study with text-to-speech,
               and track your progress. Sign in to get started.
             </p>
             <SignInButton mode="modal">
-              <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg">
+              <button className="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-lg transition-colors">
                 Get Started
               </button>
             </SignInButton>

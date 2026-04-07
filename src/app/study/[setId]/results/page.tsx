@@ -37,7 +37,7 @@ export default function ResultsPage({
   if (data === undefined || cards === undefined || set === undefined) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -45,8 +45,8 @@ export default function ResultsPage({
   if (!data || !set) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Results not found.</p>
-        <Link href="/" className="text-blue-600 hover:underline">
+        <p className="text-muted">Results not found.</p>
+        <Link href="/" className="text-accent hover:underline">
           Go home
         </Link>
       </div>
@@ -89,39 +89,39 @@ export default function ResultsPage({
   return (
     <div className="min-h-screen">
       <header className="border-b px-6 py-4">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Home
         </Link>
       </header>
 
       <main className="max-w-lg mx-auto p-6 space-y-6">
         <h1 className="text-2xl font-bold">Session Results</h1>
-        <p className="text-sm text-gray-500">{set.name}</p>
+        <p className="text-sm text-muted">{set.name}</p>
 
         {/* Score circle */}
         <div className="flex justify-center">
-          <div className="w-32 h-32 rounded-full border-4 border-blue-200 flex items-center justify-center">
+          <div className="w-32 h-32 rounded-full border-4 border-accent flex items-center justify-center">
             <div className="text-center">
               <p className="text-3xl font-bold">{scorePercent}%</p>
-              <p className="text-xs text-gray-400">Score</p>
+              <p className="text-xs text-muted">Score</p>
             </div>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 bg-gray-50 rounded-lg text-center">
+          <div className="p-3 bg-raised rounded-lg text-center">
             <p className="text-2xl font-bold">{completedCards}</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted">
               of {totalCards} cards
             </p>
           </div>
           {duration !== null && (
-            <div className="p-3 bg-gray-50 rounded-lg text-center">
+            <div className="p-3 bg-raised rounded-lg text-center">
               <p className="text-2xl font-bold">
                 {Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}
               </p>
-              <p className="text-xs text-gray-500">Duration</p>
+              <p className="text-xs text-muted">Duration</p>
             </div>
           )}
         </div>
@@ -136,7 +136,7 @@ export default function ResultsPage({
               <span className="text-sm w-16">
                 {CARD_RATING_LABELS[rating]}
               </span>
-              <div className="flex-1 bg-gray-100 rounded-full h-4">
+              <div className="flex-1 bg-raised rounded-full h-4">
                 <div
                   className={`h-full rounded-full ${
                     rating === "wrong"
@@ -152,7 +152,7 @@ export default function ResultsPage({
                   }}
                 />
               </div>
-              <span className="text-sm text-gray-500 w-8 text-right">
+              <span className="text-sm text-muted w-8 text-right">
                 {count}
               </span>
             </div>
@@ -172,7 +172,7 @@ export default function ResultsPage({
                 return (
                   <div
                     key={i}
-                    className="flex items-center justify-between p-2 text-sm border rounded"
+                    className="flex items-center justify-between p-2 text-sm border border-edge rounded-lg"
                   >
                     <span className="truncate flex-1">
                       {firstFieldValue}
@@ -180,12 +180,12 @@ export default function ResultsPage({
                     <span
                       className={`px-2 py-0.5 rounded text-xs font-medium ${
                         r.rating === "wrong"
-                          ? "bg-red-100 text-red-700"
+                          ? "bg-rating-wrong-bg text-rating-wrong-text"
                           : r.rating === "hard"
-                            ? "bg-orange-100 text-orange-700"
+                            ? "bg-rating-hard-bg text-rating-hard-text"
                             : r.rating === "good"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
+                              ? "bg-rating-good-bg text-rating-good-text"
+                              : "bg-rating-easy-bg text-rating-easy-text"
                       }`}
                     >
                       {CARD_RATING_LABELS[r.rating as CardRating]}
@@ -201,13 +201,13 @@ export default function ResultsPage({
         <div className="flex gap-3">
           <Link
             href={`/study/${setId}`}
-            className="flex-1 py-3 text-center bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+            className="flex-1 py-3 text-center bg-accent text-white rounded-lg hover:bg-accent-hover font-medium transition-colors"
           >
             Study Again
           </Link>
           <Link
             href="/"
-            className="flex-1 py-3 text-center border rounded-lg hover:bg-gray-50 font-medium"
+            className="flex-1 py-3 text-center border border-edge rounded-lg hover:bg-surface-hover font-medium transition-colors"
           >
             Home
           </Link>

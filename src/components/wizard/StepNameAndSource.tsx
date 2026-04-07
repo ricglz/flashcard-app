@@ -102,12 +102,12 @@ function SourceCard({
       onClick={onClick}
       className={`p-4 border-2 rounded-lg text-left transition-colors ${
         selected
-          ? "border-blue-600 bg-blue-50"
-          : "border-gray-200 hover:border-gray-300"
+          ? "border-accent bg-info-surface"
+          : "border-edge hover:border-muted"
       }`}
     >
       <p className="font-medium">{title}</p>
-      <p className="text-sm text-gray-500 mt-1">{description}</p>
+      <p className="text-sm text-muted mt-1">{description}</p>
     </button>
   );
 }
