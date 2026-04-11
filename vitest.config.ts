@@ -4,7 +4,7 @@ import path from "path";
 export default defineConfig({
   test: {
     environment: "edge-runtime",
-    include: ["src/**/*.test.ts", "convex/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
   },
   resolve: {
     alias: {

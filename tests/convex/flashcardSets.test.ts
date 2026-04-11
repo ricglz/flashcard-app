@@ -1,11 +1,11 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
-import { api } from "./_generated/api";
-import schema from "./schema";
-import { validateSetFields } from "./flashcardSets";
+import { api } from "../../convex/_generated/api";
+import schema from "../../convex/schema";
+import { validateSetFields } from "../../convex/flashcardSets";
 
-const modules = import.meta.glob("./**/*.ts");
+const modules = import.meta.glob("../../convex/**/*.ts");
 
 const TEST_USER = {
   tokenIdentifier: "test-user-1",

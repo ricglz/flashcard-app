@@ -41,11 +41,11 @@ export default function BrowsePage({
   });
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
   const [revealed, setRevealed] = useState(false);
 
   // Compute card order once when cards first load, then filter dismissed
-  const [cardOrder, setCardOrder] = useState<string[] | null>(null);
+  const [cardOrder, setCardOrder] = useState<Id<"flashcards">[] | null>(null);
 
   if (cards && cardOrder === null) {
     const sorted = [...cards]
