@@ -16,6 +16,7 @@
 /playwright-report/
 /blob-report/
 e2e/.auth/
+/examples
 
 # next.js
 /.next/
