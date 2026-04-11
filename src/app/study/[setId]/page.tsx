@@ -87,9 +87,15 @@ export default function StudyConfigPage({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 py-4">
+      <header className="border-b px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Back
+        </Link>
+        <Link
+          href={`/sets/${setId}/edit`}
+          className="text-sm text-muted hover:text-foreground"
+        >
+          Edit Set
         </Link>
       </header>
 

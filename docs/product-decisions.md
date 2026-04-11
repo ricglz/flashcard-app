@@ -66,10 +66,20 @@ This replaces language presets — the preset concept becomes unnecessary becaus
   - e.g., show "Pinyin" -> recall "Meaning"
   - e.g., show "Meaning" -> recall "Pinyin" + "Character"
 - User's personal priority: learn pinyin, phonetics, and meaning first; character recognition secondary
+- **Configurable session size** — user can choose how many cards to include in a scored session (e.g., 20 out of 100). Large sets are overwhelming when most cards are unfamiliar; smaller sessions reduce cognitive load.
+
+### 2b. Browse / Practice Mode (Planned)
+- A **no-scoring study mode** for freely cycling through cards without spaced repetition tracking
+- **Free navigation** — user can go back and forth between cards, not just forward
+- **Dismiss/hide cards** — user can remove cards they already know from the current browse session, narrowing the deck as they go
+- Purpose: casual review and familiarization before committing to scored study sessions
+- Lives alongside scored sessions on the study config page as an alternative mode
 
 ### 3. Text-to-Speech
-- Web Speech API for pronunciation playback based on pinyin
+- Web Speech API for pronunciation playback
+- TTS voices expect native script (hanzi for Chinese, kanji/kana for Japanese) — pinyin romanization produces garbled output
 - Plays audio on demand during card review
+- **Open question**: TTS is currently on the Character field, but the user's study flow is pinyin-oriented. Hearing pronunciation on the character side may feel disconnected. Possible solutions: auto-play on reveal, TTS on both fields, or an external TTS API that handles pinyin.
 - Future: upgrade to higher-quality TTS if Web Speech API quality is insufficient
 
 ### 4. Scoring

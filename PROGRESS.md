@@ -3,43 +3,30 @@
 > Initial plan: `docs/initial-plan.md`
 > Product decisions: `docs/product-decisions.md`
 
-## Phase 1 — MVP (code complete, auth configured, ready for manual testing)
+## Phase 1 — MVP (in manual testing)
 
-### Completed
-- [x] Project scaffold (Next.js 16 + Convex + Clerk + Tailwind + papaparse)
-- [x] Shared types & constants (`src/lib/types.ts`, `src/lib/presets.ts`)
-- [x] Convex schema + functions (sets, cards, study sessions)
-- [x] CSV import logic, TTS utility
-- [x] Pages & components (dashboard, set CRUD, CSV importer, study session, results)
-- [x] Study session flow (state machine with cardOrder/currentIndex, resume, cross-device)
-- [x] Clerk + Convex auth integration
-- [x] Remove `language` field from schema and UI
-- [x] Set creation wizard (replaces single-form creation page)
-
-### Next: UI Polish (Priority)
-- [ ] Replace accent colors (current blue/green/red are harsh and not very readable)
+### Next: Bug Fixes & Polish
 - [ ] UI/UX issues discovered during testing
+- [ ] Edge cases (empty sets, no cards, no front/back fields selected)
 - [ ] Mobile responsiveness (should work as PWA target)
 
-### Next: Manual Testing
+### Next: Study Session Improvements
+- [ ] Configurable session size (pick N cards out of total)
+- [ ] Browse/practice mode (no scoring, free navigation, dismiss known cards)
+
+### Next: Manual Testing (ongoing)
 - [ ] Verify sign-in/sign-out flow works
-- [ ] Create a Chinese flashcard set via wizard — manual path (Character, Pinyin, Meaning fields)
+- [ ] Create a Chinese flashcard set via wizard — manual path
 - [ ] Create a set via wizard — CSV path (import 100 common characters CSV)
 - [ ] Verify wizard navigation (back/next, validation, step indicator)
 - [ ] Verify field metadata configuration (roles, TTS toggle, card preview)
 - [ ] Add a few cards manually via the edit page
 - [ ] Study session: configure front/back fields, toggle shuffle
-- [ ] Study session: flip through cards, verify TTS plays for pinyin fields
+- [ ] Study session: flip through cards, verify TTS plays for character fields
 - [ ] Study session: rate cards, verify progress bar advances
 - [ ] Study session: leave mid-session, verify resume prompt appears
-- [ ] Study session: complete session, verify results page (score, breakdown, per-card details)
+- [ ] Study session: complete session, verify results page
 - [ ] Cross-device resume: start on one browser, resume in another
-
-### Next: Bug Fixes & Polish
-- [ ] UI/UX issues discovered during testing
-- [ ] Edge cases (empty sets, no cards, no front/back fields selected)
-- [ ] TTS voice quality / availability on different browsers
-- [ ] Mobile responsiveness (should work as PWA target)
 
 ### Next: Automated Testing
 See `docs/testing-plan.md` for detailed test cases.
@@ -49,12 +36,16 @@ See `docs/testing-plan.md` for detailed test cases.
 - [ ] PWA manifest + offline support
 - [ ] Sharing via link
 - [ ] Progress tracking dashboard
-- [ ] Spaced repetition + smart subsets — track per-card proficiency from rating history, auto-select due/weak cards for sessions, with optional manual subset override
+- [ ] Study streaks & daily goals
+- [ ] Spaced repetition + smart subsets — track per-card proficiency from rating history, auto-select due/weak cards for sessions
 
 ## Phase 3 — Mobile
 - [ ] Expo React Native app
 - [ ] Push notifications for study reminders
 
 ## Phase 4 — Advanced
+- [ ] AI card generation from prompts
 - [ ] Pronunciation validation (speech-to-text)
+- [ ] Card annotations / personal notes
+- [ ] Multi-modal cards (images, audio clips)
 - [ ] Multi-language UX enhancements

@@ -18,13 +18,13 @@ export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
       {
         name: "Character",
         role: "primary",
-        metadata: {},
+        metadata: { tts: { lang: "zh-CN" } },
         order: 0,
       },
       {
         name: "Pinyin",
         role: "pronunciation",
-        metadata: { tts: { lang: "zh-CN" } },
+        metadata: {},
         order: 1,
       },
       {
@@ -58,13 +58,13 @@ export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
       {
         name: "Kanji",
         role: "primary",
-        metadata: {},
+        metadata: { tts: { lang: "ja" } },
         order: 0,
       },
       {
         name: "Reading",
         role: "pronunciation",
-        metadata: { tts: { lang: "ja" } },
+        metadata: {},
         order: 1,
       },
       {
