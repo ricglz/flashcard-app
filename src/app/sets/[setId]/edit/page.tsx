@@ -3,12 +3,12 @@
 import { use, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
 import Link from "next/link";
 import CardForm from "@/components/CardForm";
 import CsvImporter from "@/components/CsvImporter";
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
 import { FieldDefinition } from "@/lib/types";
+import { asId } from "@/lib/convexHelpers";
 
 export default function EditSetPage({
   params,
@@ -16,12 +16,9 @@ export default function EditSetPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = use(params);
-  const set = useQuery(api.flashcardSets.get, {
-    id: setId as Id<"flashcardSets">,
-  });
-  const cards = useQuery(api.flashcards.list, {
-    setId: setId as Id<"flashcardSets">,
-  });
+  const flashcardSetId = asId<"flashcardSets">(setId);
+  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
+  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
   const updateSet = useMutation(api.flashcardSets.update);
   const createCard = useMutation(api.flashcards.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);

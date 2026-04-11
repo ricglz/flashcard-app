@@ -9,6 +9,7 @@ import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import { FieldDefinition } from "@/lib/types";
+import { asId } from "@/lib/convexHelpers";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -33,12 +34,9 @@ export default function BrowsePage({
   const cardLimitParam = searchParams.get("cardLimit");
   const cardLimit = cardLimitParam ? parseInt(cardLimitParam, 10) : null;
 
-  const set = useQuery(api.flashcardSets.get, {
-    id: setId as Id<"flashcardSets">,
-  });
-  const cards = useQuery(api.flashcards.list, {
-    setId: setId as Id<"flashcardSets">,
-  });
+  const flashcardSetId = asId<"flashcardSets">(setId);
+  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
+  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());

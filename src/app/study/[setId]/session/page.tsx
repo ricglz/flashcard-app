@@ -3,11 +3,11 @@
 import { use, useState, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
 import { useRouter, useSearchParams } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import { FieldDefinition, CardRating } from "@/lib/types";
+import { asId } from "@/lib/convexHelpers";
 import Link from "next/link";
 
 export default function StudySessionPage({
@@ -17,20 +17,19 @@ export default function StudySessionPage({
 }) {
   const { setId } = use(params);
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("sessionId") as Id<"studySessions"> | null;
+  const sessionId = searchParams.get("sessionId")
+    ? asId<"studySessions">(searchParams.get("sessionId")!)
+    : null;
   const autoPlayTts = searchParams.get("autoPlayTts") === "true";
   const router = useRouter();
 
+  const flashcardSetId = asId<"flashcardSets">(setId);
   const session = useQuery(
     api.studySessions.get,
     sessionId ? { id: sessionId } : "skip"
   );
-  const set = useQuery(api.flashcardSets.get, {
-    id: setId as Id<"flashcardSets">,
-  });
-  const cards = useQuery(api.flashcards.list, {
-    setId: setId as Id<"flashcardSets">,
-  });
+  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
+  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
   const recordResult = useMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
 

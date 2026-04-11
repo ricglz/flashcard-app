@@ -3,7 +3,6 @@
 import { use } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +11,7 @@ import {
   CARD_RATINGS,
   CardRating,
 } from "@/lib/types";
+import { asId } from "@/lib/convexHelpers";
 
 export default function ResultsPage({
   params,
@@ -20,20 +20,17 @@ export default function ResultsPage({
 }) {
   const { setId } = use(params);
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get(
-    "sessionId"
-  ) as Id<"studySessions"> | null;
+  const sessionId = searchParams.get("sessionId")
+    ? asId<"studySessions">(searchParams.get("sessionId")!)
+    : null;
 
+  const flashcardSetId = asId<"flashcardSets">(setId);
   const data = useQuery(
     api.studySessions.getResults,
     sessionId ? { sessionId } : "skip"
   );
-  const cards = useQuery(api.flashcards.list, {
-    setId: setId as Id<"flashcardSets">,
-  });
-  const set = useQuery(api.flashcardSets.get, {
-    id: setId as Id<"flashcardSets">,
-  });
+  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
+  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
 
   if (data === undefined || cards === undefined || set === undefined) {
     return (

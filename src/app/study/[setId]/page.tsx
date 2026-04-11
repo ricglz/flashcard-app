@@ -3,10 +3,10 @@
 import { use, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FieldDefinition } from "@/lib/types";
+import { asId } from "@/lib/convexHelpers";
 
 export default function StudyConfigPage({
   params,
@@ -14,14 +14,11 @@ export default function StudyConfigPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = use(params);
-  const set = useQuery(api.flashcardSets.get, {
-    id: setId as Id<"flashcardSets">,
-  });
-  const cards = useQuery(api.flashcards.list, {
-    setId: setId as Id<"flashcardSets">,
-  });
+  const flashcardSetId = asId<"flashcardSets">(setId);
+  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
+  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
   const activeSession = useQuery(api.studySessions.getActiveSession, {
-    setId: setId as Id<"flashcardSets">,
+    setId: flashcardSetId,
   });
   const startSession = useMutation(api.studySessions.start);
   const router = useRouter();
@@ -83,7 +80,7 @@ export default function StudyConfigPage({
     setError(null);
     try {
       const sessionId = await startSession({
-        setId: setId as Id<"flashcardSets">,
+        setId: flashcardSetId,
         frontFields,
         backFields,
         shuffle,

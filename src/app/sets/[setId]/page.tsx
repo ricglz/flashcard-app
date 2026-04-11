@@ -3,10 +3,10 @@
 import { use } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
 import Link from "next/link";
 import TtsButton from "@/components/TtsButton";
 import { getTtsConfig } from "@/lib/types";
+import { asId } from "@/lib/convexHelpers";
 
 export default function SetDetailPage({
   params,
@@ -14,12 +14,9 @@ export default function SetDetailPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = use(params);
-  const set = useQuery(api.flashcardSets.get, {
-    id: setId as Id<"flashcardSets">,
-  });
-  const cards = useQuery(api.flashcards.list, {
-    setId: setId as Id<"flashcardSets">,
-  });
+  const flashcardSetId = asId<"flashcardSets">(setId);
+  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
+  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
 
   if (set === undefined || cards === undefined) {
     return (
