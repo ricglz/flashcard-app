@@ -7,12 +7,7 @@
 
 ### Next: Bug Fixes & Polish
 - [ ] UI/UX issues discovered during testing
-- [ ] Edge cases (empty sets, no cards, no front/back fields selected)
-- [ ] Mobile responsiveness (should work as PWA target)
-
-### Next: Study Session Improvements
-- [ ] Configurable session size (pick N cards out of total)
-- [ ] Browse/practice mode (no scoring, free navigation, dismiss known cards)
+- [ ] Mobile responsiveness verification (responsive padding and layouts are in place, needs device testing)
 
 ### Next: Manual Testing (ongoing)
 - [ ] Verify sign-in/sign-out flow works
@@ -22,14 +17,14 @@
 - [ ] Verify field metadata configuration (roles, TTS toggle, card preview)
 - [ ] Add a few cards manually via the edit page
 - [ ] Study session: configure front/back fields, toggle shuffle
+- [ ] Study session: configure card limit (10/20/50/All)
 - [ ] Study session: flip through cards, verify TTS plays for character fields
 - [ ] Study session: rate cards, verify progress bar advances
 - [ ] Study session: leave mid-session, verify resume prompt appears
 - [ ] Study session: complete session, verify results page
+- [ ] Browse mode: navigate back/forth, dismiss known cards
+- [ ] Browse mode: verify auto-play TTS on reveal toggle
 - [ ] Cross-device resume: start on one browser, resume in another
-
-### Next: Automated Testing
-See `docs/testing-plan.md` for detailed test cases.
 
 ## Phase 2 — Polish & Features
 - [ ] Telemetry / analytics

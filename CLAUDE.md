@@ -36,6 +36,11 @@ convex/            # Convex backend (schema, functions)
 - Git history is the authoritative record of what was built and when
 - Test plans live in `docs/testing-plan.md` until replaced by actual test code
 
+## Testing
+- **Testing hierarchy**: types > unit tests > e2e. Prioritize enforcing correctness through the type system first — consider architecture changes or more thoughtful type representations before reaching for runtime checks.
+- **Unit tests** (`pnpm test`): only for complex logic with clear expectations (parsers, reducers, score computation, validation). Not for UI unless it's state/reduction logic. Tests live in `src/` alongside source files and in `tests/convex/` for backend.
+- **E2E tests** (`pnpm test:e2e`): only to guarantee real user journeys/operations. No mocking — test what users actually do. Tests live in `e2e/`.
+
 ## Documentation
 - **Product decisions**: `docs/product-decisions.md` — vision, feature specs, data model, differentiation, development phases
 - **Testing plan**: `docs/testing-plan.md` — manual and automated test cases
