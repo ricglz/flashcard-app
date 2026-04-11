@@ -9,6 +9,7 @@ import Link from "next/link";
 import {
   CARD_RATING_LABELS,
   CARD_RATING_SCORES,
+  CARD_RATINGS,
   CardRating,
 } from "@/lib/types";
 
@@ -57,14 +58,15 @@ export default function ResultsPage({
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
 
   // Count ratings
-  const ratingCounts: Record<string, number> = {
+  const ratingCounts: Record<CardRating, number> = {
     wrong: 0,
     hard: 0,
     good: 0,
     easy: 0,
   };
   for (const r of results) {
-    ratingCounts[r.rating] = (ratingCounts[r.rating] ?? 0) + 1;
+    const rating = r.rating as CardRating;
+    ratingCounts[rating] = (ratingCounts[rating] ?? 0) + 1;
   }
 
   const totalCards = session.cardOrder.length;
@@ -129,9 +131,9 @@ export default function ResultsPage({
         {/* Rating breakdown */}
         <div className="space-y-2">
           <h2 className="font-semibold">Breakdown</h2>
-          {(
-            Object.entries(ratingCounts) as [CardRating, number][]
-          ).map(([rating, count]) => (
+          {CARD_RATINGS.map((rating) => {
+            const count = ratingCounts[rating];
+            return (
             <div key={rating} className="flex items-center gap-2">
               <span className="text-sm w-16">
                 {CARD_RATING_LABELS[rating]}
@@ -156,7 +158,8 @@ export default function ResultsPage({
                 {count}
               </span>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Per-card results */}
