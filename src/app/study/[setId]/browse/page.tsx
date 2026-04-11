@@ -32,7 +32,10 @@ export default function BrowsePage({
   const shuffle = searchParams.get("shuffle") === "true";
   const autoPlayTts = searchParams.get("autoPlayTts") === "true";
   const cardLimitParam = searchParams.get("cardLimit");
-  const cardLimit = cardLimitParam ? parseInt(cardLimitParam, 10) : null;
+  const cardLimitRaw = cardLimitParam ? Number(cardLimitParam) : null;
+  const cardLimit = cardLimitRaw !== null && !isNaN(cardLimitRaw) && cardLimitRaw > 0
+    ? cardLimitRaw
+    : null;
 
   const flashcardSetId = asId<"flashcardSets">(setId);
   const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
@@ -78,6 +81,9 @@ export default function BrowsePage({
   }
 
   const fieldDefs = set.fieldDefinitions as FieldDefinition[];
+  const validFieldNames = new Set(fieldDefs.map((fd) => fd.name));
+  const validFrontFields = frontFields.filter((f) => validFieldNames.has(f));
+  const validBackFields = backFields.filter((f) => validFieldNames.has(f));
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
 
   if (activeCardIds.length === 0) {
@@ -176,8 +182,8 @@ export default function BrowsePage({
           key={currentCardId}
           card={currentCard}
           fieldDefinitions={fieldDefs}
-          frontFields={frontFields}
-          backFields={backFields}
+          frontFields={validFrontFields}
+          backFields={validBackFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={autoPlayTts}
         />
