@@ -145,6 +145,10 @@ export const recordResult = mutation({
     if (session.status !== "in_progress")
       throw new Error("Session is not active");
 
+    const expectedCardId = session.cardOrder[session.currentIndex];
+    if (args.cardId !== expectedCardId)
+      throw new Error("cardId does not match the current card in the session");
+
     await ctx.db.insert("cardResults", {
       sessionId: args.sessionId,
       cardId: args.cardId,
@@ -195,6 +199,8 @@ export const abandon = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session || session.userId !== identity.tokenIdentifier)
       throw new Error("Not found");
+    if (session.status !== "in_progress")
+      throw new Error("Session is not active");
     await ctx.db.patch(args.sessionId, {
       status: "abandoned" as const,
       completedAt: Date.now(),
