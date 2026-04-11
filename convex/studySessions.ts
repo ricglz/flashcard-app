@@ -64,6 +64,24 @@ export const start = mutation({
     if (!set || set.ownerId !== identity.tokenIdentifier)
       throw new Error("Not found");
 
+    // Validate front/back fields
+    if (args.frontFields.length === 0)
+      throw new Error("frontFields must not be empty");
+    if (args.backFields.length === 0)
+      throw new Error("backFields must not be empty");
+
+    const validFieldNames = new Set(
+      (set.fieldDefinitions as Array<{ name: string }>).map((fd) => fd.name)
+    );
+    for (const f of args.frontFields) {
+      if (!validFieldNames.has(f))
+        throw new Error(`Invalid front field: ${f}`);
+    }
+    for (const f of args.backFields) {
+      if (!validFieldNames.has(f))
+        throw new Error(`Invalid back field: ${f}`);
+    }
+
     // Get all cards for this set
     const cards = await ctx.db
       .query("flashcards")
