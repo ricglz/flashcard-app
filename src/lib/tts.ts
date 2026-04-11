@@ -3,22 +3,35 @@
  * TTS config is derived from FieldMetadata — see types.ts.
  */
 
-let voicesLoaded = false;
-
 /** Ensure voices are loaded (they load async in some browsers). */
 function ensureVoices(): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
     const voices = speechSynthesis.getVoices();
     if (voices.length > 0) {
-      voicesLoaded = true;
       resolve(voices);
       return;
     }
     speechSynthesis.onvoiceschanged = () => {
-      voicesLoaded = true;
       resolve(speechSynthesis.getVoices());
     };
   });
+}
+
+/** Pick the best voice for a language from the available voices. */
+function pickVoice(
+  voices: SpeechSynthesisVoice[],
+  lang: string
+): SpeechSynthesisVoice | undefined {
+  const prefix = lang.split("-")[0];
+  const candidates = voices.filter(
+    (v) => v.lang === lang || v.lang.startsWith(prefix)
+  );
+  if (candidates.length === 0) return undefined;
+  const enhanced = candidates.find((v) =>
+    /enhanced|premium/i.test(v.name)
+  );
+  const remote = candidates.find((v) => !v.localService);
+  return enhanced ?? remote ?? candidates[0];
 }
 
 /** Check if the browser supports speech synthesis. */
@@ -34,30 +47,45 @@ export function isTtsSupported(): boolean {
 export async function speak(text: string, lang: string): Promise<void> {
   if (!isTtsSupported()) return;
 
-  // Cancel any ongoing speech
   speechSynthesis.cancel();
 
   const voices = await ensureVoices();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang;
 
-  // Find voices matching the language, preferring higher-quality ones
-  const prefix = lang.split("-")[0];
-  const candidates = voices.filter(
-    (v) => v.lang === lang || v.lang.startsWith(prefix)
-  );
-  if (candidates.length > 0) {
-    // Prefer enhanced/premium voices (macOS labels them), then non-local
-    // (network-synthesised) voices, then fall back to first match
-    const enhanced = candidates.find((v) =>
-      /enhanced|premium/i.test(v.name)
-    );
-    const remote = candidates.find((v) => !v.localService);
-    utterance.voice = enhanced ?? remote ?? candidates[0];
-  }
+  const voice = pickVoice(voices, lang);
+  if (voice) utterance.voice = voice;
 
   utterance.rate = 0.9;
   speechSynthesis.speak(utterance);
+}
+
+/**
+ * Speak multiple texts sequentially, each with its own language.
+ * Cancels any ongoing speech before starting.
+ */
+export async function speakSequence(
+  items: { text: string; lang: string }[]
+): Promise<void> {
+  if (!isTtsSupported() || items.length === 0) return;
+
+  speechSynthesis.cancel();
+  const voices = await ensureVoices();
+
+  for (const item of items) {
+    await new Promise<void>((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(item.text);
+      utterance.lang = item.lang;
+
+      const voice = pickVoice(voices, item.lang);
+      if (voice) utterance.voice = voice;
+
+      utterance.rate = 0.9;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      speechSynthesis.speak(utterance);
+    });
+  }
 }
 
 /** Get available voices for a language. */
