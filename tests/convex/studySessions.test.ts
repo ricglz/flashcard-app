@@ -248,6 +248,32 @@ describe("studySessions.recordResult", () => {
       })
     ).rejects.toThrow("cardId does not match");
   });
+
+  it("rejects recording result on abandoned session", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 2);
+
+    const sessionId = await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    });
+
+    const session = await as.query(api.studySessions.get, {
+      id: sessionId,
+    });
+    await as.mutation(api.studySessions.abandon, { sessionId });
+
+    await expect(
+      as.mutation(api.studySessions.recordResult, {
+        sessionId,
+        cardId: session!.cardOrder[0],
+        rating: "good",
+      })
+    ).rejects.toThrow("Session is not active");
+  });
 });
 
 describe("studySessions.abandon", () => {
