@@ -31,6 +31,7 @@ export default function StudyConfigPage({
   const [frontFields, setFrontFields] = useState<string[]>([]);
   const [backFields, setBackFields] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (set === undefined || cards === undefined || activeSession === undefined) {
     return (
@@ -63,12 +64,12 @@ export default function StudyConfigPage({
     side: "front" | "back"
   ) => {
     if (side === "front") {
-      if (frontFields.includes(fieldName)) {
+      if (frontFields.includes(fieldName) && frontFields.length > 1) {
         setFrontFields(frontFields.filter((f) => f !== fieldName));
         setBackFields([...backFields, fieldName]);
       }
     } else {
-      if (backFields.includes(fieldName)) {
+      if (backFields.includes(fieldName) && backFields.length > 1) {
         setBackFields(backFields.filter((f) => f !== fieldName));
         setFrontFields([...frontFields, fieldName]);
       }
@@ -77,14 +78,19 @@ export default function StudyConfigPage({
 
   const handleStart = async () => {
     if (frontFields.length === 0 || backFields.length === 0) return;
-    const sessionId = await startSession({
-      setId: setId as Id<"flashcardSets">,
-      frontFields,
-      backFields,
-      shuffle,
-      ...(cardLimit !== null && { cardLimit }),
-    });
-    router.push(`/study/${setId}/session?sessionId=${sessionId}`);
+    setError(null);
+    try {
+      const sessionId = await startSession({
+        setId: setId as Id<"flashcardSets">,
+        frontFields,
+        backFields,
+        shuffle,
+        ...(cardLimit !== null && { cardLimit }),
+      });
+      router.push(`/study/${setId}/session?sessionId=${sessionId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start session");
+    }
   };
 
   return (
@@ -215,17 +221,27 @@ export default function StudyConfigPage({
         </div>
 
         {/* Start button */}
-        <button
-          onClick={handleStart}
-          disabled={
-            frontFields.length === 0 ||
-            backFields.length === 0 ||
-            cards.length === 0
-          }
-          className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
-        >
-          Start New Session
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={handleStart}
+            disabled={
+              frontFields.length === 0 ||
+              backFields.length === 0 ||
+              cards.length === 0
+            }
+            className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
+          >
+            Start New Session
+          </button>
+          {cards.length === 0 && (
+            <p className="text-xs text-muted text-center">
+              This set has no cards. Add cards before studying.
+            </p>
+          )}
+          {error && (
+            <p className="text-sm text-danger text-center">{error}</p>
+          )}
+        </div>
       </main>
     </div>
   );
