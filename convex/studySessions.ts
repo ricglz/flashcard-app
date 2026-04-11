@@ -55,6 +55,7 @@ export const start = mutation({
     frontFields: v.array(v.string()),
     backFields: v.array(v.string()),
     shuffle: v.boolean(),
+    cardLimit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -82,6 +83,15 @@ export const start = mutation({
         const j = Math.floor(Math.random() * (i + 1));
         [cardOrder[i], cardOrder[j]] = [cardOrder[j], cardOrder[i]];
       }
+    }
+
+    // Limit number of cards if specified
+    if (
+      args.cardLimit &&
+      args.cardLimit > 0 &&
+      args.cardLimit < cardOrder.length
+    ) {
+      cardOrder = cardOrder.slice(0, args.cardLimit);
     }
 
     return await ctx.db.insert("studySessions", {
