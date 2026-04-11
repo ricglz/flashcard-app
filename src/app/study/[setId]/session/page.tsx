@@ -99,6 +99,11 @@ export default function StudySessionPage({
     return null;
   }
 
+  if (session.status === "abandoned") {
+    router.push(`/study/${setId}`);
+    return null;
+  }
+
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
   const currentCardId = session.cardOrder[session.currentIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
