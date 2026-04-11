@@ -18,6 +18,7 @@ export default function StudySessionPage({
   const { setId } = use(params);
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId") as Id<"studySessions"> | null;
+  const autoPlayTts = searchParams.get("autoPlayTts") === "true";
   const router = useRouter();
 
   const session = useQuery(
@@ -162,6 +163,7 @@ export default function StudySessionPage({
           frontFields={session.frontFields}
           backFields={session.backFields}
           onRevealed={() => setRevealed(true)}
+          autoPlayTts={autoPlayTts}
         />
 
         {revealed && (

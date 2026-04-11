@@ -29,6 +29,7 @@ export default function BrowsePage({
   const frontFields = searchParams.get("frontFields")?.split(",") ?? [];
   const backFields = searchParams.get("backFields")?.split(",") ?? [];
   const shuffle = searchParams.get("shuffle") === "true";
+  const autoPlayTts = searchParams.get("autoPlayTts") === "true";
   const cardLimitParam = searchParams.get("cardLimit");
   const cardLimit = cardLimitParam ? parseInt(cardLimitParam, 10) : null;
 
@@ -180,6 +181,7 @@ export default function BrowsePage({
           frontFields={frontFields}
           backFields={backFields}
           onRevealed={() => setRevealed(true)}
+          autoPlayTts={autoPlayTts}
         />
 
         {revealed && (
