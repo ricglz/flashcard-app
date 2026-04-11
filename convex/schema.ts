@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-const fieldDefinitionValidator = v.object({
+export const fieldDefinitionValidator = v.object({
   name: v.string(),
   role: v.union(
     v.literal("primary"),

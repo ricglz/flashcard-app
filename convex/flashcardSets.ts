@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { fieldDefinitionValidator } from "./schema";
 
 export function validateSetFields(
   name: string | undefined,
@@ -49,19 +50,7 @@ export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
-    fieldDefinitions: v.array(
-      v.object({
-        name: v.string(),
-        role: v.union(
-          v.literal("primary"),
-          v.literal("pronunciation"),
-          v.literal("definition"),
-          v.literal("note")
-        ),
-        metadata: v.record(v.string(), v.any()),
-        order: v.number(),
-      })
-    ),
+    fieldDefinitions: v.array(fieldDefinitionValidator),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -82,21 +71,7 @@ export const update = mutation({
     id: v.id("flashcardSets"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
-    fieldDefinitions: v.optional(
-      v.array(
-        v.object({
-          name: v.string(),
-          role: v.union(
-            v.literal("primary"),
-            v.literal("pronunciation"),
-            v.literal("definition"),
-            v.literal("note")
-          ),
-          metadata: v.record(v.string(), v.any()),
-          order: v.number(),
-        })
-      )
-    ),
+    fieldDefinitions: v.optional(v.array(fieldDefinitionValidator)),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
