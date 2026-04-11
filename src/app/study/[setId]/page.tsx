@@ -27,6 +27,7 @@ export default function StudyConfigPage({
   const router = useRouter();
 
   const [shuffle, setShuffle] = useState(true);
+  const [cardLimit, setCardLimit] = useState<number | null>(null);
   const [frontFields, setFrontFields] = useState<string[]>([]);
   const [backFields, setBackFields] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
@@ -81,6 +82,7 @@ export default function StudyConfigPage({
       frontFields,
       backFields,
       shuffle,
+      ...(cardLimit !== null && { cardLimit }),
     });
     router.push(`/study/${setId}/session?sessionId=${sessionId}`);
   };
@@ -180,6 +182,37 @@ export default function StudyConfigPage({
           />
           <span className="text-sm">Shuffle cards</span>
         </label>
+
+        {/* Card limit */}
+        <div className="space-y-2">
+          <h2 className="font-semibold text-sm">Cards to study</h2>
+          <div className="flex gap-2">
+            {[10, 20, 50].map((n) => (
+              <button
+                key={n}
+                onClick={() => setCardLimit(n)}
+                disabled={cards.length < n}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  cardLimit === n
+                    ? "bg-accent text-white"
+                    : "border border-edge hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              onClick={() => setCardLimit(null)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                cardLimit === null
+                  ? "bg-accent text-white"
+                  : "border border-edge hover:bg-surface-hover"
+              }`}
+            >
+              All
+            </button>
+          </div>
+        </div>
 
         {/* Start button */}
         <button
