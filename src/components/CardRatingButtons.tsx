@@ -16,7 +16,7 @@ const RATING_COLORS: Record<CardRating, string> = {
 
 export default function CardRatingButtons({ onRate, disabled }: Props) {
   return (
-    <div className="flex gap-2 justify-center">
+    <div className="grid grid-cols-2 sm:flex gap-2 justify-center">
       {CARD_RATINGS.map((rating) => (
         <button
           key={rating}

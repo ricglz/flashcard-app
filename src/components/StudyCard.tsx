@@ -32,7 +32,7 @@ export default function StudyCard({
   return (
     <div className="w-full max-w-lg mx-auto">
       {/* Front */}
-      <div className="bg-card-bg border-2 border-card-border rounded-xl p-8 shadow-sm">
+      <div className="bg-card-bg border-2 border-card-border rounded-xl p-4 sm:p-8 shadow-sm">
         <div className="space-y-4">
           {frontFields.map((fieldName) => {
             const fd = fieldDefsMap.get(fieldName);
@@ -48,8 +48,8 @@ export default function StudyCard({
                   <p
                     className={
                       fd?.role === "primary"
-                        ? "text-4xl font-bold"
-                        : "text-2xl"
+                        ? "text-2xl sm:text-4xl font-bold"
+                        : "text-xl sm:text-2xl"
                     }
                   >
                     {value}
@@ -82,8 +82,8 @@ export default function StudyCard({
                       <p
                         className={
                           fd?.role === "primary"
-                            ? "text-3xl font-bold"
-                            : "text-xl"
+                            ? "text-xl sm:text-3xl font-bold"
+                            : "text-lg sm:text-xl"
                         }
                       >
                         {value}
