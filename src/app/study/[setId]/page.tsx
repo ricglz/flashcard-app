@@ -24,7 +24,6 @@ export default function StudyConfigPage({
   const router = useRouter();
 
   const [shuffle, setShuffle] = useState(true);
-  const [autoPlayTts, setAutoPlayTts] = useState(false);
   const [cardLimit, setCardLimit] = useState<number | null>(null);
   const [mode, setMode] = useState<"study" | "browse">("study");
   const [frontFields, setFrontFields] = useState<string[]>([]);
@@ -86,7 +85,7 @@ export default function StudyConfigPage({
         shuffle,
         ...(cardLimit !== null && { cardLimit }),
       });
-      router.push(`/study/${setId}/session?sessionId=${sessionId}&autoPlayTts=${autoPlayTts}`);
+      router.push(`/study/${setId}/session?sessionId=${sessionId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start session");
     }
@@ -98,7 +97,6 @@ export default function StudyConfigPage({
       frontFields: frontFields.join(","),
       backFields: backFields.join(","),
       shuffle: String(shuffle),
-      autoPlayTts: String(autoPlayTts),
       ...(cardLimit !== null && { cardLimit: String(cardLimit) }),
     });
     router.push(`/study/${setId}/browse?${params}`);
@@ -215,17 +213,6 @@ export default function StudyConfigPage({
             className="w-4 h-4"
           />
           <span className="text-sm">Shuffle cards</span>
-        </label>
-
-        {/* Auto-play TTS toggle */}
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={autoPlayTts}
-            onChange={(e) => setAutoPlayTts(e.target.checked)}
-            className="w-4 h-4"
-          />
-          <span className="text-sm">Auto-play TTS on reveal</span>
         </label>
 
         {/* Card limit */}
