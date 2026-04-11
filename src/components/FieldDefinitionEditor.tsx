@@ -47,11 +47,14 @@ export default function FieldDefinitionEditor({
     onChange(updated);
   };
 
-  const toggleTts = (index: number, lang: string) => {
+  const toggleTts = (index: number) => {
     const field = value[index];
     const hasTts = !!field.metadata.tts;
+    const { tts: _removed, ...rest } = field.metadata;
     updateField(index, {
-      metadata: hasTts ? {} : { ...field.metadata, tts: { lang } },
+      metadata: hasTts
+        ? rest
+        : { ...field.metadata, tts: { lang: field.metadata.tts?.lang ?? "en" } },
     });
   };
 
@@ -95,7 +98,7 @@ export default function FieldDefinitionEditor({
             <input
               type="checkbox"
               checked={!!field.metadata.tts}
-              onChange={() => toggleTts(index, "en")}
+              onChange={() => toggleTts(index)}
             />
             TTS
           </label>

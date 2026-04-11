@@ -151,6 +151,7 @@ export default function StudySessionPage({
 
       <main className="flex-1 flex flex-col items-center justify-center p-6">
         <StudyCard
+          key={currentCardId}
           card={currentCard}
           fieldDefinitions={fieldDefs}
           frontFields={session.frontFields}

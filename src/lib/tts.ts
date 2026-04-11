@@ -41,13 +41,19 @@ export async function speak(text: string, lang: string): Promise<void> {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang;
 
-  // Try to find a voice matching the language
-  const matchingVoice =
-    voices.find((v) => v.lang === lang) ??
-    voices.find((v) => v.lang.startsWith(lang.split("-")[0]));
-
-  if (matchingVoice) {
-    utterance.voice = matchingVoice;
+  // Find voices matching the language, preferring higher-quality ones
+  const prefix = lang.split("-")[0];
+  const candidates = voices.filter(
+    (v) => v.lang === lang || v.lang.startsWith(prefix)
+  );
+  if (candidates.length > 0) {
+    // Prefer enhanced/premium voices (macOS labels them), then non-local
+    // (network-synthesised) voices, then fall back to first match
+    const enhanced = candidates.find((v) =>
+      /enhanced|premium/i.test(v.name)
+    );
+    const remote = candidates.find((v) => !v.localService);
+    utterance.voice = enhanced ?? remote ?? candidates[0];
   }
 
   utterance.rate = 0.9;
