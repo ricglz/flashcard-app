@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
+import { speakSequence } from "@/lib/tts";
 import TtsButton from "./TtsButton";
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
   frontFields: string[];
   backFields: string[];
   onRevealed?: () => void;
+  autoPlayTts?: boolean;
 };
 
 export default function StudyCard({
@@ -19,12 +21,26 @@ export default function StudyCard({
   frontFields,
   backFields,
   onRevealed,
+  autoPlayTts,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
 
   const handleReveal = () => {
     setRevealed(true);
     onRevealed?.();
+
+    if (autoPlayTts) {
+      const items: { text: string; lang: string }[] = [];
+      for (const fieldName of backFields) {
+        const fd = fieldDefsMap.get(fieldName);
+        const value = card.fields[fieldName];
+        const ttsConfig = fd ? getTtsConfig(fd) : null;
+        if (ttsConfig && value) {
+          items.push({ text: value, lang: ttsConfig.lang });
+        }
+      }
+      if (items.length > 0) speakSequence(items);
+    }
   };
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
