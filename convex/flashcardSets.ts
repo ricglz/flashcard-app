@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-function validateSetFields(
+export function validateSetFields(
   name: string | undefined,
   fieldDefinitions: Array<{ name: string }> | undefined
 ) {

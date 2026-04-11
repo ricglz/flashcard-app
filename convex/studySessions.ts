@@ -1,12 +1,25 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-const RATING_SCORES: Record<string, number> = {
+export const RATING_SCORES: Record<string, number> = {
   wrong: 0,
   hard: 1,
   good: 2,
   easy: 3,
 };
+
+/** Compute overall score from an array of card result ratings. */
+export function computeOverallScore(
+  ratings: Array<{ rating: string }>
+): number {
+  if (ratings.length === 0) return 0;
+  const totalScore = ratings.reduce(
+    (sum, r) => sum + (RATING_SCORES[r.rating] ?? 0),
+    0
+  );
+  const maxScore = ratings.length * 3;
+  return maxScore > 0 ? totalScore / maxScore : 0;
+}
 
 export const getActiveSession = query({
   args: { setId: v.id("flashcardSets") },
@@ -168,12 +181,7 @@ export const recordResult = mutation({
           q.eq("sessionId", args.sessionId)
         )
         .take(1000);
-      const totalScore = allResults.reduce(
-        (sum, r) => sum + (RATING_SCORES[r.rating] ?? 0),
-        0
-      );
-      const maxScore = allResults.length * 3;
-      const overallScore = maxScore > 0 ? totalScore / maxScore : 0;
+      const overallScore = computeOverallScore(allResults);
 
       await ctx.db.patch(args.sessionId, {
         currentIndex: nextIndex,
