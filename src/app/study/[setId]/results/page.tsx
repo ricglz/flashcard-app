@@ -88,13 +88,13 @@ export default function ResultsPage({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 py-4">
+      <header className="border-b px-4 sm:px-6 py-4">
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Home
         </Link>
       </header>
 
-      <main className="max-w-lg mx-auto p-6 space-y-6">
+      <main className="max-w-lg mx-auto p-4 sm:p-6 space-y-6">
         <h1 className="text-2xl font-bold">Session Results</h1>
         <p className="text-sm text-muted">{set.name}</p>
 

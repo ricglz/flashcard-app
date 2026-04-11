@@ -119,7 +119,7 @@ export default function StudySessionPage({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
+      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link
             href={`/study/${setId}`}
@@ -154,7 +154,7 @@ export default function StudySessionPage({
         />
       </div>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         <StudyCard
           key={currentCardId}
           card={currentCard}

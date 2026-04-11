@@ -52,7 +52,7 @@ export default function EditSetPage({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 py-4">
+      <header className="border-b px-4 sm:px-6 py-4">
         <Link
           href={`/sets/${setId}`}
           className="text-sm text-muted hover:text-foreground"
@@ -61,7 +61,7 @@ export default function EditSetPage({
         </Link>
       </header>
 
-      <main className="max-w-2xl mx-auto p-6 space-y-8">
+      <main className="max-w-2xl mx-auto p-4 sm:p-6 space-y-8">
         <div>
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">Edit: {set.name}</h1>

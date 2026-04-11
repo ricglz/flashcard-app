@@ -44,7 +44,7 @@ export default function StepNameAndSource({ state, dispatch }: Props) {
         <label className="block text-sm font-medium mb-3">
           How do you want to add cards?
         </label>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SourceCard
             title="Import CSV"
             description="Upload a CSV file with your cards"

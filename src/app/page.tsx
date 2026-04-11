@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
+      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">Flashcard App</h1>
         <div className="flex items-center gap-4">
           <Authenticated>
@@ -30,7 +30,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
         <AuthLoading>
           <div className="flex justify-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />

@@ -46,7 +46,7 @@ export default function SetDetailPage({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
+      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Back
         </Link>
@@ -66,7 +66,7 @@ export default function SetDetailPage({
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto p-6">
+      <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <h1 className="text-2xl font-bold mb-1">{set.name}</h1>
         {set.description && (
           <p className="text-muted mb-4">{set.description}</p>

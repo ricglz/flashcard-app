@@ -95,7 +95,7 @@ export default function StudyConfigPage({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 py-4 flex items-center justify-between">
+      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-sm text-muted hover:text-foreground">
           &larr; Back
         </Link>
@@ -107,7 +107,7 @@ export default function StudyConfigPage({
         </Link>
       </header>
 
-      <main className="max-w-md mx-auto p-6 space-y-6">
+      <main className="max-w-md mx-auto p-4 sm:p-6 space-y-6">
         <h1 className="text-2xl font-bold">Study: {set.name}</h1>
         <p className="text-sm text-muted">{cards.length} cards</p>
 
