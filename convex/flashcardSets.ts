@@ -122,17 +122,48 @@ export const remove = mutation({
     if (!set || set.ownerId !== identity.tokenIdentifier)
       throw new Error("Not found");
     // Delete cards in batches
-    let batch = await ctx.db
+    let cardBatch = await ctx.db
       .query("flashcards")
       .withIndex("by_setId", (q) => q.eq("setId", args.id))
       .take(500);
-    while (batch.length > 0) {
-      for (const card of batch) {
+    while (cardBatch.length > 0) {
+      for (const card of cardBatch) {
         await ctx.db.delete(card._id);
       }
-      batch = await ctx.db
+      cardBatch = await ctx.db
         .query("flashcards")
         .withIndex("by_setId", (q) => q.eq("setId", args.id))
+        .take(500);
+    }
+    // Delete sessions and their card results
+    let sessionBatch = await ctx.db
+      .query("studySessions")
+      .withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id))
+      .take(500);
+    while (sessionBatch.length > 0) {
+      for (const session of sessionBatch) {
+        let resultBatch = await ctx.db
+          .query("cardResults")
+          .withIndex("by_sessionId", (q) =>
+            q.eq("sessionId", session._id)
+          )
+          .take(500);
+        while (resultBatch.length > 0) {
+          for (const result of resultBatch) {
+            await ctx.db.delete(result._id);
+          }
+          resultBatch = await ctx.db
+            .query("cardResults")
+            .withIndex("by_sessionId", (q) =>
+              q.eq("sessionId", session._id)
+            )
+            .take(500);
+        }
+        await ctx.db.delete(session._id);
+      }
+      sessionBatch = await ctx.db
+        .query("studySessions")
+        .withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id))
         .take(500);
     }
     await ctx.db.delete(args.id);
