@@ -28,6 +28,7 @@ convex/            # Convex backend (schema, functions)
 - **Convex functions**: always check auth via `ctx.auth.getUserIdentity()`
 - **Single source of truth types**: `FieldRole`, `FieldMetadata`, `SessionStatus` in `src/lib/types.ts`
 - **Metadata pattern**: feature-specific config (e.g., TTS) lives in `FieldMetadata` typed blocks — presence = enabled
+- **Metadata is intentionally `v.any()`**: The Convex schema uses `v.record(v.string(), v.any())` for field metadata by design — it's an open map for disjoint types per field role. Type safety is enforced at the application layer via typed accessors (e.g., `getTtsConfig()` in `src/lib/types.ts`). If a stronger Convex validator is found that still supports extensible metadata, updating the schema is welcome.
 
 ## Progress Tracking
 - **PROGRESS.md** tracks current status, forward-looking tasks, and completed items for the active phase only — once a phase is done, remove its completed items (git has the record)
