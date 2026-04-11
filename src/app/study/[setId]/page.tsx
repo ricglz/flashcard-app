@@ -28,6 +28,7 @@ export default function StudyConfigPage({
 
   const [shuffle, setShuffle] = useState(true);
   const [cardLimit, setCardLimit] = useState<number | null>(null);
+  const [mode, setMode] = useState<"study" | "browse">("study");
   const [frontFields, setFrontFields] = useState<string[]>([]);
   const [backFields, setBackFields] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
@@ -93,6 +94,17 @@ export default function StudyConfigPage({
     }
   };
 
+  const handleBrowse = () => {
+    if (frontFields.length === 0 || backFields.length === 0) return;
+    const params = new URLSearchParams({
+      frontFields: frontFields.join(","),
+      backFields: backFields.join(","),
+      shuffle: String(shuffle),
+      ...(cardLimit !== null && { cardLimit: String(cardLimit) }),
+    });
+    router.push(`/study/${setId}/browse?${params}`);
+  };
+
   return (
     <div className="min-h-screen">
       <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -111,8 +123,25 @@ export default function StudyConfigPage({
         <h1 className="text-2xl font-bold">Study: {set.name}</h1>
         <p className="text-sm text-muted">{cards.length} cards</p>
 
+        {/* Mode selector */}
+        <div className="flex gap-2">
+          {(["study", "browse"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                mode === m
+                  ? "bg-accent text-white"
+                  : "border border-edge hover:bg-surface-hover"
+              }`}
+            >
+              {m === "study" ? "Study" : "Browse"}
+            </button>
+          ))}
+        </div>
+
         {/* Resume existing session */}
-        {activeSession && (
+        {mode === "study" && activeSession && (
           <div className="p-4 bg-info-surface border border-info-edge rounded-lg">
             <p className="text-sm font-medium mb-2">
               You have an active session ({activeSession.currentIndex}/
@@ -223,7 +252,7 @@ export default function StudyConfigPage({
         {/* Start button */}
         <div className="space-y-2">
           <button
-            onClick={handleStart}
+            onClick={mode === "study" ? handleStart : handleBrowse}
             disabled={
               frontFields.length === 0 ||
               backFields.length === 0 ||
@@ -231,7 +260,7 @@ export default function StudyConfigPage({
             }
             className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
           >
-            Start New Session
+            {mode === "study" ? "Start New Session" : "Start Browsing"}
           </button>
           {cards.length === 0 && (
             <p className="text-xs text-muted text-center">
