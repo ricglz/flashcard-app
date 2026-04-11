@@ -1,6 +1,27 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+function validateSetFields(
+  name: string | undefined,
+  fieldDefinitions: Array<{ name: string }> | undefined
+) {
+  if (name !== undefined && name.trim().length === 0) {
+    throw new Error("Set name must not be empty");
+  }
+  if (fieldDefinitions !== undefined) {
+    if (fieldDefinitions.length === 0) {
+      throw new Error("At least one field definition is required");
+    }
+    const names = fieldDefinitions.map((fd) => fd.name.trim());
+    if (names.some((n) => n.length === 0)) {
+      throw new Error("Field names must not be empty");
+    }
+    if (new Set(names).size !== names.length) {
+      throw new Error("Field names must be unique");
+    }
+  }
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -45,6 +66,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    validateSetFields(args.name, args.fieldDefinitions);
     return await ctx.db.insert("flashcardSets", {
       name: args.name,
       description: args.description,
@@ -82,6 +104,7 @@ export const update = mutation({
     const set = await ctx.db.get(args.id);
     if (!set || set.ownerId !== identity.tokenIdentifier)
       throw new Error("Not found");
+    validateSetFields(args.name, args.fieldDefinitions);
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
