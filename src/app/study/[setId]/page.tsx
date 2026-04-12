@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { fetchQuery, preloadQuery } from "convex/nextjs";
+import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { getAuthToken } from "@/lib/server";
@@ -17,34 +17,28 @@ export default async function StudyConfigPage({
   const flashcardSetId = setId as Id<"flashcardSets">;
   const token = await getAuthToken();
 
-  const set = await fetchQuery(
+  const preloadedSet = await preloadQuery(
     api.flashcardSets.get,
     { id: flashcardSetId },
     { token }
   );
 
-  if (!set) {
+  if (!preloadedQueryResult(preloadedSet)) {
     redirect("/");
   }
 
-  const [preloadedSet, preloadedCards, preloadedActiveSession] =
-    await Promise.all([
-      preloadQuery(
-        api.flashcardSets.get,
-        { id: flashcardSetId },
-        { token }
-      ),
-      preloadQuery(
-        api.flashcards.list,
-        { setId: flashcardSetId },
-        { token }
-      ),
-      preloadQuery(
-        api.studySessions.getActiveSession,
-        { setId: flashcardSetId },
-        { token }
-      ),
-    ]);
+  const [preloadedCards, preloadedActiveSession] = await Promise.all([
+    preloadQuery(
+      api.flashcards.list,
+      { setId: flashcardSetId },
+      { token }
+    ),
+    preloadQuery(
+      api.studySessions.getActiveSession,
+      { setId: flashcardSetId },
+      { token }
+    ),
+  ]);
 
   const initialMode = modeParam === "browse" ? "browse" : "study";
 

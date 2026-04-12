@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { fetchQuery, preloadQuery } from "convex/nextjs";
+import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
 import { getAuthToken } from "@/lib/server";
@@ -23,12 +23,13 @@ export default async function StudySessionPage({
   const flashcardSetId = setId as Id<"flashcardSets">;
   const token = await getAuthToken();
 
-  // Fetch to validate status, then preload for the client
-  const session = await fetchQuery(
-    api.studySessions.get,
-    { id: typedSessionId },
-    { token }
-  );
+  const [preloadedSession, preloadedSet, preloadedCards] = await Promise.all([
+    preloadQuery(api.studySessions.get, { id: typedSessionId }, { token }),
+    preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+    preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+  ]);
+
+  const session = preloadedQueryResult(preloadedSession);
 
   if (!session) {
     redirect(`/study/${setId}`);
@@ -41,12 +42,6 @@ export default async function StudySessionPage({
   if (session.status === "abandoned") {
     redirect(`/study/${setId}`);
   }
-
-  const [preloadedSession, preloadedSet, preloadedCards] = await Promise.all([
-    preloadQuery(api.studySessions.get, { id: typedSessionId }, { token }),
-    preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
-    preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
-  ]);
 
   return (
     <StudySessionClient
