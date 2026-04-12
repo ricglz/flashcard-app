@@ -120,9 +120,9 @@ export default function StudySessionClient({
             )}
           </button>
           <button
-            onClick={async () => {
+            onClick={() => {
               if (confirm("Abandon this session?")) {
-                await abandonSession({ sessionId });
+                abandonSession({ sessionId });
                 router.push(`/study/${setId}`);
               }
             }}
