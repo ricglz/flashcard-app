@@ -56,7 +56,7 @@ export async function speak(text: string, lang: string): Promise<void> {
   const voice = pickVoice(voices, lang);
   if (voice) utterance.voice = voice;
 
-  utterance.rate = 0.9;
+  utterance.rate = 0.75;
   speechSynthesis.speak(utterance);
 }
 
@@ -80,7 +80,7 @@ export async function speakSequence(
       const voice = pickVoice(voices, item.lang);
       if (voice) utterance.voice = voice;
 
-      utterance.rate = 0.9;
+      utterance.rate = 0.75;
       utterance.onend = () => resolve();
       utterance.onerror = () => resolve();
       speechSynthesis.speak(utterance);
