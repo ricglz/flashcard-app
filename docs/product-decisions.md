@@ -80,7 +80,7 @@ This replaces language presets — the preset concept becomes unnecessary becaus
 - TTS voices expect native script (hanzi for Chinese, kanji/kana for Japanese) — pinyin romanization produces garbled output
 - Plays audio on demand during card review, auto-plays on reveal with mute/unmute toggle
 - **Open question**: TTS is currently on the Character field, but the user's study flow is pinyin-oriented. Hearing pronunciation on the character side may feel disconnected. Possible solutions: TTS on both fields, or an external TTS API that handles pinyin.
-- **Optional high-quality TTS (nice to have)**: Users can provide their own API key (Google Cloud TTS, OpenAI TTS, etc.) for natural-sounding voices. Purely opt-in — Web Speech API remains the default. Requires: user key storage in Convex, Convex action to proxy TTS API calls, audio caching to avoid redundant API calls for the same text.
+- **Optional high-quality TTS (nice to have)**: Users can provide their own API key (Google Cloud TTS, OpenAI TTS, etc.) for natural-sounding voices. Purely opt-in — Web Speech API remains the default. Requires: user key storage in Convex, Convex action to proxy TTS API calls, audio caching to avoid redundant API calls for the same text. See `docs/tts-api-research.md` for detailed comparison and architecture.
 
 ### 4. Scoring
 - **Per-card self-rating** during the session (Wrong / Hard / Good / Easy)
