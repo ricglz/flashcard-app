@@ -73,10 +73,12 @@ export default function StudySessionClient({
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
   const fieldDefs = set.fieldDefinitions as FieldDefinition[];
 
+  // Session completed — currentIndex is past the last card.
+  // Router.push to results is in flight; show a brief loading state.
   if (!currentCard) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted">Card not found.</p>
+      <div className="flex justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
       </div>
     );
   }
