@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
 import { fetchQuery, preloadQuery } from "convex/nextjs";
-import { auth } from "@clerk/nextjs/server";
 import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
+import { getAuthToken } from "@/lib/server";
 import StudySessionClient from "./StudySessionClient";
-
-async function getAuthToken() {
-  return (await (await auth()).getToken()) ?? undefined;
-}
 
 export default async function StudySessionPage({
   params,

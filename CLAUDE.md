@@ -27,7 +27,7 @@ e2e/               # Playwright E2E tests
 - **Package manager**: pnpm
 - **Import alias**: `@/` maps to `src/`
 - **Components**: PascalCase, `.tsx` extension, `"use client"` only when needed
-- **Server components first**: Pages should be server components that handle data fetching, validation, and route guards (e.g., redirect if session is completed). Client components are only for interactivity — receive validated data as props.
+- **Server components first**: Pages should be server components that handle data fetching, validation, and route guards (e.g., redirect if set not found). Client components are only for interactivity — receive validated data as props. Pattern: server uses `getAuthToken()` from `src/lib/server.ts` + `fetchQuery` for validation + `preloadQuery` to pass data; client uses `usePreloadedQuery` for immediate data + real-time subscription.
 - **Next.js 16**: `params` is a `Promise` — must be awaited in page components
 - **Convex functions**: always check auth via `ctx.auth.getUserIdentity()`
 - **Single source of truth types**: `FieldRole`, `FieldMetadata`, `SessionStatus` in `src/lib/types.ts`
