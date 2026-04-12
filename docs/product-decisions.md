@@ -99,13 +99,20 @@ This replaces language presets — the preset concept becomes unnecessary becaus
 - Import from shared links requires explicit user action
 - Note: even link-based sharing has potential integrity issues (anyone with link can import anything). Accept this risk for now, add moderation/flagging later if needed
 
-### 7. AI Card Generation (Future)
+### 7. AI Features — BYOK Model (Future)
+All AI features follow a **bring-your-own-key** approach: the app provides the UI and orchestration, but users supply their own LLM API key. No API costs for the platform. Keys stored per-user in Convex.
+
+**Card Generation**:
 - User provides a **text prompt** describing what they want to learn (e.g., "50 most common Chinese food vocabulary", "HSK 2 verbs", "basic greetings in Mandarin")
 - LLM generates cards matching the set's **field definitions** (e.g., Character/Pinyin/Meaning for Chinese)
 - Generated cards are shown in a **review/edit screen** before saving — users must verify accuracy, especially for tonal languages where LLM mistakes are common
-- Backend: Convex action calling an LLM API server-side (Claude or similar)
-- Consider per-user generation limits to manage API costs (free tier: N generations/month, or pay-per-use)
 - Differentiator: Anki has no native AI generation — this is a unique value-add
+
+**Weak Spot Analysis** (see Phase 4):
+- AI analyzes performance data and suggests targeted card sets
+
+**Customization**:
+- Users may be able to customize the system prompt per feature (e.g., tone of generated content, difficulty level). Exact configurability TBD per feature.
 
 ### 8. Study Streaks & Gamification (Future)
 - Daily study streak tracking — consecutive days with at least one completed session
