@@ -32,8 +32,9 @@ All external TTS APIs require a backend proxy because:
 
 ### Decision
 - Web Speech API remains the default (zero config, free forever)
-- External TTS is a nice-to-have, purely opt-in when user provides their key
-- Not prioritized for Phase 1 — revisit in Phase 2+ if quality remains a pain point
+- **Chrome's Web Speech API is significantly better than Firefox** — the quality difference is night and day. Most TTS quality complaints may be browser-specific rather than API-level
+- External TTS is a worst-case fallback, purely opt-in when user provides their key
+- Very low priority — only revisit if quality is still a problem on Chrome
 
 ## Sources
 - [Best TTS APIs in 2026 - Speechmatics](https://www.speechmatics.com/company/articles-and-news/best-tts-apis-in-2025-top-12-text-to-speech-services-for-developers)
