@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import { FieldDefinition, CardRating } from "@/lib/types";
-import { asId } from "@/lib/convexHelpers";
 import Link from "next/link";
 
 /** Server component guarantees session is in_progress before rendering this client. */
@@ -19,15 +18,25 @@ type ActiveSession = Omit<Doc<"studySessions">, "status"> & {
 type Props = {
   setId: string;
   sessionId: Id<"studySessions">;
+  preloadedSession: Preloaded<typeof api.studySessions.get>;
+  preloadedSet: Preloaded<typeof api.flashcardSets.get>;
+  preloadedCards: Preloaded<typeof api.flashcards.list>;
 };
 
-export default function StudySessionClient({ setId, sessionId }: Props) {
+export default function StudySessionClient({
+  setId,
+  sessionId,
+  preloadedSession,
+  preloadedSet,
+  preloadedCards,
+}: Props) {
   const router = useRouter();
-  const flashcardSetId = asId<"flashcardSets">(setId);
 
-  const session = useQuery(api.studySessions.get, { id: sessionId });
-  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
-  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
+  // Server already validated these are non-null and session is in_progress.
+  // usePreloadedQuery provides data immediately + real-time subscription.
+  const session = usePreloadedQuery(preloadedSession) as ActiveSession;
+  const set = usePreloadedQuery(preloadedSet)!;
+  const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
 
@@ -37,7 +46,7 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
-      if (!session || isSubmitting) return;
+      if (isSubmitting) return;
       const currentCardId = session.cardOrder[session.currentIndex];
       if (!currentCardId) return;
 
@@ -59,32 +68,8 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
     [session, sessionId, isSubmitting, recordResult, router, setId]
   );
 
-  if (
-    session === undefined ||
-    set === undefined ||
-    cards === undefined
-  ) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!session || !set) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted">Session not found.</p>
-      </div>
-    );
-  }
-
-  // Server component guarantees status is "in_progress" on initial load.
-  // useQuery may briefly return a completed session after handleRate navigates away.
-  const activeSession = session as ActiveSession;
-
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
-  const currentCardId = activeSession.cardOrder[activeSession.currentIndex];
+  const currentCardId = session.cardOrder[session.currentIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
   const fieldDefs = set.fieldDefinitions as FieldDefinition[];
 
@@ -107,7 +92,7 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
             &larr; Back
           </Link>
           <span className="text-sm text-muted">
-            {activeSession.currentIndex + 1} / {activeSession.cardOrder.length}
+            {session.currentIndex + 1} / {session.cardOrder.length}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -146,7 +131,7 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
         <div
           className="h-full bg-accent transition-all"
           style={{
-            width: `${(activeSession.currentIndex / activeSession.cardOrder.length) * 100}%`,
+            width: `${(session.currentIndex / session.cardOrder.length) * 100}%`,
           }}
         />
       </div>
@@ -156,8 +141,8 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
           key={currentCardId}
           card={currentCard}
           fieldDefinitions={fieldDefs}
-          frontFields={activeSession.frontFields}
-          backFields={activeSession.backFields}
+          frontFields={session.frontFields}
+          backFields={session.backFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
         />
