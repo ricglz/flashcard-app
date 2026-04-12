@@ -18,12 +18,16 @@ src/
   components/      # React components
   lib/             # Shared types, utilities, helpers
 convex/            # Convex backend (schema, functions)
+data/              # CSV datasets for flashcard import
+tests/convex/      # Convex backend unit tests (NOT in convex/ — avoid pnpx convex dev processing)
+e2e/               # Playwright E2E tests
 ```
 
 ## Key Conventions
 - **Package manager**: pnpm
 - **Import alias**: `@/` maps to `src/`
 - **Components**: PascalCase, `.tsx` extension, `"use client"` only when needed
+- **Server components first**: Pages should be server components that handle data fetching, validation, and route guards (e.g., redirect if session is completed). Client components are only for interactivity — receive validated data as props.
 - **Next.js 16**: `params` is a `Promise` — must be awaited in page components
 - **Convex functions**: always check auth via `ctx.auth.getUserIdentity()`
 - **Single source of truth types**: `FieldRole`, `FieldMetadata`, `SessionStatus` in `src/lib/types.ts`
