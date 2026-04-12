@@ -74,6 +74,34 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
     );
   }
 
+  if (session.status === "completed") {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted mb-4">This session is complete.</p>
+        <Link
+          href={`/study/${setId}/results?sessionId=${sessionId}`}
+          className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
+        >
+          View Results
+        </Link>
+      </div>
+    );
+  }
+
+  if (session.status === "abandoned") {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted mb-4">This session was abandoned.</p>
+        <Link
+          href={`/study/${setId}`}
+          className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
+        >
+          Start New Session
+        </Link>
+      </div>
+    );
+  }
+
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
   const currentCardId = session.cardOrder[session.currentIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
