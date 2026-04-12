@@ -39,6 +39,7 @@ export default function StudyConfigClient({
   const [backFields, setBackFields] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const fieldDefs = set.fieldDefinitions as FieldDefinition[];
 
@@ -70,6 +71,7 @@ export default function StudyConfigClient({
   const handleStart = async () => {
     if (frontFields.length === 0 || backFields.length === 0) return;
     setError(null);
+    setIsNavigating(true);
     try {
       const sessionId = await startSession({
         setId: flashcardSetId,
@@ -80,6 +82,7 @@ export default function StudyConfigClient({
       });
       router.push(`/study/${setId}/session?sessionId=${sessionId}`);
     } catch (err) {
+      setIsNavigating(false);
       setError(err instanceof Error ? err.message : "Failed to start session");
     }
   };
@@ -94,6 +97,14 @@ export default function StudyConfigClient({
     });
     router.push(`/study/${setId}/browse?${params}`);
   };
+
+  if (isNavigating) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
