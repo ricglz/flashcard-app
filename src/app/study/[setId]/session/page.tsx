@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useCallback } from "react";
+import { use, useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -86,22 +86,24 @@ export default function StudySessionPage({
     );
   }
 
-  if (!session || !set) {
+  const isTerminal =
+    session?.status === "completed" || session?.status === "abandoned";
+
+  useEffect(() => {
+    if (!session) return;
+    if (session.status === "completed") {
+      router.push(`/study/${setId}/results?sessionId=${sessionId}`);
+    } else if (session.status === "abandoned") {
+      router.push(`/study/${setId}`);
+    }
+  }, [session, setId, sessionId, router]);
+
+  if (!session || !set || isTerminal) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted">Session not found.</p>
+        <p className="text-muted">{isTerminal ? "Redirecting..." : "Session not found."}</p>
       </div>
     );
-  }
-
-  if (session.status === "completed") {
-    router.push(`/study/${setId}/results?sessionId=${sessionId}`);
-    return null;
-  }
-
-  if (session.status === "abandoned") {
-    router.push(`/study/${setId}`);
-    return null;
   }
 
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
