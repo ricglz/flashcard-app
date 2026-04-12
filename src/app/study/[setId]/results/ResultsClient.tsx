@@ -8,6 +8,8 @@ import {
   CARD_RATING_SCORES,
   CARD_RATINGS,
   CardRating,
+  TypedFlashcardSet,
+  TypedCardResult,
 } from "@/lib/types";
 
 type Props = {
@@ -25,9 +27,10 @@ export default function ResultsClient({
 }: Props) {
   const data = usePreloadedQuery(preloadedResults)!;
   const cards = usePreloadedQuery(preloadedCards);
-  const set = usePreloadedQuery(preloadedSet)!;
+  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
 
-  const { session, results } = data;
+  const { session } = data;
+  const results = data.results as TypedCardResult[];
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
 
   // Count ratings
@@ -38,7 +41,7 @@ export default function ResultsClient({
     easy: 0,
   };
   for (const r of results) {
-    const rating = r.rating as CardRating;
+    const rating = r.rating;
     ratingCounts[rating] = (ratingCounts[rating] ?? 0) + 1;
   }
 
@@ -50,7 +53,7 @@ export default function ResultsClient({
         (results.reduce(
           (sum, r) =>
             sum +
-            CARD_RATING_SCORES[r.rating as CardRating],
+            CARD_RATING_SCORES[r.rating],
           0
         ) /
           (completedCards * 3 || 1)) *
@@ -164,7 +167,7 @@ export default function ResultsClient({
                               : "bg-rating-easy-bg text-rating-easy-text"
                       }`}
                     >
-                      {CARD_RATING_LABELS[r.rating as CardRating]}
+                      {CARD_RATING_LABELS[r.rating]}
                     </span>
                   </div>
                 );

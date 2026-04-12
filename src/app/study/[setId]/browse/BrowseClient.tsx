@@ -7,7 +7,7 @@ import { Id } from "../../../../../convex/_generated/dataModel";
 import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
-import { FieldDefinition } from "@/lib/types";
+import { FieldDefinition, TypedFlashcardSet } from "@/lib/types";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -37,7 +37,7 @@ export default function BrowseClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet)!;
+  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -64,7 +64,7 @@ export default function BrowseClient({
     return cardOrder.filter((id) => !dismissed.has(id));
   }, [cardOrder, dismissed]);
 
-  const fieldDefs = set.fieldDefinitions as FieldDefinition[];
+  const fieldDefs = set.fieldDefinitions;
   const validFieldNames = new Set(fieldDefs.map((fd) => fd.name));
   const validFrontFields = frontFields.filter((f) => validFieldNames.has(f));
   const validBackFields = backFields.filter((f) => validFieldNames.has(f));

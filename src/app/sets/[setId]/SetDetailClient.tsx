@@ -4,7 +4,7 @@ import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import Link from "next/link";
 import TtsButton from "@/components/TtsButton";
-import { getTtsConfig, FieldDefinition } from "@/lib/types";
+import { getTtsConfig, TypedFlashcardSet } from "@/lib/types";
 
 type Props = {
   setId: string;
@@ -17,11 +17,10 @@ export default function SetDetailClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet)!;
+  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
 
-  const fieldDefs = set.fieldDefinitions as FieldDefinition[];
-  const sortedFieldDefs = [...fieldDefs].sort(
+  const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
   );
 

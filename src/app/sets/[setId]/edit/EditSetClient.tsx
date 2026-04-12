@@ -7,7 +7,7 @@ import Link from "next/link";
 import CardForm from "@/components/CardForm";
 import CsvImporter from "@/components/CsvImporter";
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
-import { FieldDefinition } from "@/lib/types";
+import { FieldDefinition, TypedFlashcardSet } from "@/lib/types";
 
 type Props = {
   setId: string;
@@ -20,7 +20,7 @@ export default function EditSetClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet)!;
+  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
   const updateSet = useMutation(api.flashcardSets.update);
   const createCard = useMutation(api.flashcards.create);
@@ -29,8 +29,7 @@ export default function EditSetClient({
 
   const [editingSet, setEditingSet] = useState(false);
 
-  const typedFieldDefs = set.fieldDefinitions as FieldDefinition[];
-  const sortedFieldDefs = [...typedFieldDefs].sort(
+  const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
   );
 
@@ -60,7 +59,7 @@ export default function EditSetClient({
           {editingSet && (
             <SetInfoEditor
               set={set}
-              fieldDefinitions={typedFieldDefs}
+              fieldDefinitions={set.fieldDefinitions}
               onSave={async (updates) => {
                 await updateSet({ id: set._id, ...updates });
                 setEditingSet(false);
@@ -130,7 +129,7 @@ export default function EditSetClient({
               })),
             });
           }}
-          existingFieldDefinitions={typedFieldDefs}
+          existingFieldDefinitions={set.fieldDefinitions}
         />
       </main>
     </div>

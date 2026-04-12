@@ -99,3 +99,21 @@ export const SESSION_STATUSES = [
   "abandoned",
 ] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
+
+// ---------------------------------------------------------------------------
+// Narrowed Convex document types
+// ---------------------------------------------------------------------------
+// Convex returns metadata as Record<string, any> and rating as string.
+// These types narrow once at the query boundary so downstream code is typed.
+
+import type { Doc } from "../../convex/_generated/dataModel";
+
+/** Flashcard set with typed fieldDefinitions (narrows Convex's any metadata). */
+export type TypedFlashcardSet = Omit<Doc<"flashcardSets">, "fieldDefinitions"> & {
+  fieldDefinitions: FieldDefinition[];
+};
+
+/** Card result with typed rating (narrows Convex's string to CardRating). */
+export type TypedCardResult = Omit<Doc<"cardResults">, "rating"> & {
+  rating: CardRating;
+};

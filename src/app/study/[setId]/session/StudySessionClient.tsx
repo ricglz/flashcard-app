@@ -7,7 +7,7 @@ import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
-import { FieldDefinition, CardRating } from "@/lib/types";
+import { FieldDefinition, CardRating, TypedFlashcardSet } from "@/lib/types";
 import Link from "next/link";
 
 /** Server component guarantees session is in_progress before rendering this client. */
@@ -35,7 +35,7 @@ export default function StudySessionClient({
   // Server already validated these are non-null and session is in_progress.
   // usePreloadedQuery provides data immediately + real-time subscription.
   const session = usePreloadedQuery(preloadedSession) as ActiveSession;
-  const set = usePreloadedQuery(preloadedSet)!;
+  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
@@ -76,7 +76,7 @@ export default function StudySessionClient({
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
   const currentCardId = session.cardOrder[session.currentIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
-  const fieldDefs = set.fieldDefinitions as FieldDefinition[];
+  const fieldDefs = set.fieldDefinitions;
 
   // Session completed — currentIndex is past the last card.
   // Router.push to results is in flight; show a brief loading state.

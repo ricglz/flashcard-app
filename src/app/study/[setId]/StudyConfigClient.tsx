@@ -5,7 +5,7 @@ import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FieldDefinition } from "@/lib/types";
+import { FieldDefinition, TypedFlashcardSet } from "@/lib/types";
 import { asId } from "@/lib/convexHelpers";
 
 type Props = {
@@ -25,7 +25,7 @@ export default function StudyConfigClient({
   preloadedCards,
   preloadedActiveSession,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet)!;
+  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
   const activeSession = usePreloadedQuery(preloadedActiveSession);
   const startSession = useMutation(api.studySessions.start);
@@ -41,7 +41,7 @@ export default function StudyConfigClient({
   const [error, setError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  const fieldDefs = set.fieldDefinitions as FieldDefinition[];
+  const fieldDefs = set.fieldDefinitions;
 
   // Initialize front/back defaults on first render
   if (!initialized && fieldDefs.length > 0) {
