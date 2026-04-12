@@ -1,135 +1,39 @@
-"use client";
-
-import { use } from "react";
-import { useQuery } from "convex/react";
+import { redirect } from "next/navigation";
+import { fetchQuery, preloadQuery } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import Link from "next/link";
-import TtsButton from "@/components/TtsButton";
-import { getTtsConfig } from "@/lib/types";
-import { asId } from "@/lib/convexHelpers";
+import { Id } from "../../../../convex/_generated/dataModel";
+import { getAuthToken } from "@/lib/server";
+import SetDetailClient from "./SetDetailClient";
 
-export default function SetDetailPage({
+export default async function SetDetailPage({
   params,
 }: {
   params: Promise<{ setId: string }>;
 }) {
-  const { setId } = use(params);
-  const flashcardSetId = asId<"flashcardSets">(setId);
-  const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
-  const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
+  const { setId } = await params;
+  const flashcardSetId = setId as Id<"flashcardSets">;
+  const token = await getAuthToken();
 
-  if (set === undefined || cards === undefined) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (set === null) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted mb-4">Set not found.</p>
-        <Link href="/" className="text-accent hover:underline">
-          Go back
-        </Link>
-      </div>
-    );
-  }
-
-  const sortedFieldDefs = [...set.fieldDefinitions].sort(
-    (a, b) => a.order - b.order
+  const set = await fetchQuery(
+    api.flashcardSets.get,
+    { id: flashcardSetId },
+    { token }
   );
 
+  if (!set) {
+    redirect("/");
+  }
+
+  const [preloadedSet, preloadedCards] = await Promise.all([
+    preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+    preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+  ]);
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
-          &larr; Back
-        </Link>
-        <div className="flex gap-2">
-          <Link
-            href={`/study/${setId}`}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-          >
-            Study
-          </Link>
-          <Link
-            href={`/sets/${setId}/edit`}
-            className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
-          >
-            Edit
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto p-4 sm:p-6">
-        <h1 className="text-2xl font-bold mb-1">{set.name}</h1>
-        {set.description && (
-          <p className="text-muted mb-4">{set.description}</p>
-        )}
-        <p className="text-sm text-muted mb-6">
-          {cards.length} card{cards.length !== 1 ? "s" : ""}
-        </p>
-
-        {cards.length === 0 ? (
-          <div className="text-center py-8 border rounded-lg">
-            <p className="text-muted mb-3">No cards yet.</p>
-            <Link
-              href={`/sets/${setId}/edit`}
-              className="text-accent hover:underline text-sm"
-            >
-              Add cards
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto border rounded-lg">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-raised">
-                  <th className="text-left px-4 py-2 text-xs text-muted">
-                    #
-                  </th>
-                  {sortedFieldDefs.map((fd) => (
-                    <th
-                      key={fd.name}
-                      className="text-left px-4 py-2 text-xs text-muted"
-                    >
-                      {fd.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {cards
-                  .sort((a, b) => a.order - b.order)
-                  .map((card, idx) => (
-                    <tr key={card._id} className="border-t hover:bg-surface-hover">
-                      <td className="px-4 py-2 text-muted">{idx + 1}</td>
-                      {sortedFieldDefs.map((fd) => {
-                        const value = card.fields[fd.name] ?? "";
-                        const ttsConfig = getTtsConfig(fd);
-                        return (
-                          <td key={fd.name} className="px-4 py-2">
-                            <div className="flex items-center gap-1">
-                              <span>{value}</span>
-                              {ttsConfig && value && (
-                                <TtsButton
-                                  text={value}
-                                  lang={ttsConfig.lang}
-                                />
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
-    </div>
+    <SetDetailClient
+      setId={setId}
+      preloadedSet={preloadedSet}
+      preloadedCards={preloadedCards}
+    />
   );
 }
