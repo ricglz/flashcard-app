@@ -127,7 +127,16 @@ export default function StudyConfigPage({
           {(["study", "browse"] as const).map((m) => (
             <button
               key={m}
-              onClick={() => setMode(m)}
+              onClick={() => {
+                setMode(m);
+                const url = new URL(window.location.href);
+                if (m === "browse") {
+                  url.searchParams.set("mode", "browse");
+                } else {
+                  url.searchParams.delete("mode");
+                }
+                router.replace(url.pathname + url.search);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 mode === m
                   ? "bg-accent text-white"
