@@ -7,23 +7,26 @@
 
 ### Next: Bug Fixes & Polish
 - [ ] UI/UX issues discovered during testing
+- [ ] Add labels/tooltips to make icon buttons more obvious (e.g., mute/unmute TTS)
+- [ ] TTS playback speed control (slider or preset buttons in session header)
+- [ ] Consider allowing fields to be excluded from the card entirely (e.g., Character used only for TTS, not displayed — currently all fields must be front or back)
 - [ ] Mobile responsiveness verification (responsive padding and layouts are in place, needs device testing)
 
 ### Next: Manual Testing (ongoing)
-- [ ] Verify sign-in/sign-out flow works
-- [ ] Create a Chinese flashcard set via wizard — manual path
-- [ ] Create a set via wizard — CSV path (import 100 common characters CSV)
-- [ ] Verify wizard navigation (back/next, validation, step indicator)
-- [ ] Verify field metadata configuration (roles, TTS toggle, card preview)
+- [x] Verify sign-in/sign-out flow works
+- [x] Create a Chinese flashcard set via wizard — manual path
+- [x] Create a set via wizard — CSV path (import 100 common characters CSV)
+- [x] Verify wizard navigation (back/next, validation, step indicator)
+- [x] Verify field metadata configuration (roles, TTS toggle, card preview)
+- [x] Study session: configure front/back fields, toggle shuffle
+- [x] Study session: flip through cards, verify TTS plays for character fields
+- [x] Study session: rate cards, verify progress bar advances
+- [x] Study session: leave mid-session, verify resume prompt appears
 - [ ] Add a few cards manually via the edit page
-- [ ] Study session: configure front/back fields, toggle shuffle
 - [ ] Study session: configure card limit (10/20/50/All)
-- [ ] Study session: flip through cards, verify TTS plays for character fields
-- [ ] Study session: rate cards, verify progress bar advances
-- [ ] Study session: leave mid-session, verify resume prompt appears
 - [ ] Study session: complete session, verify results page
 - [ ] Browse mode: navigate back/forth, dismiss known cards
-- [ ] Browse mode: verify auto-play TTS on reveal toggle
+- [ ] Browse mode: verify TTS mute/unmute toggle
 - [ ] Cross-device resume: start on one browser, resume in another
 
 ## Phase 2 — Polish & Features
