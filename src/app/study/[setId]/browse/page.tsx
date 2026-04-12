@@ -91,7 +91,7 @@ export default function BrowsePage({
       <div className="min-h-screen flex flex-col">
         <header className="border-b px-4 sm:px-6 py-4">
           <Link
-            href={`/study/${setId}`}
+            href={`/study/${setId}?mode=browse`}
             className="text-sm text-muted hover:text-foreground"
           >
             &larr; Back
@@ -104,7 +104,7 @@ export default function BrowsePage({
               : "No cards to browse."}
           </p>
           <Link
-            href={`/study/${setId}`}
+            href={`/study/${setId}?mode=browse`}
             className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
           >
             Back to Study Config

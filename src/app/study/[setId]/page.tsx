@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { FieldDefinition } from "@/lib/types";
 import { asId } from "@/lib/convexHelpers";
@@ -14,6 +14,7 @@ export default function StudyConfigPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = use(params);
+  const searchParams = useSearchParams();
   const flashcardSetId = asId<"flashcardSets">(setId);
   const set = useQuery(api.flashcardSets.get, { id: flashcardSetId });
   const cards = useQuery(api.flashcards.list, { setId: flashcardSetId });
@@ -25,7 +26,8 @@ export default function StudyConfigPage({
 
   const [shuffle, setShuffle] = useState(true);
   const [cardLimit, setCardLimit] = useState<number | null>(null);
-  const [mode, setMode] = useState<"study" | "browse">("study");
+  const initialMode = searchParams.get("mode") === "browse" ? "browse" : "study";
+  const [mode, setMode] = useState<"study" | "browse">(initialMode);
   const [frontFields, setFrontFields] = useState<string[]>([]);
   const [backFields, setBackFields] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
