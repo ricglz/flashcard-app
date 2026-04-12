@@ -77,13 +77,16 @@ function inferRole(
 /** Infer metadata (e.g., TTS) from column name patterns. */
 function inferMetadata(name: string): FieldDefinition["metadata"] {
   const lower = name.toLowerCase();
-  if (lower.includes("pinyin") || lower.includes("chinese"))
+  // TTS goes on native script fields, not romanization (pinyin/romaji)
+  if (
+    lower.includes("character") ||
+    lower.includes("hanzi") ||
+    lower.includes("chinese")
+  )
     return { tts: { lang: "zh-CN" } };
+  if (lower.includes("kanji") || lower.includes("japanese"))
+    return { tts: { lang: "ja" } };
   if (lower.includes("spanish") || lower.includes("español"))
     return { tts: { lang: "es" } };
-  if (lower.includes("japanese") || lower.includes("romaji"))
-    return { tts: { lang: "ja" } };
-  if (lower.includes("pronunciation") || lower.includes("phonetic"))
-    return { tts: { lang: "en" } };
   return {};
 }

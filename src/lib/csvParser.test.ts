@@ -77,11 +77,16 @@ describe("role inference via parseCsv", () => {
 });
 
 describe("metadata inference via parseCsv", () => {
-  it("sets zh-CN TTS for Pinyin column", () => {
-    const result = parseCsv("Pinyin\ntest");
+  it("sets zh-CN TTS for Character column", () => {
+    const result = parseCsv("Character\ntest");
     expect(result.fieldDefinitions[0].metadata).toEqual({
       tts: { lang: "zh-CN" },
     });
+  });
+
+  it("sets no TTS for Pinyin column (romanization, not native script)", () => {
+    const result = parseCsv("Pinyin\ntest");
+    expect(result.fieldDefinitions[0].metadata).toEqual({});
   });
 
   it("sets es TTS for Spanish column", () => {
@@ -91,15 +96,15 @@ describe("metadata inference via parseCsv", () => {
     });
   });
 
-  it("sets ja TTS for Japanese column", () => {
-    const result = parseCsv("Japanese\ntest");
+  it("sets ja TTS for Kanji column", () => {
+    const result = parseCsv("Kanji\ntest");
     expect(result.fieldDefinitions[0].metadata).toEqual({
       tts: { lang: "ja" },
     });
   });
 
   it("sets no TTS for unrecognized columns", () => {
-    const result = parseCsv("Character\ntest");
+    const result = parseCsv("Meaning\ntest");
     expect(result.fieldDefinitions[0].metadata).toEqual({});
   });
 });

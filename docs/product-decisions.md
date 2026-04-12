@@ -51,7 +51,7 @@ The current set creation page front-loads field definition configuration, which 
 **Step 3 — Configure field metadata**
 - Shows a **card preview** alongside the field configuration
 - For each field, user sets: **role** (primary / pronunciation / definition / note) and **TTS** (on/off + language code)
-- Heuristics can suggest defaults (e.g., a column named "Pinyin" → role: pronunciation, TTS: zh-CN) but user always confirms
+- Heuristics can suggest defaults (e.g., a column named "Character" → role: primary, TTS: zh-CN; "Pinyin" → role: pronunciation) but user always confirms
 - This step applies to both CSV and manual paths — every set goes through metadata configuration
 
 **Step 4 — Review & create**
@@ -79,7 +79,7 @@ This replaces language presets — the preset concept becomes unnecessary becaus
 - Web Speech API for pronunciation playback (default, no setup required)
 - TTS voices expect native script (hanzi for Chinese, kanji/kana for Japanese) — pinyin romanization produces garbled output
 - Plays audio on demand during card review, auto-plays on reveal with mute/unmute toggle
-- **Open question**: TTS is currently on the Character field, but the user's study flow is pinyin-oriented. Hearing pronunciation on the character side may feel disconnected. Possible solutions: TTS on both fields, or an external TTS API that handles pinyin.
+- **Open question**: TTS is on the Character field (native script). The user's study flow is pinyin-oriented, so hearing pronunciation on the character side may feel disconnected. Possible solutions: TTS on both fields, or an external TTS API that handles pinyin.
 - **Optional high-quality TTS (nice to have)**: Users can provide their own API key (Google Cloud TTS, OpenAI TTS, etc.) for natural-sounding voices. Purely opt-in — Web Speech API remains the default. Requires: user key storage in Convex, Convex action to proxy TTS API calls, audio caching to avoid redundant API calls for the same text. See `docs/tts-api-research.md` for detailed comparison and architecture.
 
 ### 4. Scoring
@@ -165,8 +165,8 @@ Each flashcard set declares its fields with:
 Example for Chinese:
 ```
 fieldDefinitions: [
-  { name: "Character", role: "primary",       metadata: { ttsEnabled: false }, order: 0 },
-  { name: "Pinyin",    role: "pronunciation", metadata: { ttsEnabled: true, ttsLang: "zh-CN" }, order: 1 },
+  { name: "Character", role: "primary",       metadata: { tts: { lang: "zh-CN" } }, order: 0 },
+  { name: "Pinyin",    role: "pronunciation", metadata: {}, order: 1 },
   { name: "Meaning",   role: "definition",    metadata: {}, order: 2 },
 ]
 ```
