@@ -50,17 +50,22 @@ export default function StudySessionClient({
       const currentCardId = session.cardOrder[session.currentIndex];
       if (!currentCardId) return;
 
+      const isLastCard =
+        session.currentIndex === session.cardOrder.length - 1;
+
       setIsSubmitting(true);
+
+      if (isLastCard) {
+        // Navigate immediately — don't wait for the reactive update
+        // that would push currentIndex out of bounds
+        recordResult({ sessionId, cardId: currentCardId, rating });
+        router.push(`/study/${setId}/results?sessionId=${sessionId}`);
+        return;
+      }
+
       try {
-        const result = await recordResult({
-          sessionId,
-          cardId: currentCardId,
-          rating,
-        });
+        await recordResult({ sessionId, cardId: currentCardId, rating });
         setRevealed(false);
-        if (result.isComplete) {
-          router.push(`/study/${setId}/results?sessionId=${sessionId}`);
-        }
       } finally {
         setIsSubmitting(false);
       }
