@@ -3,13 +3,18 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import { FieldDefinition, CardRating } from "@/lib/types";
 import { asId } from "@/lib/convexHelpers";
 import Link from "next/link";
+
+/** Server component guarantees session is in_progress before rendering this client. */
+type ActiveSession = Omit<Doc<"studySessions">, "status"> & {
+  status: "in_progress";
+};
 
 type Props = {
   setId: string;
@@ -74,8 +79,12 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
     );
   }
 
+  // Server component guarantees status is "in_progress" on initial load.
+  // useQuery may briefly return a completed session after handleRate navigates away.
+  const activeSession = session as ActiveSession;
+
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
-  const currentCardId = session.cardOrder[session.currentIndex];
+  const currentCardId = activeSession.cardOrder[activeSession.currentIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
   const fieldDefs = set.fieldDefinitions as FieldDefinition[];
 
@@ -98,7 +107,7 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
             &larr; Back
           </Link>
           <span className="text-sm text-muted">
-            {session.currentIndex + 1} / {session.cardOrder.length}
+            {activeSession.currentIndex + 1} / {activeSession.cardOrder.length}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -137,7 +146,7 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
         <div
           className="h-full bg-accent transition-all"
           style={{
-            width: `${(session.currentIndex / session.cardOrder.length) * 100}%`,
+            width: `${(activeSession.currentIndex / activeSession.cardOrder.length) * 100}%`,
           }}
         />
       </div>
@@ -147,8 +156,8 @@ export default function StudySessionClient({ setId, sessionId }: Props) {
           key={currentCardId}
           card={currentCard}
           fieldDefinitions={fieldDefs}
-          frontFields={session.frontFields}
-          backFields={session.backFields}
+          frontFields={activeSession.frontFields}
+          backFields={activeSession.backFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
         />
