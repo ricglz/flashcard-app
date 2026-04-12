@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { parseCsv, ParsedCsvResult } from "@/lib/csvParser";
 import { FieldDefinition } from "@/lib/types";
 
@@ -15,13 +15,11 @@ export default function CsvImporter({
 }: Props) {
   const [preview, setPreview] = useState<ParsedCsvResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = useCallback((file: File) => {
     setError(null);
-
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
@@ -33,6 +31,22 @@ export default function CsvImporter({
       setPreview(result);
     };
     reader.readAsText(file);
+  }, []);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith(".csv")) {
+      processFile(file);
+    } else {
+      setError("Please drop a .csv file.");
+    }
   };
 
   const handleConfirm = () => {
@@ -44,17 +58,30 @@ export default function CsvImporter({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Import from CSV
-        </label>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+          isDragging
+            ? "border-accent bg-accent-surface"
+            : "border-edge hover:border-muted"
+        }`}
+      >
         <input
           ref={fileInputRef}
           type="file"
           accept=".csv"
           onChange={handleFile}
-          className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-info-surface file:text-foreground hover:file:bg-surface-hover"
+          className="hidden"
         />
+        <p className="text-sm text-muted">
+          Drop a CSV file here or click to browse
+        </p>
       </div>
 
       {error && <p className="text-danger text-sm">{error}</p>}
