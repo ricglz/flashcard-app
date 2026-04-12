@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
-import { Id } from "../../../../../convex/_generated/dataModel";
 import { getAuthToken } from "@/lib/server";
+import { asId } from "@/lib/convexHelpers";
 import EditSetClient from "./EditSetClient";
 
 export default async function EditSetPage({
@@ -11,7 +11,7 @@ export default async function EditSetPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = await params;
-  const flashcardSetId = setId as Id<"flashcardSets">;
+  const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
 
   const preloadedSet = await preloadQuery(
