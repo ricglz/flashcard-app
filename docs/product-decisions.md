@@ -255,3 +255,6 @@ fieldDefinitions: [
 - Card annotations / personal notes
 - Multi-modal cards (images, audio clips)
 - Multi-language UX enhancements
+- **AI-powered weak spot analysis**: Analyze cards the user consistently gets wrong and suggest new card sets targeting those weak areas. For language learning: suggest phrases/topics containing difficult characters. For phrases: suggest a more focused card set drilling the specific patterns the user struggles with. May be most valuable for language learning use cases.
+- **Related card sets**: Link a card set to related sets that broaden or deepen the same topic. Could be user-curated or AI-suggested based on content overlap.
+- **Copy/import other users' card sets**: Users can browse shared sets and copy them into their own library. Distinct from the existing link-based sharing (which is view-only) — copying creates an independent clone the user can edit.
