@@ -4,25 +4,32 @@ import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import Link from "next/link";
 import TtsButton from "@/components/TtsButton";
+import SrsSetConfig from "@/components/SrsSetConfig";
 import { getTtsConfig, TypedFlashcardSet } from "@/lib/types";
+import type { Id } from "../../../../convex/_generated/dataModel";
 
 type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
+  preloadedUserSet: Preloaded<typeof api.userSets.get>;
 };
 
 export default function SetDetailClient({
   setId,
   preloadedSet,
   preloadedCards,
+  preloadedUserSet,
 }: Props) {
   const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
+  const userSet = usePreloadedQuery(preloadedUserSet);
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
   );
+
+  const isOwner = userSet?.role === "owner";
 
   return (
     <div className="min-h-screen">
@@ -37,12 +44,14 @@ export default function SetDetailClient({
           >
             Study
           </Link>
-          <Link
-            href={`/sets/${setId}/edit`}
-            className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
-          >
-            Edit
-          </Link>
+          {isOwner && (
+            <Link
+              href={`/sets/${setId}/edit`}
+              className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
+            >
+              Edit
+            </Link>
+          )}
         </div>
       </header>
 
@@ -55,15 +64,29 @@ export default function SetDetailClient({
           {cards.length} card{cards.length !== 1 ? "s" : ""}
         </p>
 
+        {userSet && (
+          <div className="mb-6">
+            <SrsSetConfig
+              setId={set._id as Id<"flashcardSets">}
+              srsEnabled={userSet.srsEnabled}
+              defaultFrontFields={userSet.defaultFrontFields}
+              defaultBackFields={userSet.defaultBackFields}
+              fieldDefinitions={set.fieldDefinitions}
+            />
+          </div>
+        )}
+
         {cards.length === 0 ? (
           <div className="text-center py-8 border rounded-lg">
             <p className="text-muted mb-3">No cards yet.</p>
-            <Link
-              href={`/sets/${setId}/edit`}
-              className="text-accent hover:underline text-sm"
-            >
-              Add cards
-            </Link>
+            {isOwner && (
+              <Link
+                href={`/sets/${setId}/edit`}
+                className="text-accent hover:underline text-sm"
+              >
+                Add cards
+              </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto border rounded-lg">

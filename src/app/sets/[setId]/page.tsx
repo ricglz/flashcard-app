@@ -14,27 +14,22 @@ export default async function SetDetailPage({
   const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
 
-  const preloadedSet = await preloadQuery(
-    api.flashcardSets.get,
-    { id: flashcardSetId },
-    { token }
-  );
+  const [preloadedSet, preloadedCards, preloadedUserSet] = await Promise.all([
+    preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+    preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+    preloadQuery(api.userSets.get, { setId: flashcardSetId }, { token }),
+  ]);
 
   if (!preloadedQueryResult(preloadedSet)) {
     redirect("/");
   }
-
-  const preloadedCards = await preloadQuery(
-    api.flashcards.list,
-    { setId: flashcardSetId },
-    { token }
-  );
 
   return (
     <SetDetailClient
       setId={setId}
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
+      preloadedUserSet={preloadedUserSet}
     />
   );
 }
