@@ -22,26 +22,42 @@
 - [x] Study session: flip through cards, verify TTS plays for character fields
 - [x] Study session: rate cards, verify progress bar advances
 - [x] Study session: leave mid-session, verify resume prompt appears
-- [ ] Add a few cards manually via the edit page
-- [ ] Study session: configure card limit (10/20/50/All)
-- [ ] Study session: complete session, verify results page
-- [ ] Browse mode: navigate back/forth, dismiss known cards
-- [ ] Browse mode: verify TTS mute/unmute toggle
-- [ ] Cross-device resume: start on one browser, resume in another
+- [x] Add a few cards manually via the edit page
+- [x] Study session: configure card limit (10/20/50/All)
+- [x] Study session: complete session, verify results page
+- [x] Browse mode: navigate back/forth, dismiss known cards
+- [x] Browse mode: verify TTS mute/unmute toggle
+- [x] Cross-device resume: start on one browser, resume in another
 
-## Phase 2 — Polish & Features
+## Phase 2 — SRS Queue (code complete, needs Convex deployment + manual testing)
+- [x] `userSets` table (per-user set link with role, SRS toggle + default front/back fields)
+- [x] `srsCards` table (per-user, per-card scheduling state)
+- [x] `reviewQueue` table (daily to-do list populated by cron)
+- [x] `srsReviews` table (immutable review log)
+- [x] SM-2 algorithm implementation + unit tests
+- [x] Access control migration (`ownerId` checks → `userSets` membership/ownership)
+- [x] `flashcardSets.create` auto-creates `userSets` row with `role: "owner"`
+- [x] Cascade delete of SRS data on set removal
+- [x] Daily cron job (populate queue with due + new cards, max 20/day global, shuffle, carry over unfinished)
+- [x] SRS review UI (`/srs` route — queue progress, card review, rating, completion screen)
+- [x] Dashboard: "X cards due today" indicator + "Review" header link
+- [x] SRS config per set (toggle + default front/back fields on set detail page)
+- [x] Dashboard: owner/member role-aware UI (edit/delete only for owners)
+- [ ] Backfill existing sets with `userSets` rows (run `internal.userSets.backfillExistingSets` after deploy)
+- [ ] Manual testing: create set → verify SRS enrollment → trigger cron → review cards at `/srs`
+
+## Phase 3 — Polish & Features
 - [ ] Telemetry / analytics
 - [ ] PWA manifest + offline support
 - [ ] Sharing via link
 - [ ] Progress tracking dashboard
 - [ ] Study streaks & daily goals
-- [ ] Spaced repetition + smart subsets — track per-card proficiency from rating history, auto-select due/weak cards for sessions
 
-## Phase 3 — Mobile
+## Phase 4 — Mobile
 - [ ] Expo React Native app
 - [ ] Push notifications for study reminders
 
-## Phase 4 — Advanced
+## Phase 5 — Advanced
 - [ ] AI card generation from prompts
 - [ ] Pronunciation validation (speech-to-text)
 - [ ] Card annotations / personal notes
