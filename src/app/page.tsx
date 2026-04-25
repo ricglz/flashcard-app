@@ -3,6 +3,7 @@
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import FlashcardSetList from "@/components/FlashcardSetList";
+import SrsQueueStatus from "@/components/SrsQueueStatus";
 import Link from "next/link";
 
 export default function Home() {
@@ -12,6 +13,12 @@ export default function Home() {
         <h1 className="text-xl font-bold">Flashcard App</h1>
         <div className="flex items-center gap-4">
           <Authenticated>
+            <Link
+              href="/srs"
+              className="px-4 py-2 border border-edge text-foreground rounded-lg hover:bg-surface-hover text-sm transition-colors"
+            >
+              Review
+            </Link>
             <Link
               href="/sets/new"
               className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
@@ -55,6 +62,7 @@ export default function Home() {
         </Unauthenticated>
 
         <Authenticated>
+          <SrsQueueStatus />
           <FlashcardSetList />
         </Authenticated>
       </main>

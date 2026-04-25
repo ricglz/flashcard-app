@@ -5,6 +5,7 @@ import { CardRating, CARD_RATINGS, CARD_RATING_LABELS } from "@/lib/types";
 type Props = {
   onRate: (rating: CardRating) => void;
   disabled?: boolean;
+  labels?: Record<CardRating, string>;
 };
 
 const RATING_COLORS: Record<CardRating, string> = {
@@ -14,7 +15,8 @@ const RATING_COLORS: Record<CardRating, string> = {
   easy: "bg-green-600 hover:bg-green-700",
 };
 
-export default function CardRatingButtons({ onRate, disabled }: Props) {
+export default function CardRatingButtons({ onRate, disabled, labels }: Props) {
+  const ratingLabels = labels ?? CARD_RATING_LABELS;
   return (
     <div className="grid grid-cols-2 sm:flex gap-2 justify-center">
       {CARD_RATINGS.map((rating) => (
@@ -24,7 +26,7 @@ export default function CardRatingButtons({ onRate, disabled }: Props) {
           disabled={disabled}
           className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${RATING_COLORS[rating]}`}
         >
-          {CARD_RATING_LABELS[rating]}
+          {ratingLabels[rating]}
         </button>
       ))}
     </div>
