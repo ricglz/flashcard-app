@@ -25,7 +25,7 @@ Anki is the gold standard for spaced-repetition flashcards. This app occupies a 
 | Platform | Desktop app + AnkiWeb + AnkiDroid (separate codebases) | Single PWA → Expo native, one codebase |
 | Sync | AnkiWeb (manual sync button) | Real-time via Convex, automatic cross-device resume |
 | AI generation | None (community add-ons only) | Planned: LLM-powered card generation from a prompt |
-| Spaced repetition | Core feature (SM-2) | Planned for Phase 2, not the sole focus |
+| Spaced repetition | Core feature (SM-2) | Dual-mode: Focus Study (on-demand) + SRS Queue (daily reviews) |
 
 **Positioning**: Anki's flexibility with Duolingo's approachability, Chinese-first.
 
@@ -213,6 +213,160 @@ fieldDefinitions: [
 - Language-specific UX enhancements (e.g., tone color coding) can be driven by field metadata (TTS lang, field roles)
 - Generalization of UX (language-specific rendering plugins) deferred until there's demand
 
+## Two Study Modes
+
+The app has two distinct study workstreams, each with its own purpose and UI:
+
+### Focus Study (existing)
+On-demand, set-based study — the current flow. User picks a set, configures front/back fields, studies a session of N cards, gets a score. No scheduling, no queue. Use case: "I want to drill this specific set right now."
+
+No changes needed to the existing implementation.
+
+### SRS Queue (new — Anki-inspired spaced repetition)
+
+A daily review queue powered by spaced repetition. Cards from SRS-enabled sets are scheduled for review based on past performance. The user opens the queue, reviews what's due today, and the algorithm schedules the next review.
+
+#### How it works
+
+1. **Enrollment**: When a user adds a set to their library, they can enable/disable SRS for it (default: on). This is stored on the `userSets` link table, not on the set itself — so linking another user's set in the future works naturally.
+
+2. **Daily cron job**: A scheduled Convex cron runs daily and populates the `reviewQueue` table. It checks each user's `srsCards` for cards where `nextReviewAt <= now`, plus picks new cards (never reviewed) up to the daily limit (default: 20). All eligible cards are shuffled together across sets, then inserted into the queue.
+
+3. **Review flow**: User opens the queue and sees their cards for the day ("12 of 30 done"). After revealing the answer, they rate recall: **Again** / **Hard** / **Good** / **Easy**. This matches the existing `cardResults` rating scale.
+
+4. **On review completion**: The SM-2 algorithm updates the card's scheduling state in `srsCards` (new interval, ease factor, `nextReviewAt`). A review log entry is created in `srsReviews`. The card is **removed from `reviewQueue`**.
+
+5. **Cross-set queue**: The queue pulls from ALL SRS-enabled sets for the user, shuffled together. The user doesn't pick a set — they just "do their daily reviews."
+
+6. **Study direction**: Each user defines default front/back fields per set (stored on `userSets`). During SRS review, the card is shown using its set's configured defaults.
+
+#### SRS algorithm (SM-2)
+
+The classic SM-2 algorithm, same foundation as Anki:
+
+- **ease_factor**: starts at 2.5, adjusted per review (min 1.3)
+- **interval**: first review = 1 day, second = 6 days, then `interval × ease_factor`
+- **Again** resets interval to 1 day and decreases ease
+- **Hard** slightly increases interval, slightly decreases ease
+- **Good** applies the standard interval formula
+- **Easy** applies a bonus multiplier and increases ease
+
+#### Schema changes
+
+**New table — `userSets`:**
+
+Per-user link to a set. Replaces the implicit "you own it" relationship and supports future set-sharing. Controls SRS enrollment and study direction defaults.
+
+```
+userSets: {
+  userId:           string              // Clerk user ID
+  setId:            Id<"flashcardSets">
+  srsEnabled:       boolean             // default: true — whether this set feeds the SRS queue
+  defaultFrontFields: string[]          // field names shown during SRS review
+  defaultBackFields:  string[]          // field names hidden during SRS review
+  createdAt:        number
+}
+// Indexes:
+//   by_userId: [userId]                — all sets in a user's library
+//   by_userId_setId: [userId, setId]   — lookup for a specific user+set
+//   by_setId: [setId]                  — all users linked to a set
+```
+
+**New table — `srsCards`:**
+
+Per-user, per-card SRS scheduling state. Created when a card's set is SRS-enrolled by the user.
+
+```
+srsCards: {
+  userId:         string              // Clerk user ID
+  cardId:         Id<"flashcards">
+  setId:          Id<"flashcardSets"> // denormalized for efficient per-set queries
+  easeFactor:     number              // starts at 2.5
+  interval:       number              // days until next review
+  repetitions:    number              // consecutive successful reviews (reset on "Again")
+  nextReviewAt:   number              // timestamp — when this card is next due
+  lastReviewedAt: optional number     // timestamp of most recent review
+  status:         "new" | "learning" | "review"  // Anki-style card states
+}
+// Indexes:
+//   by_userId_nextReview: [userId, nextReviewAt]  — cron uses this to find due cards
+//   by_userId_setId: [userId, setId]              — per-set management
+//   by_cardId_userId: [cardId, userId]            — lookup for a specific card+user
+```
+
+**New table — `reviewQueue`:**
+
+The daily to-do list. Populated by the cron job, drained as the user reviews cards.
+
+```
+reviewQueue: {
+  userId:    string              // Clerk user ID
+  cardId:    Id<"flashcards">
+  srsCardId: Id<"srsCards">     // link back to scheduling state
+  setId:     Id<"flashcardSets"> // denormalized for UI (field definitions lookup)
+  queuedAt:  number              // timestamp when cron added this
+  order:     number              // shuffled position within the day's queue
+}
+// Indexes:
+//   by_userId_order: [userId, order]  — fetch today's queue in order
+//   by_srsCardId: [srsCardId]         — lookup/delete after review
+```
+
+**New table — `srsReviews`:**
+
+Immutable log of every SRS review event. Separate from `cardResults` because SRS reviews are not tied to a study session — they're standalone.
+
+```
+srsReviews: {
+  userId:        string
+  cardId:        Id<"flashcards">
+  srsCardId:     Id<"srsCards">
+  rating:        "wrong" | "hard" | "good" | "easy"  // reuses existing rating type
+  timestamp:     number
+  // snapshot of scheduling state AFTER this review (useful for debugging/analytics)
+  newInterval:   number
+  newEaseFactor: number
+}
+// Indexes:
+//   by_srsCardId: [srsCardId]  — review history for a card
+//   by_userId:    [userId]     — user's review history
+```
+
+#### Card lifecycle
+
+```
+User adds set to library (userSets, srsEnabled: true)
+                     ↓
+      srsCards rows created for each card (status: "new")
+                     ↓
+      Daily cron runs → finds due cards + new cards (up to limit)
+                     ↓
+      Shuffles all eligible cards → inserts into reviewQueue
+                     ↓
+              User reviews card from queue
+                     ↓
+         SM-2 computes next interval
+                     ↓
+     srsCards updated (nextReviewAt, interval, easeFactor)
+     srsReviews row created (immutable log)
+     reviewQueue row deleted
+                     ↓
+        Card re-enters queue on a future day via cron
+```
+
+#### UX considerations
+
+- **Dashboard**: Show "X cards due today" prominently — this is the primary daily action
+- **Daily progress**: "12 of 30 reviewed" — the queue table makes this trivial to compute
+- **Mixed sets in queue**: Cards from different sets may have different field structures. The review UI adapts per card based on its set's field definitions and the user's configured front/back defaults
+- **Undo**: Allow undoing the last rating (important for misclicks). Revert the `srsCards` state, delete the `srsReviews` row, re-insert the `reviewQueue` row
+
+#### Resolved decisions
+
+- **Cron timing**: Fixed UTC schedule (no per-user timezone logic). Simple and predictable.
+- **Leftover queue items**: Carry over — unfinished cards stay in the queue until reviewed. The cron only adds newly due cards and new cards, it doesn't clear old ones.
+- **New card limit scope**: 20 new cards/day global across all sets. The cron picks from all SRS-enabled sets combined, not 20 per set.
+
 ## Pending Decisions
 
 ### Language field removal
@@ -258,7 +412,7 @@ fieldDefinitions: [
 ### Phase 4 — Advanced
 - AI card generation from prompts
 - Pronunciation validation
-- Spaced repetition algorithm
+- Spaced repetition — SRS Queue (see "Two Study Modes" section above)
 - Card annotations / personal notes
 - Multi-modal cards (images, audio clips)
 - Multi-language UX enhancements
