@@ -81,6 +81,13 @@ export const CARD_RATING_LABELS: Record<CardRating, string> = {
   easy: "Easy",
 };
 
+export const SRS_RATING_LABELS: Record<CardRating, string> = {
+  wrong: "Again",
+  hard: "Hard",
+  good: "Good",
+  easy: "Easy",
+};
+
 /** Numeric score per rating for computing session averages. */
 export const CARD_RATING_SCORES: Record<CardRating, number> = {
   wrong: 0,

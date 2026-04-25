@@ -18,6 +18,24 @@ export const fieldDefinitionValidator = v.object({
   order: v.number(),
 });
 
+export const ratingValidator = v.union(
+  v.literal("wrong"),
+  v.literal("hard"),
+  v.literal("good"),
+  v.literal("easy")
+);
+
+export const srsCardStatusValidator = v.union(
+  v.literal("new"),
+  v.literal("learning"),
+  v.literal("review")
+);
+
+export const userSetRoleValidator = v.union(
+  v.literal("owner"),
+  v.literal("member")
+);
+
 export default defineSchema({
   flashcardSets: defineTable({
     name: v.string(),
@@ -56,12 +74,59 @@ export default defineSchema({
   cardResults: defineTable({
     sessionId: v.id("studySessions"),
     cardId: v.id("flashcards"),
-    rating: v.union(
-      v.literal("wrong"),
-      v.literal("hard"),
-      v.literal("good"),
-      v.literal("easy")
-    ),
+    rating: ratingValidator,
     timestamp: v.number(),
   }).index("by_sessionId", ["sessionId"]),
+
+  userSets: defineTable({
+    userId: v.string(),
+    setId: v.id("flashcardSets"),
+    role: userSetRoleValidator,
+    srsEnabled: v.boolean(),
+    defaultFrontFields: v.array(v.string()),
+    defaultBackFields: v.array(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_setId", ["userId", "setId"])
+    .index("by_setId", ["setId"]),
+
+  srsCards: defineTable({
+    userId: v.string(),
+    cardId: v.id("flashcards"),
+    setId: v.id("flashcardSets"),
+    easeFactor: v.number(),
+    interval: v.number(),
+    repetitions: v.number(),
+    nextReviewAt: v.number(),
+    lastReviewedAt: v.optional(v.number()),
+    status: srsCardStatusValidator,
+  })
+    .index("by_userId_and_nextReviewAt", ["userId", "nextReviewAt"])
+    .index("by_userId_and_setId", ["userId", "setId"])
+    .index("by_cardId_and_userId", ["cardId", "userId"])
+    .index("by_setId", ["setId"]),
+
+  reviewQueue: defineTable({
+    userId: v.string(),
+    cardId: v.id("flashcards"),
+    srsCardId: v.id("srsCards"),
+    setId: v.id("flashcardSets"),
+    queuedAt: v.number(),
+    order: v.number(),
+  })
+    .index("by_userId_and_order", ["userId", "order"])
+    .index("by_srsCardId", ["srsCardId"]),
+
+  srsReviews: defineTable({
+    userId: v.string(),
+    cardId: v.id("flashcards"),
+    srsCardId: v.id("srsCards"),
+    rating: ratingValidator,
+    timestamp: v.number(),
+    newInterval: v.number(),
+    newEaseFactor: v.number(),
+  })
+    .index("by_srsCardId", ["srsCardId"])
+    .index("by_userId", ["userId"]),
 });
