@@ -1,13 +1,17 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertMember, assertOwner } from "./userSets";
 
 export const list = query({
   args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    const set = await ctx.db.get(args.setId);
-    if (!set || set.ownerId !== identity.tokenIdentifier) return [];
+    try {
+      await assertMember(ctx, identity.tokenIdentifier, args.setId);
+    } catch {
+      return [];
+    }
     return await ctx.db
       .query("flashcards")
       .withIndex("by_setId", (q) => q.eq("setId", args.setId))
@@ -24,9 +28,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const set = await ctx.db.get(args.setId);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    await assertOwner(ctx, identity.tokenIdentifier, args.setId);
     return await ctx.db.insert("flashcards", args);
   },
 });
@@ -44,9 +46,7 @@ export const batchCreate = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const set = await ctx.db.get(args.setId);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    await assertOwner(ctx, identity.tokenIdentifier, args.setId);
     const ids = [];
     for (const card of args.cards) {
       const id = await ctx.db.insert("flashcards", {
@@ -70,9 +70,7 @@ export const update = mutation({
     if (!identity) throw new Error("Not authenticated");
     const card = await ctx.db.get(args.id);
     if (!card) throw new Error("Not found");
-    const set = await ctx.db.get(card.setId);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    await assertOwner(ctx, identity.tokenIdentifier, card.setId);
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -88,9 +86,7 @@ export const remove = mutation({
     if (!identity) throw new Error("Not authenticated");
     const card = await ctx.db.get(args.id);
     if (!card) throw new Error("Not found");
-    const set = await ctx.db.get(card.setId);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    await assertOwner(ctx, identity.tokenIdentifier, card.setId);
     await ctx.db.delete(args.id);
   },
 });

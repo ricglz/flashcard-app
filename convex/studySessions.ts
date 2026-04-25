@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { ratingValidator } from "./schema";
+import { assertMember } from "./userSets";
 
 export const RATING_SCORES: Record<string, number> = {
   wrong: 0,
@@ -74,8 +76,8 @@ export const start = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const set = await ctx.db.get(args.setId);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    if (!set) throw new Error("Not found");
+    await assertMember(ctx, identity.tokenIdentifier, args.setId);
 
     // Validate front/back fields
     if (args.frontFields.length === 0)
@@ -142,12 +144,7 @@ export const recordResult = mutation({
   args: {
     sessionId: v.id("studySessions"),
     cardId: v.id("flashcards"),
-    rating: v.union(
-      v.literal("wrong"),
-      v.literal("hard"),
-      v.literal("good"),
-      v.literal("easy")
-    ),
+    rating: ratingValidator,
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

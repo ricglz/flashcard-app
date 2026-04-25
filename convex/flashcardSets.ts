@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { fieldDefinitionValidator } from "./schema";
+import { assertOwner } from "./userSets";
 
 export function validateSetFields(
   name: string | undefined,
@@ -28,10 +29,18 @@ export const list = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    return await ctx.db
-      .query("flashcardSets")
-      .withIndex("by_ownerId", (q) => q.eq("ownerId", identity.tokenIdentifier))
+    const links = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .take(100);
+    const sets = await Promise.all(
+      links.map(async (link) => {
+        const set = await ctx.db.get(link.setId);
+        if (!set) return null;
+        return { ...set, userSet: link };
+      })
+    );
+    return sets.filter((s) => s !== null);
   },
 });
 
@@ -41,7 +50,14 @@ export const get = query({
     const set = await ctx.db.get(args.id);
     if (!set) return null;
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity || set.ownerId !== identity.tokenIdentifier) return null;
+    if (!identity) return null;
+    const link = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId_and_setId", (q) =>
+        q.eq("userId", identity.tokenIdentifier).eq("setId", args.id)
+      )
+      .first();
+    if (!link) return null;
     return set;
   },
 });
@@ -56,13 +72,29 @@ export const create = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     validateSetFields(args.name, args.fieldDefinitions);
-    return await ctx.db.insert("flashcardSets", {
+    const setId = await ctx.db.insert("flashcardSets", {
       name: args.name,
       description: args.description,
       fieldDefinitions: args.fieldDefinitions,
       ownerId: identity.tokenIdentifier,
       createdAt: Date.now(),
     });
+
+    const sorted = [...args.fieldDefinitions].sort((a, b) => a.order - b.order);
+    const defaultFrontFields = sorted.length > 0 ? [sorted[0].name] : [];
+    const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
+
+    await ctx.db.insert("userSets", {
+      userId: identity.tokenIdentifier,
+      setId,
+      role: "owner",
+      srsEnabled: true,
+      defaultFrontFields,
+      defaultBackFields,
+      createdAt: Date.now(),
+    });
+
+    return setId;
   },
 });
 
@@ -76,9 +108,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const set = await ctx.db.get(args.id);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    await assertOwner(ctx, identity.tokenIdentifier, args.id);
     validateSetFields(args.name, args.fieldDefinitions);
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
@@ -93,9 +123,8 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    const set = await ctx.db.get(args.id);
-    if (!set || set.ownerId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    await assertOwner(ctx, identity.tokenIdentifier, args.id);
+
     // Delete cards in batches
     let cardBatch = await ctx.db
       .query("flashcards")
@@ -110,6 +139,7 @@ export const remove = mutation({
         .withIndex("by_setId", (q) => q.eq("setId", args.id))
         .take(500);
     }
+
     // Delete sessions and their card results
     let sessionBatch = await ctx.db
       .query("studySessions")
@@ -141,6 +171,44 @@ export const remove = mutation({
         .withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id))
         .take(500);
     }
+
+    // Delete SRS data for all users linked to this set
+    let srsBatch = await ctx.db
+      .query("srsCards")
+      .withIndex("by_setId", (q) => q.eq("setId", args.id))
+      .take(500);
+    while (srsBatch.length > 0) {
+      for (const srsCard of srsBatch) {
+        const queueItems = await ctx.db
+          .query("reviewQueue")
+          .withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id))
+          .take(100);
+        for (const qi of queueItems) {
+          await ctx.db.delete(qi._id);
+        }
+        await ctx.db.delete(srsCard._id);
+      }
+      srsBatch = await ctx.db
+        .query("srsCards")
+        .withIndex("by_setId", (q) => q.eq("setId", args.id))
+        .take(500);
+    }
+
+    // Delete userSets links
+    let linkBatch = await ctx.db
+      .query("userSets")
+      .withIndex("by_setId", (q) => q.eq("setId", args.id))
+      .take(500);
+    while (linkBatch.length > 0) {
+      for (const link of linkBatch) {
+        await ctx.db.delete(link._id);
+      }
+      linkBatch = await ctx.db
+        .query("userSets")
+        .withIndex("by_setId", (q) => q.eq("setId", args.id))
+        .take(500);
+    }
+
     await ctx.db.delete(args.id);
   },
 });
