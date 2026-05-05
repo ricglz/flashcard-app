@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
-import { computeSM2, computeNextReviewAt } from "./srs";
+import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from "./srs";
 import type { CardRating } from "../src/lib/types";
 
 export const getQueueStats = query({
@@ -17,9 +17,13 @@ export const getQueueStats = query({
       )
       .take(500);
 
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    const todayMs = todayStart.getTime();
+    const userSettings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .first();
+    const dayResetUtcHour =
+      userSettings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+    const todayMs = computeDayStartMs(dayResetUtcHour);
 
     const todayReviews = await ctx.db
       .query("srsReviews")
@@ -32,6 +36,7 @@ export const getQueueStats = query({
     return {
       remaining: remaining.length,
       reviewedToday,
+      dayResetUtcHour,
     };
   },
 });

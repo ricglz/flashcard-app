@@ -6,6 +6,7 @@ export const SRS_DEFAULTS = {
   INITIAL_REPETITIONS: 0,
   MAX_NEW_CARDS_PER_DAY: 20,
   MIN_EASE_FACTOR: 1.3,
+  DAY_RESET_UTC_HOUR: 4,
 } as const;
 
 export type SrsCardStatus = "new" | "learning" | "review";
@@ -79,6 +80,15 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function computeNextReviewAt(interval: number, now: number): number {
   return now + interval * MS_PER_DAY;
+}
+
+export function computeDayStartMs(dayResetUtcHour: number): number {
+  const now = new Date();
+  now.setUTCHours(dayResetUtcHour, 0, 0, 0);
+  if (now.getTime() > Date.now()) {
+    now.setUTCDate(now.getUTCDate() - 1);
+  }
+  return now.getTime();
 }
 
 export function selectNewCardsRoundRobin<T>(

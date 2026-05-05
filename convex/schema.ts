@@ -133,5 +133,6 @@ export default defineSchema({
   userSettings: defineTable({
     userId: v.string(),
     maxNewCardsPerDay: v.number(),
+    dayResetUtcHour: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 });

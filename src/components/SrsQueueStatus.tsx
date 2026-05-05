@@ -5,37 +5,77 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
 
+function formatResetTime(dayResetUtcHour: number): string {
+  const d = new Date();
+  d.setUTCHours(dayResetUtcHour, 0, 0, 0);
+  if (d.getTime() <= Date.now()) {
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function utcHourToLocal(utcHour: number): number {
+  const d = new Date();
+  d.setUTCHours(utcHour, 0, 0, 0);
+  return d.getHours();
+}
+
+function localHourToUtc(localHour: number): number {
+  const d = new Date();
+  d.setHours(localHour, 0, 0, 0);
+  return d.getUTCHours();
+}
+
 export default function SrsQueueStatus() {
   const stats = useQuery(api.srsReviewQueue.getQueueStats);
   const settings = useQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
   const [showSettings, setShowSettings] = useState(false);
   const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
+  const [localResetHour, setLocalResetHour] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   if (stats === undefined) return null;
   if (stats === null) return null;
 
   const currentMax = settings?.maxNewCardsPerDay ?? 20;
-  const editValue = localMaxNew ?? String(currentMax);
-  const parsedValue = Math.max(1, Math.min(100, Number(editValue) || 1));
+  const currentResetUtcHour = settings?.dayResetUtcHour ?? 4;
+  const editMaxValue = localMaxNew ?? String(currentMax);
+  const parsedMaxValue = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
+  const editResetHour =
+    localResetHour ?? String(utcHourToLocal(currentResetUtcHour));
+  const parsedResetHour = Math.max(
+    0,
+    Math.min(23, Math.round(Number(editResetHour) || 0))
+  );
 
   async function handleSave() {
     setIsSaving(true);
     try {
-      await updateSettings({ maxNewCardsPerDay: parsedValue });
+      await updateSettings({
+        maxNewCardsPerDay: parsedMaxValue,
+        dayResetUtcHour: localHourToUtc(parsedResetHour),
+      });
       setShowSettings(false);
       setLocalMaxNew(null);
+      setLocalResetHour(null);
     } finally {
       setIsSaving(false);
     }
   }
 
+  const resetTimeStr = formatResetTime(stats.dayResetUtcHour);
+
   if (stats.remaining === 0 && stats.reviewedToday === 0) {
     return (
       <div className="mb-6 p-4 border border-edge rounded-lg">
         <div className="flex items-center justify-between">
-          <p className="text-muted text-sm">No cards to review right now.</p>
+          <div>
+            <p className="text-muted text-sm">No cards to review right now.</p>
+            <p className="text-xs text-muted mt-1">
+              Next reset at {resetTimeStr}
+            </p>
+          </div>
           <button
             onClick={() => setShowSettings((v) => !v)}
             className="text-muted hover:text-foreground transition-colors"
@@ -46,9 +86,11 @@ export default function SrsQueueStatus() {
         </div>
         {showSettings && (
           <SettingsPanel
-            editValue={editValue}
+            editMaxValue={editMaxValue}
+            editResetHour={editResetHour}
             isSaving={isSaving}
-            onChangeValue={(v) => setLocalMaxNew(v)}
+            onChangeMaxValue={(v) => setLocalMaxNew(v)}
+            onChangeResetHour={(v) => setLocalResetHour(v)}
             onSave={handleSave}
           />
         )}
@@ -60,10 +102,15 @@ export default function SrsQueueStatus() {
     return (
       <div className="mb-6 p-4 border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950 rounded-lg">
         <div className="flex items-center justify-between">
-          <p className="text-green-700 dark:text-green-300 font-medium">
-            All done for today! You reviewed {stats.reviewedToday} card
-            {stats.reviewedToday !== 1 ? "s" : ""}.
-          </p>
+          <div>
+            <p className="text-green-700 dark:text-green-300 font-medium">
+              All done for today! You reviewed {stats.reviewedToday} card
+              {stats.reviewedToday !== 1 ? "s" : ""}.
+            </p>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+              Next reset at {resetTimeStr}
+            </p>
+          </div>
           <button
             onClick={() => setShowSettings((v) => !v)}
             className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 transition-colors"
@@ -74,9 +121,11 @@ export default function SrsQueueStatus() {
         </div>
         {showSettings && (
           <SettingsPanel
-            editValue={editValue}
+            editMaxValue={editMaxValue}
+            editResetHour={editResetHour}
             isSaving={isSaving}
-            onChangeValue={(v) => setLocalMaxNew(v)}
+            onChangeMaxValue={(v) => setLocalMaxNew(v)}
+            onChangeResetHour={(v) => setLocalResetHour(v)}
             onSave={handleSave}
           />
         )}
@@ -115,9 +164,11 @@ export default function SrsQueueStatus() {
       </div>
       {showSettings && (
         <SettingsPanel
-          editValue={editValue}
+          editMaxValue={editMaxValue}
+          editResetHour={editResetHour}
           isSaving={isSaving}
-          onChangeValue={(v) => setLocalMaxNew(v)}
+          onChangeMaxValue={(v) => setLocalMaxNew(v)}
+          onChangeResetHour={(v) => setLocalResetHour(v)}
           onSave={handleSave}
         />
       )}
@@ -145,42 +196,69 @@ function GearIcon() {
 }
 
 function SettingsPanel({
-  editValue,
+  editMaxValue,
+  editResetHour,
   isSaving,
-  onChangeValue,
+  onChangeMaxValue,
+  onChangeResetHour,
   onSave,
 }: {
-  editValue: string;
+  editMaxValue: string;
+  editResetHour: string;
   isSaving: boolean;
-  onChangeValue: (v: string) => void;
+  onChangeMaxValue: (v: string) => void;
+  onChangeResetHour: (v: string) => void;
   onSave: () => void;
 }) {
   return (
-    <div className="mt-3 pt-3 border-t border-edge">
-      <label className="text-xs text-muted block mb-1">
-        New cards per day (across all sets)
-      </label>
-      <div className="flex items-center gap-2">
+    <div className="mt-3 pt-3 border-t border-edge space-y-3">
+      <div>
+        <label className="text-xs text-muted block mb-1">
+          New cards per day (across all sets)
+        </label>
         <input
           type="number"
           min={1}
           max={100}
-          value={editValue}
-          onChange={(e) => onChangeValue(e.target.value)}
+          value={editMaxValue}
+          onChange={(e) => onChangeMaxValue(e.target.value)}
           onBlur={(e) => {
-            const clamped = Math.max(1, Math.min(100, Number(e.target.value) || 1));
-            onChangeValue(String(clamped));
+            const clamped = Math.max(
+              1,
+              Math.min(100, Number(e.target.value) || 1)
+            );
+            onChangeMaxValue(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
-        <button
-          onClick={onSave}
-          disabled={isSaving}
-          className="px-3 py-1 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
-        >
-          {isSaving ? "..." : "Save"}
-        </button>
       </div>
+      <div>
+        <label className="text-xs text-muted block mb-1">
+          Day resets at (local hour, 0-23)
+        </label>
+        <input
+          type="number"
+          min={0}
+          max={23}
+          value={editResetHour}
+          onChange={(e) => onChangeResetHour(e.target.value)}
+          onBlur={(e) => {
+            const clamped = Math.max(
+              0,
+              Math.min(23, Math.round(Number(e.target.value) || 0))
+            );
+            onChangeResetHour(String(clamped));
+          }}
+          className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
+        />
+      </div>
+      <button
+        onClick={onSave}
+        disabled={isSaving}
+        className="px-3 py-1 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
+      >
+        {isSaving ? "..." : "Save"}
+      </button>
     </div>
   );
 }
