@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation, useQuery, Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
@@ -22,6 +22,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const router = useRouter();
   const queue = usePreloadedQuery(preloadedQueue);
   const recordReview = useMutation(api.srsReviewQueue.recordReview);
+  const stats = useQuery(api.srsReviewQueue.getQueueStats);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +73,8 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
           (reviewedCount * 3)
         : 0;
 
+    const totalReviewed = stats?.reviewedToday ?? reviewedCount;
+
     return (
       <div className="min-h-screen flex flex-col">
         <header className="border-b px-4 sm:px-6 py-4">
@@ -83,8 +86,8 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
           <div className="max-w-md w-full text-center">
             <h2 className="text-2xl font-bold mb-2">All done!</h2>
             <p className="text-muted mb-6">
-              You reviewed {reviewedCount} card
-              {reviewedCount !== 1 ? "s" : ""} today.
+              You reviewed {totalReviewed} card
+              {totalReviewed !== 1 ? "s" : ""} today.
             </p>
 
             <div className="bg-card-bg border border-card-border rounded-xl p-6 mb-6">
