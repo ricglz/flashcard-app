@@ -11,6 +11,8 @@
 - [ ] TTS playback speed control (slider or preset buttons in session header)
 - [ ] Consider allowing fields to be excluded from the card entirely (e.g., Character used only for TTS, not displayed — currently all fields must be front or back)
 - [ ] Mobile responsiveness verification (responsive padding and layouts are in place, needs device testing)
+- [ ] "Create Another" option after set creation — reset wizard to step 1 instead of always navigating to the new set
+- [ ] Bulk set creation — quick-create mode or streamlined flow for adding many sets at once (noted: the full wizard is too heavyweight when creating several sets in a row)
 
 ### Next: Manual Testing (ongoing)
 - [x] Verify sign-in/sign-out flow works
@@ -43,23 +45,46 @@
 - [x] Dashboard: "X cards due today" indicator + "Review" header link
 - [x] SRS config per set (toggle + default front/back fields on set detail page)
 - [x] Dashboard: owner/member role-aware UI (edit/delete only for owners)
-- [ ] Backfill existing sets with `userSets` rows (run `internal.userSets.backfillExistingSets` after deploy)
-- [ ] Manual testing: create set → verify SRS enrollment → trigger cron → review cards at `/srs`
+- [x] Backfill existing sets with `userSets` rows (run `internal.userSets.backfillExistingSets` after deploy)
 
-## Phase 3 — Polish & Features
+### Manual Testing
+- [ ] Set detail page: verify SRS Settings section appears with toggle and front/back config
+- [ ] Set detail page: toggle SRS off/on, change front/back defaults, save
+- [ ] Dashboard: trigger queue population via Convex dashboard (`internal.srsEngine.populateQueues`)
+- [ ] Dashboard: verify "X cards to review" indicator appears with "Start Review" button
+- [ ] SRS review (`/srs`): cards render with reveal + Again/Hard/Good/Easy buttons
+- [ ] SRS review: rate cards, verify progress bar advances and cards leave queue
+- [ ] SRS review: TTS auto-plays on reveal, mute toggle works
+- [ ] SRS review: finish all cards, verify completion screen with score breakdown
+- [ ] SRS review: "End Session" button returns to dashboard with progress saved
+- [ ] Dashboard: after completing all reviews, verify "All done for today!" message
+- [ ] Existing Focus Study flow still works (create set, study, browse, results)
+- [ ] Create a new set: verify `userSets` row auto-created (SRS Settings visible on detail page)
+- [ ] Delete a set: verify SRS data cleaned up (no orphaned srsCards/reviewQueue rows)
+
+## Phase 3 — Offline & Local-First
+- [ ] Research: evaluate local-first options (Convex offline caching vs. local DB + sync layer)
+- [ ] PWA offline support — service worker caching app shell + static assets
+- [ ] Offline data access — cache sets/cards for offline reads
+- [ ] Offline write queue — queue mutations and sync when back online
+- [ ] TTS playback speed control (slider or preset in session header)
+
+## Phase 4 — Polish & Features
 - [ ] Telemetry / analytics
-- [ ] PWA manifest + offline support
 - [ ] Sharing via link
 - [ ] Progress tracking dashboard
 - [ ] Study streaks & daily goals
 
-## Phase 4 — Mobile
+## Phase 5 — Mobile
 - [ ] Expo React Native app
 - [ ] Push notifications for study reminders
 
-## Phase 5 — Advanced
+## Phase 6 — Advanced
 - [ ] AI card generation from prompts
+- [ ] AI-powered card suggestions based on SRS performance (design: `docs/ai-card-suggestions.md`)
 - [ ] Pronunciation validation (speech-to-text)
-- [ ] Card annotations / personal notes
+- [ ] Card flags & annotations (flag cards as difficult, attach personal notes)
+- [ ] Difficult cards cross-set view (SRS-derived + flags + focus study history)
+- [ ] Per-character TTS playback (tap individual characters to hear them spoken)
 - [ ] Multi-modal cards (images, audio clips)
 - [ ] Multi-language UX enhancements

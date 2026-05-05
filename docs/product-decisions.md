@@ -80,6 +80,8 @@ This replaces language presets — the preset concept becomes unnecessary becaus
 - TTS voices expect native script (hanzi for Chinese, kanji/kana for Japanese) — pinyin romanization produces garbled output
 - Plays audio on demand during card review, auto-plays on reveal with mute/unmute toggle
 - **Open question**: TTS is on the Character field (native script). The user's study flow is pinyin-oriented, so hearing pronunciation on the character side may feel disconnected. Possible solutions: TTS on both fields, or an external TTS API that handles pinyin.
+- **Speed control (planned)**: Currently hardcoded to `0.75` rate in `src/lib/tts.ts`. Add a user-facing speed slider or preset buttons (0.5x / 0.75x / 1.0x) in the session header. The Web Speech API `SpeechSynthesisUtterance.rate` property already supports this — just needs UI and a persisted preference.
+- **Per-character playback (planned)**: Tap an individual character during review to hear just that character spoken in isolation. Useful when a multi-character phrase is too fast or the user wants to focus on one syllable. The existing `speak()` function accepts any string, so this is a UI interaction change — add tap handlers on individual characters that call `speak(char, lang)`.
 - **Optional high-quality TTS (nice to have)**: Users can provide their own API key (Google Cloud TTS, OpenAI TTS, etc.) for natural-sounding voices. Purely opt-in — Web Speech API remains the default. Requires: user key storage in Convex, Convex action to proxy TTS API calls, audio caching to avoid redundant API calls for the same text. See `docs/tts-api-research.md` for detailed comparison and architecture.
 
 ### 4. Scoring
@@ -121,13 +123,31 @@ All AI features follow a **bring-your-own-key** approach: the app provides the U
 - Lightweight — no leaderboards or social pressure, just personal motivation
 - Inspired by Duolingo's streak mechanic but without the guilt-trip notifications
 
-### 9. Card Annotations / Notes (Future)
+### 9. Card Flags & Annotations (Future)
+- Users can **flag** individual cards as "difficult" or "needs attention" — a lightweight marker separate from SRS scoring
+- Flags capture intent the algorithm can't infer (e.g., "got it right but was guessing", "ask teacher about this tone")
 - Users can attach **personal notes** to individual cards (mnemonics, example sentences, memory aids)
 - Notes are per-user, not per-card — if a shared set is imported, each user's notes are private
 - Displayed below the card during review (toggle-able)
 - Useful for Chinese: users often have personal mnemonics for characters
 
-### 10. Multi-Modal Cards (Future)
+### 10. Difficult Cards View (Future)
+A cross-set view that surfaces cards the user is struggling with, regardless of which set they belong to. Primary daily use case: review problem cards before a tutoring session, or re-study them in a focused batch.
+
+**Data sources (layered):**
+1. **SRS-derived** (automatic): Query `srsCards` for low ease factors (near the 1.3 minimum), high lapse counts, or `status: "learning"` with many repetitions. Zero user effort — surfaces what the algorithm already knows. Requires SRS to be deployed and cards to have review history.
+2. **Focus Study history**: Query `cardResults` for cards rated "wrong" or "hard" across sessions. Requires joining through `studySessions` to get set context — less direct than SRS data but covers non-SRS study.
+3. **Manual flags**: User-flagged cards (see Section 9). Captures struggles the algorithm misses.
+
+**UX:**
+- Top-level page (e.g., `/difficult`) accessible from the dashboard — not scoped to a single set
+- Cards grouped by set, each showing the card content + reason it's surfaced (low ease, flagged, recent "wrong" ratings)
+- Actions: re-study as a batch (ad-hoc session from the filtered cards), unflag, add/edit notes
+- Filter/sort by: source (SRS / flags / focus study), set, date last reviewed
+
+**Implementation note:** Start with SRS data after deploy (simplest query, best signal). Layer in flags and focus study history as follow-ups.
+
+### 11. Multi-Modal Cards (Future)
 - Support **images** as field values (e.g., a picture of the character's stroke order, a photo for visual vocabulary)
 - Support **audio clips** as field values (recorded pronunciation, not just TTS)
 - Stored via Convex file storage
@@ -204,9 +224,10 @@ fieldDefinitions: [
 - If importing into an existing set, columns must match existing field definitions
 
 ### Storage Strategy
-- **Local-first**: data stored in browser (IndexedDB or similar) for offline use
-- **Convex sync**: background sync to cloud when online
-- **Conflict resolution**: last-write-wins for simplicity (Convex handles this)
+- **Cloud-first with offline cache**: Convex is the source of truth, with IndexedDB as a local read cache and offline write queue
+- **Offline support**: Service worker (Serwist) caches app shell; IndexedDB mirrors query data for offline reads; mutations queue locally and sync on reconnect
+- **Conflict resolution**: server wins on sync — local cache refreshed from Convex after outbox drain
+- See `docs/offline-strategy.md` for full research, alternatives explored, and implementation plan
 
 ## Architecture Approach
 - **Chinese-first UX, generic data model** — field-based structure supports any subject/language, but the UI is optimized for Chinese (tone indicators, pinyin display, Chinese TTS voices)
@@ -413,10 +434,11 @@ User adds set to library (userSets, srsEnabled: true)
 - AI card generation from prompts
 - Pronunciation validation
 - Spaced repetition — SRS Queue (see "Two Study Modes" section above)
-- Card annotations / personal notes
+- Card flags & annotations (see Section 9)
+- Difficult cards cross-set view (see Section 10)
 - Multi-modal cards (images, audio clips)
 - Multi-language UX enhancements
-- **AI-powered weak spot analysis**: Analyze cards the user consistently gets wrong and suggest new card sets targeting those weak areas. For language learning: suggest phrases/topics containing difficult characters. For phrases: suggest a more focused card set drilling the specific patterns the user struggles with. May be most valuable for language learning use cases.
+- **AI-powered weak spot analysis**: Analyze cards the user consistently gets wrong and suggest new cards targeting those weak areas. Uses SRS performance data (ease factors, review history, card status) to identify struggles, then sends context to an LLM to generate targeted cards. See `docs/ai-card-suggestions.md` for full design.
 - **Related card sets**: Link a card set to related sets that broaden or deepen the same topic. Could be user-curated or AI-suggested based on content overlap.
 - **Copy/import other users' card sets**: Users can browse shared sets and copy them into their own library. Distinct from the existing link-based sharing (which is view-only) — copying creates an independent clone the user can edit.
 - **Cross-field word alignment (exploratory)**: Map individual tokens across fields (e.g., 你 ↔ nǐ ↔ you) with UI highlighting. Useful for language learning but complex — word boundaries differ across languages, pinyin syllables don't always map 1:1 to meaning words, and sentence-level alignment is a hard problem. Could be manual (user/program defines mappings) or AI-assisted. Needs research before committing.
