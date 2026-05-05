@@ -129,4 +129,9 @@ export default defineSchema({
   })
     .index("by_srsCardId", ["srsCardId"])
     .index("by_userId", ["userId"]),
+
+  userSettings: defineTable({
+    userId: v.string(),
+    maxNewCardsPerDay: v.number(),
+  }).index("by_userId", ["userId"]),
 });

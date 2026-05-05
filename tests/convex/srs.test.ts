@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeSM2, computeNextReviewAt, SRS_DEFAULTS } from "../../convex/srs";
+import { computeSM2, computeNextReviewAt, selectNewCardsRoundRobin, SRS_DEFAULTS } from "../../convex/srs";
 
 describe("computeSM2", () => {
   const defaults = {
@@ -140,5 +140,56 @@ describe("computeNextReviewAt", () => {
   it("returns now for zero interval", () => {
     const now = 1000000;
     expect(computeNextReviewAt(0, now)).toBe(now);
+  });
+});
+
+describe("selectNewCardsRoundRobin", () => {
+  it("distributes evenly across sets", () => {
+    const setA = ["A1", "A2", "A3", "A4"];
+    const setB = ["B1", "B2", "B3", "B4"];
+    const setC = ["C1", "C2", "C3", "C4"];
+    const result = selectNewCardsRoundRobin([setA, setB, setC], 9);
+    expect(result).toEqual(["A1", "B1", "C1", "A2", "B2", "C2", "A3", "B3", "C3"]);
+  });
+
+  it("handles unequal set sizes", () => {
+    const setA = ["A1"];
+    const setB = ["B1", "B2", "B3", "B4"];
+    const result = selectNewCardsRoundRobin([setA, setB], 5);
+    expect(result).toEqual(["A1", "B1", "B2", "B3", "B4"]);
+  });
+
+  it("caps at the global limit", () => {
+    const setA = ["A1", "A2", "A3"];
+    const setB = ["B1", "B2", "B3"];
+    const result = selectNewCardsRoundRobin([setA, setB], 3);
+    expect(result).toEqual(["A1", "B1", "A2"]);
+  });
+
+  it("returns empty when limit is 0", () => {
+    const result = selectNewCardsRoundRobin([["A1", "A2"]], 0);
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty when no sets provided", () => {
+    const result = selectNewCardsRoundRobin([], 10);
+    expect(result).toEqual([]);
+  });
+
+  it("returns all cards when limit exceeds total available", () => {
+    const setA = ["A1", "A2"];
+    const setB = ["B1"];
+    const result = selectNewCardsRoundRobin([setA, setB], 100);
+    expect(result).toEqual(["A1", "B1", "A2"]);
+  });
+
+  it("works with a single set", () => {
+    const result = selectNewCardsRoundRobin([["A1", "A2", "A3"]], 2);
+    expect(result).toEqual(["A1", "A2"]);
+  });
+
+  it("handles negative limit", () => {
+    const result = selectNewCardsRoundRobin([["A1"]], -5);
+    expect(result).toEqual([]);
   });
 });

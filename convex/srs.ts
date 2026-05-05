@@ -80,3 +80,26 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export function computeNextReviewAt(interval: number, now: number): number {
   return now + interval * MS_PER_DAY;
 }
+
+export function selectNewCardsRoundRobin<T>(
+  perSetCards: T[][],
+  limit: number
+): T[] {
+  const result: T[] = [];
+  if (limit <= 0 || perSetCards.length === 0) return result;
+
+  const indices = perSetCards.map(() => 0);
+  let exhausted = false;
+  while (!exhausted && result.length < limit) {
+    exhausted = true;
+    for (let s = 0; s < perSetCards.length; s++) {
+      if (result.length >= limit) break;
+      if (indices[s] < perSetCards[s].length) {
+        result.push(perSetCards[s][indices[s]]);
+        indices[s]++;
+        exhausted = false;
+      }
+    }
+  }
+  return result;
+}
