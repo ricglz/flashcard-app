@@ -16,6 +16,7 @@ type Props = {
   preloadedActiveSession: Preloaded<
     typeof api.studySessions.getActiveSession
   >;
+  preloadedUserSet: Preloaded<typeof api.userSets.get>;
 };
 
 export default function StudyConfigClient({
@@ -24,10 +25,12 @@ export default function StudyConfigClient({
   preloadedSet,
   preloadedCards,
   preloadedActiveSession,
+  preloadedUserSet,
 }: Props) {
   const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
   const activeSession = usePreloadedQuery(preloadedActiveSession);
+  const userSet = usePreloadedQuery(preloadedUserSet);
   const startSession = useMutation(api.studySessions.start);
   const router = useRouter();
   const flashcardSetId = asId<"flashcardSets">(setId);
@@ -43,11 +46,16 @@ export default function StudyConfigClient({
 
   const fieldDefs = set.fieldDefinitions;
 
-  // Initialize front/back defaults on first render
+  // Initialize front/back defaults from userSet (SRS defaults) or field order
   if (!initialized && fieldDefs.length > 0) {
-    const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
-    setFrontFields([sorted[0].name]);
-    setBackFields(sorted.slice(1).map((f) => f.name));
+    if (userSet) {
+      setFrontFields(userSet.defaultFrontFields);
+      setBackFields(userSet.defaultBackFields);
+    } else {
+      const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
+      setFrontFields([sorted[0].name]);
+      setBackFields(sorted.slice(1).map((f) => f.name));
+    }
     setInitialized(true);
   }
 
