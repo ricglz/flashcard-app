@@ -52,8 +52,8 @@ export const update = mutation({
       await ctx.db.insert("userSettings", {
         userId,
         maxNewCardsPerDay:
-          args.maxNewCardsPerDay ?? DEFAULTS.maxNewCardsPerDay,
-        dayResetUtcHour: args.dayResetUtcHour ?? DEFAULTS.dayResetUtcHour,
+          patch.maxNewCardsPerDay ?? DEFAULTS.maxNewCardsPerDay,
+        dayResetUtcHour: patch.dayResetUtcHour ?? DEFAULTS.dayResetUtcHour,
       });
     }
   },

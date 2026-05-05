@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { computeSM2, computeNextReviewAt, selectNewCardsRoundRobin, SRS_DEFAULTS } from "../../convex/srs";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { computeSM2, computeNextReviewAt, selectNewCardsRoundRobin, computeDayStartMs, SRS_DEFAULTS } from "../../convex/srs";
 
 describe("computeSM2", () => {
   const defaults = {
@@ -191,5 +191,46 @@ describe("selectNewCardsRoundRobin", () => {
   it("handles negative limit", () => {
     const result = selectNewCardsRoundRobin([["A1"]], -5);
     expect(result).toEqual([]);
+  });
+});
+
+describe("computeDayStartMs", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns today at the reset hour when current time is past it", () => {
+    // 2025-06-15 10:30:00 UTC — past hour 4
+    vi.setSystemTime(new Date("2025-06-15T10:30:00Z"));
+    const result = computeDayStartMs(4);
+    expect(result).toBe(new Date("2025-06-15T04:00:00Z").getTime());
+  });
+
+  it("returns yesterday at the reset hour when current time is before it", () => {
+    // 2025-06-15 02:00:00 UTC — before hour 4
+    vi.setSystemTime(new Date("2025-06-15T02:00:00Z"));
+    const result = computeDayStartMs(4);
+    expect(result).toBe(new Date("2025-06-14T04:00:00Z").getTime());
+  });
+
+  it("handles midnight (hour 0) correctly", () => {
+    // 2025-06-15 15:00:00 UTC — well past midnight
+    vi.setSystemTime(new Date("2025-06-15T15:00:00Z"));
+    const result = computeDayStartMs(0);
+    expect(result).toBe(new Date("2025-06-15T00:00:00Z").getTime());
+  });
+
+  it("handles hour 23 correctly", () => {
+    // 2025-06-15 22:00:00 UTC — before hour 23
+    vi.setSystemTime(new Date("2025-06-15T22:00:00Z"));
+    const result = computeDayStartMs(23);
+    expect(result).toBe(new Date("2025-06-14T23:00:00Z").getTime());
+  });
+
+  it("always returns a time <= now", () => {
+    vi.setSystemTime(new Date("2025-06-15T04:00:01Z"));
+    for (const hour of [0, 4, 12, 23]) {
+      expect(computeDayStartMs(hour)).toBeLessThanOrEqual(Date.now());
+    }
   });
 });
