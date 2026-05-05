@@ -129,7 +129,6 @@ export default function EditSetClient({
               })),
             });
           }}
-          existingFieldDefinitions={set.fieldDefinitions}
         />
       </main>
     </div>

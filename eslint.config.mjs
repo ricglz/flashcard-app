@@ -12,7 +12,21 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Auto-generated Convex files:
+    "convex/_generated/**",
   ]),
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: "error",
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["error", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+      }],
+    },
+  },
 ]);
 
 export default eslintConfig;

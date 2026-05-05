@@ -49,10 +49,9 @@ export default function FieldDefinitionEditor({
 
   const toggleTts = (index: number) => {
     const field = value[index];
-    const hasTts = !!field.metadata.tts;
-    const { tts: _removed, ...rest } = field.metadata;
+    const { tts, ...rest } = field.metadata;
     updateField(index, {
-      metadata: hasTts
+      metadata: tts
         ? rest
         : { ...field.metadata, tts: { lang: field.metadata.tts?.lang ?? "en" } },
     });

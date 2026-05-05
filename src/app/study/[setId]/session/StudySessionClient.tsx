@@ -7,7 +7,7 @@ import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
-import { FieldDefinition, CardRating, TypedFlashcardSet } from "@/lib/types";
+import { CardRating, TypedFlashcardSet } from "@/lib/types";
 import Link from "next/link";
 
 /** Server component guarantees session is in_progress before rendering this client. */

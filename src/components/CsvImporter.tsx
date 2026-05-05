@@ -2,16 +2,13 @@
 
 import { useState, useRef, useCallback } from "react";
 import { parseCsv, ParsedCsvResult } from "@/lib/csvParser";
-import { FieldDefinition } from "@/lib/types";
 
 type Props = {
   onImport: (result: ParsedCsvResult) => void;
-  existingFieldDefinitions?: FieldDefinition[];
 };
 
 export default function CsvImporter({
   onImport,
-  existingFieldDefinitions,
 }: Props) {
   const [preview, setPreview] = useState<ParsedCsvResult | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -5,7 +5,7 @@ import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FieldDefinition, TypedFlashcardSet } from "@/lib/types";
+import { TypedFlashcardSet } from "@/lib/types";
 import { asId } from "@/lib/convexHelpers";
 
 type Props = {

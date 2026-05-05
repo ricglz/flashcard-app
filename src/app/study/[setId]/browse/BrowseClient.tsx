@@ -7,7 +7,7 @@ import { Id } from "../../../../../convex/_generated/dataModel";
 import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
-import { FieldDefinition, TypedFlashcardSet } from "@/lib/types";
+import { TypedFlashcardSet } from "@/lib/types";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];
