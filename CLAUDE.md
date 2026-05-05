@@ -1,15 +1,7 @@
 # Flashcard App
 
 ## Overview
-Chinese-first flashcard PWA with generic field-based data model. Built with Next.js 16 (App Router) + Convex + Clerk + Tailwind CSS.
-
-## Dev Commands
-```bash
-pnpm dev          # Start Next.js dev server (with Turbopack)
-pnpx convex dev   # Start Convex dev server (run in separate terminal)
-pnpm build        # Production build
-pnpm lint         # ESLint
-```
+Chinese-first flashcard PWA with generic field-based data model.
 
 ## Project Structure
 ```
@@ -22,19 +14,6 @@ data/              # CSV datasets for flashcard import
 tests/convex/      # Convex backend unit tests (NOT in convex/ — avoid pnpx convex dev processing)
 e2e/               # Playwright E2E tests
 ```
-
-## Key Conventions
-- **Package manager**: pnpm
-- **Import alias**: `@/` maps to `src/`
-- **Components**: PascalCase, `.tsx` extension, `"use client"` only when needed
-- **Server components first**: Pages should be server components that handle data fetching, validation, and route guards (e.g., redirect if set not found). Client components are only for interactivity — receive validated data as props. Pattern: server uses `getAuthToken()` from `src/lib/server.ts` + `preloadQuery` to fetch data + `preloadedQueryResult` to validate server-side; client uses `usePreloadedQuery` for immediate data + real-time subscription.
-- **Navigation**: Use `redirect()` in server components for route guards. Use `router.push()` in event handlers for user-triggered navigation. Never call `router.push()` during render — it causes React state update errors. When a mutation changes data that a reactive query on the same page subscribes to, fire the mutation without await and navigate immediately — otherwise the reactive update renders intermediate UI before navigation completes.
-- **Next.js 16**: `params` is a `Promise` — must be awaited in page components
-- **Convex functions**: always check auth via `ctx.auth.getUserIdentity()`
-- **Single source of truth types**: `FieldRole`, `FieldMetadata`, `SessionStatus` in `src/lib/types.ts`
-- **Metadata pattern**: feature-specific config (e.g., TTS) lives in `FieldMetadata` typed blocks — presence = enabled
-- **Metadata is intentionally `v.any()`**: The Convex schema uses `v.record(v.string(), v.any())` for field metadata by design — it's an open map for disjoint types per field role. Type safety is enforced at the application layer via typed accessors (e.g., `getTtsConfig()` in `src/lib/types.ts`). If a stronger Convex validator is found that still supports extensible metadata, updating the schema is welcome.
-- **URL reflects page state**: When a page has user-selectable modes or state (e.g., study/browse toggle), sync it to URL search params so browser back/forward preserves the selection. Use `router.replace` for in-place updates.
 
 ## Progress Tracking
 - **PROGRESS.md** tracks current status, forward-looking tasks, and completed items for the active phase only — once a phase is done, remove its completed items (git has the record)
