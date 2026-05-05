@@ -2,7 +2,6 @@
 
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton, UserButton } from "@clerk/nextjs";
-import FlashcardSetList from "@/components/FlashcardSetList";
 import SrsQueueStatus from "@/components/SrsQueueStatus";
 import Link from "next/link";
 
@@ -13,18 +12,6 @@ export default function Home() {
         <h1 className="text-xl font-bold">Flashcard App</h1>
         <div className="flex items-center gap-4">
           <Authenticated>
-            <Link
-              href="/srs"
-              className="px-4 py-2 border border-edge text-foreground rounded-lg hover:bg-surface-hover text-sm transition-colors"
-            >
-              Review
-            </Link>
-            <Link
-              href="/sets/new"
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-            >
-              New Set
-            </Link>
             <UserButton />
           </Authenticated>
           <Unauthenticated>
@@ -63,7 +50,27 @@ export default function Home() {
 
         <Authenticated>
           <SrsQueueStatus />
-          <FlashcardSetList />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Link
+              href="/sets"
+              className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
+            >
+              <h2 className="font-semibold text-lg mb-1">My Sets</h2>
+              <p className="text-sm text-muted">
+                Manage your flashcard sets
+              </p>
+            </Link>
+            <Link
+              href="/sets/new"
+              className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
+            >
+              <h2 className="font-semibold text-lg mb-1">New Set</h2>
+              <p className="text-sm text-muted">
+                Create a new flashcard set
+              </p>
+            </Link>
+          </div>
         </Authenticated>
       </main>
     </div>
