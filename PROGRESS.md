@@ -40,27 +40,31 @@
 - [x] Access control migration (`ownerId` checks → `userSets` membership/ownership)
 - [x] `flashcardSets.create` auto-creates `userSets` row with `role: "owner"`
 - [x] Cascade delete of SRS data on set removal
-- [x] Daily cron job (populate queue with due + new cards, max 20/day global, shuffle, carry over unfinished)
+- [x] Hourly cron job (populate queue with due cards every hour + new cards at user's reset hour, round-robin across sets, carry over unfinished)
 - [x] SRS review UI (`/srs` route — queue progress, card review, rating, completion screen)
 - [x] Dashboard: "X cards due today" indicator + "Review" header link
 - [x] SRS config per set (toggle + default front/back fields on set detail page)
 - [x] Dashboard: owner/member role-aware UI (edit/delete only for owners)
 - [x] Backfill existing sets with `userSets` rows (run `internal.userSets.backfillExistingSets` after deploy)
+- [x] Per-user `maxNewCardsPerDay` setting with round-robin distribution across sets
+- [x] User-configurable day reset hour (local time → UTC conversion)
+- [x] Server-side reviewed count on SRS completion screen
+- [x] Split home screen into dashboard and dedicated sets page
 
 ### Manual Testing
-- [ ] Set detail page: verify SRS Settings section appears with toggle and front/back config
-- [ ] Set detail page: toggle SRS off/on, change front/back defaults, save
-- [ ] Dashboard: trigger queue population via Convex dashboard (`internal.srsEngine.populateQueues`)
-- [ ] Dashboard: verify "X cards to review" indicator appears with "Start Review" button
-- [ ] SRS review (`/srs`): cards render with reveal + Again/Hard/Good/Easy buttons
-- [ ] SRS review: rate cards, verify progress bar advances and cards leave queue
-- [ ] SRS review: TTS auto-plays on reveal, mute toggle works
-- [ ] SRS review: finish all cards, verify completion screen with score breakdown
-- [ ] SRS review: "End Session" button returns to dashboard with progress saved
-- [ ] Dashboard: after completing all reviews, verify "All done for today!" message
-- [ ] Existing Focus Study flow still works (create set, study, browse, results)
-- [ ] Create a new set: verify `userSets` row auto-created (SRS Settings visible on detail page)
-- [ ] Delete a set: verify SRS data cleaned up (no orphaned srsCards/reviewQueue rows)
+- [x] Set detail page: verify SRS Settings section appears with toggle and front/back config
+- [x] Set detail page: toggle SRS off/on, change front/back defaults, save
+- [x] Dashboard: trigger queue population via Convex dashboard (`internal.srsEngine.populateQueues`)
+- [x] Dashboard: verify "X cards to review" indicator appears with "Start Review" button
+- [x] SRS review (`/srs`): cards render with reveal + Again/Hard/Good/Easy buttons
+- [x] SRS review: rate cards, verify progress bar advances and cards leave queue
+- [x] SRS review: TTS auto-plays on reveal, mute toggle works
+- [x] SRS review: finish all cards, verify completion screen with score breakdown
+- [x] SRS review: "End Session" button returns to dashboard with progress saved
+- [x] Dashboard: after completing all reviews, verify "All done for today!" message
+- [x] Existing Focus Study flow still works (create set, study, browse, results)
+- [x] Create a new set: verify `userSets` row auto-created (SRS Settings visible on detail page)
+- [x] Delete a set: verify SRS data cleaned up (no orphaned srsCards/reviewQueue rows)
 
 ## Phase 3 — Offline & Local-First
 - [ ] Research: evaluate local-first options (Convex offline caching vs. local DB + sync layer)

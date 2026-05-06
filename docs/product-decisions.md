@@ -251,7 +251,7 @@ A daily review queue powered by spaced repetition. Cards from SRS-enabled sets a
 
 1. **Enrollment**: When a user adds a set to their library, they can enable/disable SRS for it (default: on). This is stored on the `userSets` link table, not on the set itself — so linking another user's set in the future works naturally.
 
-2. **Daily cron job**: A scheduled Convex cron runs daily and populates the `reviewQueue` table. It checks each user's `srsCards` for cards where `nextReviewAt <= now`, plus picks new cards (never reviewed) up to the daily limit (default: 20). All eligible cards are shuffled together across sets, then inserted into the queue.
+2. **Hourly cron job**: A scheduled Convex cron runs every hour and processes each user's queue. It checks each user's `srsCards` for cards where `nextReviewAt <= now` and adds them to the queue. New cards (never reviewed) are only introduced during the user's configured reset hour, up to their daily limit (default: 20), distributed round-robin across SRS-enabled sets.
 
 3. **Review flow**: User opens the queue and sees their cards for the day ("12 of 30 done"). After revealing the answer, they rate recall: **Again** / **Hard** / **Good** / **Easy**. This matches the existing `cardResults` rating scale.
 
@@ -360,7 +360,7 @@ User adds set to library (userSets, srsEnabled: true)
                      ↓
       srsCards rows created for each card (status: "new")
                      ↓
-      Daily cron runs → finds due cards + new cards (up to limit)
+      Hourly cron runs → finds due cards + new cards (at reset hour, up to limit)
                      ↓
       Shuffles all eligible cards → inserts into reviewQueue
                      ↓
@@ -384,9 +384,9 @@ User adds set to library (userSets, srsEnabled: true)
 
 #### Resolved decisions
 
-- **Cron timing**: Fixed UTC schedule (no per-user timezone logic). Simple and predictable.
+- **Cron timing**: Hourly cron that checks each user's configured `dayResetUtcHour`. Due review/learning cards are picked up every hour; new cards are only introduced during the user's specific reset hour. Users configure their reset hour in local time; the frontend converts to UTC for storage.
 - **Leftover queue items**: Carry over — unfinished cards stay in the queue until reviewed. The cron only adds newly due cards and new cards, it doesn't clear old ones.
-- **New card limit scope**: 20 new cards/day global across all sets. The cron picks from all SRS-enabled sets combined, not 20 per set.
+- **New card limit scope**: Configurable new cards/day (default 20) global across all sets. The cron picks from all SRS-enabled sets combined via round-robin, not per set.
 
 ## Pending Decisions
 
