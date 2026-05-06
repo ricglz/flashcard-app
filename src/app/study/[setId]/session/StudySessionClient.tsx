@@ -152,6 +152,7 @@ export default function StudySessionClient({
           fieldDefinitions={fieldDefs}
           frontFields={session.frontFields}
           backFields={session.backFields}
+          ttsOnlyFields={(session as Record<string, unknown>).ttsOnlyFields as string[] ?? []}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
           ttsRate={settings?.ttsPlaybackSpeed}

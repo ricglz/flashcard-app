@@ -13,6 +13,7 @@ export default async function BrowsePage({
   searchParams: Promise<{
     frontFields?: string;
     backFields?: string;
+    ttsOnlyFields?: string;
     shuffle?: string;
     cardLimit?: string;
   }>;
@@ -40,6 +41,7 @@ export default async function BrowsePage({
 
   const frontFields = sp.frontFields?.split(",") ?? [];
   const backFields = sp.backFields?.split(",") ?? [];
+  const ttsOnlyFields = sp.ttsOnlyFields?.split(",").filter(Boolean) ?? [];
   const shuffle = sp.shuffle === "true";
   const cardLimitRaw = sp.cardLimit ? Number(sp.cardLimit) : null;
   const cardLimit =
@@ -52,6 +54,7 @@ export default async function BrowsePage({
       setId={setId}
       frontFields={frontFields}
       backFields={backFields}
+      ttsOnlyFields={ttsOnlyFields}
       shuffle={shuffle}
       cardLimit={cardLimit}
       preloadedSet={preloadedSet}

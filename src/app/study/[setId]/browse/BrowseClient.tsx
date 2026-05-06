@@ -22,6 +22,7 @@ type Props = {
   setId: string;
   frontFields: string[];
   backFields: string[];
+  ttsOnlyFields: string[];
   shuffle: boolean;
   cardLimit: number | null;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
@@ -32,6 +33,7 @@ export default function BrowseClient({
   setId,
   frontFields,
   backFields,
+  ttsOnlyFields,
   shuffle,
   cardLimit,
   preloadedSet,
@@ -69,6 +71,7 @@ export default function BrowseClient({
   const validFieldNames = new Set(fieldDefs.map((fd) => fd.name));
   const validFrontFields = frontFields.filter((f) => validFieldNames.has(f));
   const validBackFields = backFields.filter((f) => validFieldNames.has(f));
+  const validTtsOnlyFields = ttsOnlyFields.filter((f) => validFieldNames.has(f));
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
 
   if (activeCardIds.length === 0) {
@@ -187,6 +190,7 @@ export default function BrowseClient({
           fieldDefinitions={fieldDefs}
           frontFields={validFrontFields}
           backFields={validBackFields}
+          ttsOnlyFields={validTtsOnlyFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
           ttsRate={settings?.ttsPlaybackSpeed}

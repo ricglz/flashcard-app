@@ -17,16 +17,24 @@ const fieldDefs = [
   { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
 ];
 
+const fieldDefsWithTts = [
+  { name: "Character", role: "primary" as const, metadata: { tts: { lang: "zh-CN" } }, order: 0 },
+  { name: "Pinyin", role: "pronunciation" as const, metadata: {}, order: 1 },
+  { name: "Meaning", role: "definition" as const, metadata: {}, order: 2 },
+];
+
 async function createSetWithCards(
   as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>,
-  cardCount: number
+  cardCount: number,
+  defs = fieldDefs
 ) {
   const setId = await as.mutation(api.flashcardSets.create, {
     name: "Test",
-    fieldDefinitions: fieldDefs,
+    fieldDefinitions: defs,
   });
+  const fieldNames = defs.map((d) => d.name);
   const cards = Array.from({ length: cardCount }, (_, i) => ({
-    fields: { Front: `Q${i}`, Back: `A${i}` },
+    fields: Object.fromEntries(fieldNames.map((n) => [n, `${n}${i}`])),
     order: i,
   }));
   await as.mutation(api.flashcards.batchCreate, { setId, cards });
@@ -365,5 +373,88 @@ describe("studySessions.getActiveSession", () => {
       setId,
     });
     expect(active).toBeNull();
+  });
+});
+
+describe("studySessions.start — ttsOnlyFields", () => {
+  it("accepts ttsOnlyFields for TTS-capable fields", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
+
+    const sessionId = await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Pinyin"],
+      backFields: ["Meaning"],
+      ttsOnlyFields: ["Character"],
+      shuffle: false,
+    });
+
+    const session = await as.query(api.studySessions.get, { id: sessionId });
+    expect(session!.ttsOnlyFields).toEqual(["Character"]);
+  });
+
+  it("works without ttsOnlyFields (backward compat)", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
+
+    const sessionId = await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Character"],
+      backFields: ["Meaning"],
+      shuffle: false,
+    });
+
+    const session = await as.query(api.studySessions.get, { id: sessionId });
+    expect(session!.ttsOnlyFields).toEqual([]);
+  });
+
+  it("rejects fields without TTS config in ttsOnlyFields", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
+
+    await expect(
+      as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Character"],
+        backFields: ["Meaning"],
+        ttsOnlyFields: ["Pinyin"],
+        shuffle: false,
+      })
+    ).rejects.toThrow('Field "Pinyin" has no TTS config');
+  });
+
+  it("rejects fields appearing in both ttsOnlyFields and frontFields", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
+
+    await expect(
+      as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Character"],
+        backFields: ["Meaning"],
+        ttsOnlyFields: ["Character"],
+        shuffle: false,
+      })
+    ).rejects.toThrow('Field "Character" cannot be in both');
+  });
+
+  it("rejects invalid field names in ttsOnlyFields", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
+
+    await expect(
+      as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Character"],
+        backFields: ["Meaning"],
+        ttsOnlyFields: ["NonExistent"],
+        shuffle: false,
+      })
+    ).rejects.toThrow("Invalid TTS-only field: NonExistent");
   });
 });

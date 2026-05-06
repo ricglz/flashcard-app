@@ -206,6 +206,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
           fieldDefinitions={fieldDefs}
           frontFields={currentItem.frontFields}
           backFields={currentItem.backFields}
+          ttsOnlyFields={currentItem.ttsOnlyFields ?? []}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
           ttsRate={settings?.ttsPlaybackSpeed}

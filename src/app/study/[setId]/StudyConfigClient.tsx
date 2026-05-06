@@ -5,8 +5,9 @@ import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TypedFlashcardSet } from "@/lib/types";
+import { TypedFlashcardSet, getTtsConfig } from "@/lib/types";
 import { asId } from "@/lib/convexHelpers";
+import { cycleFieldAssignment } from "@/lib/fieldToggle";
 
 type Props = {
   setId: string;
@@ -40,6 +41,7 @@ export default function StudyConfigClient({
   const [mode, setMode] = useState<"study" | "browse">(initialMode);
   const [frontFields, setFrontFields] = useState<string[]>([]);
   const [backFields, setBackFields] = useState<string[]>([]);
+  const [ttsOnlyFields, setTtsOnlyFields] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -51,6 +53,9 @@ export default function StudyConfigClient({
     if (userSet) {
       setFrontFields(userSet.defaultFrontFields);
       setBackFields(userSet.defaultBackFields);
+      setTtsOnlyFields(
+        (userSet as Record<string, unknown>).defaultTtsOnlyFields as string[] ?? []
+      );
     } else {
       const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
       setFrontFields([sorted[0].name]);
@@ -59,21 +64,17 @@ export default function StudyConfigClient({
     setInitialized(true);
   }
 
-  const toggleField = (
-    fieldName: string,
-    side: "front" | "back"
-  ) => {
-    if (side === "front") {
-      if (frontFields.includes(fieldName) && frontFields.length > 1) {
-        setFrontFields(frontFields.filter((f) => f !== fieldName));
-        setBackFields([...backFields, fieldName]);
-      }
-    } else {
-      if (backFields.includes(fieldName) && backFields.length > 1) {
-        setBackFields(backFields.filter((f) => f !== fieldName));
-        setFrontFields([...frontFields, fieldName]);
-      }
-    }
+  const handleToggle = (fieldName: string) => {
+    const fd = fieldDefs.find((d) => d.name === fieldName);
+    const hasTts = fd ? getTtsConfig(fd) !== null : false;
+    const result = cycleFieldAssignment(
+      fieldName,
+      { frontFields, backFields, ttsOnlyFields },
+      hasTts
+    );
+    setFrontFields(result.frontFields);
+    setBackFields(result.backFields);
+    setTtsOnlyFields(result.ttsOnlyFields);
   };
 
   const handleStart = async () => {
@@ -85,6 +86,7 @@ export default function StudyConfigClient({
         setId: flashcardSetId,
         frontFields,
         backFields,
+        ttsOnlyFields,
         shuffle,
         ...(cardLimit !== null && { cardLimit }),
       });
@@ -101,6 +103,7 @@ export default function StudyConfigClient({
       frontFields: frontFields.join(","),
       backFields: backFields.join(","),
       shuffle: String(shuffle),
+      ...(ttsOnlyFields.length > 0 && { ttsOnlyFields: ttsOnlyFields.join(",") }),
       ...(cardLimit !== null && { cardLimit: String(cardLimit) }),
     });
     router.push(`/study/${setId}/browse?${params}`);
@@ -190,38 +193,43 @@ export default function StudyConfigClient({
         <div className="space-y-4">
           <h2 className="font-semibold">Study Direction</h2>
           <p className="text-xs text-muted">
-            Choose which fields to show (front) and which to recall (back).
+            Tap a field to cycle: Front → Back{" "}
+            {fieldDefs.some((fd) => getTtsConfig(fd) !== null) && "→ TTS Only "}→ Front
           </p>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-sm font-medium mb-2 text-accent">
-                Front (shown)
-              </h3>
-              {frontFields.map((name) => (
-                <button
-                  key={name}
-                  onClick={() => toggleField(name, "front")}
-                  className="block w-full text-left px-3 py-2 mb-1 text-sm bg-info-surface border border-info-edge rounded-lg hover:bg-surface-hover transition-colors"
-                >
-                  {name} &rarr;
-                </button>
-              ))}
-            </div>
-            <div>
-              <h3 className="text-sm font-medium mb-2 text-accent">
-                Back (recall)
-              </h3>
-              {backFields.map((name) => (
-                <button
-                  key={name}
-                  onClick={() => toggleField(name, "back")}
-                  className="block w-full text-left px-3 py-2 mb-1 text-sm bg-info-surface border border-info-edge rounded-lg hover:bg-surface-hover transition-colors"
-                >
-                  &larr; {name}
-                </button>
-              ))}
-            </div>
+          <div className="space-y-2">
+            {fieldDefs
+              .sort((a, b) => a.order - b.order)
+              .map((fd) => {
+                const name = fd.name;
+                const isFront = frontFields.includes(name);
+                const isBack = backFields.includes(name);
+                const isTtsOnly = ttsOnlyFields.includes(name);
+                const label = isFront
+                  ? "Front"
+                  : isBack
+                    ? "Back"
+                    : isTtsOnly
+                      ? "TTS Only"
+                      : "Front";
+                const style = isFront
+                  ? "bg-accent/10 border-accent text-accent"
+                  : isBack
+                    ? "bg-warning/10 border-warning text-warning"
+                    : isTtsOnly
+                      ? "bg-info-surface border-info-edge text-muted"
+                      : "border-edge text-muted";
+                return (
+                  <button
+                    key={name}
+                    onClick={() => handleToggle(name)}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-lg border transition-colors hover:bg-surface-hover flex justify-between items-center ${style}`}
+                  >
+                    <span>{name}</span>
+                    <span className="text-xs font-medium">{label}</span>
+                  </button>
+                );
+              })}
           </div>
         </div>
 

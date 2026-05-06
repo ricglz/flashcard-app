@@ -11,6 +11,7 @@ type Props = {
   fieldDefinitions: FieldDefinition[];
   frontFields: string[];
   backFields: string[];
+  ttsOnlyFields?: string[];
   onRevealed?: () => void;
   autoPlayTts?: boolean;
   ttsRate?: number;
@@ -21,6 +22,7 @@ export default function StudyCard({
   fieldDefinitions,
   frontFields,
   backFields,
+  ttsOnlyFields = [],
   onRevealed,
   autoPlayTts,
   ttsRate,
@@ -33,7 +35,7 @@ export default function StudyCard({
 
     if (autoPlayTts) {
       const items: { text: string; lang: string }[] = [];
-      for (const fieldName of backFields) {
+      for (const fieldName of [...backFields, ...ttsOnlyFields]) {
         const fd = fieldDefsMap.get(fieldName);
         const value = card.fields[fieldName];
         const ttsConfig = fd ? getTtsConfig(fd) : null;

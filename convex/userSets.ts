@@ -123,6 +123,7 @@ export const update = mutation({
     srsEnabled: v.optional(v.boolean()),
     defaultFrontFields: v.optional(v.array(v.string())),
     defaultBackFields: v.optional(v.array(v.string())),
+    defaultTtsOnlyFields: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -143,6 +144,8 @@ export const update = mutation({
       patch.defaultFrontFields = args.defaultFrontFields;
     if (args.defaultBackFields !== undefined)
       patch.defaultBackFields = args.defaultBackFields;
+    if (args.defaultTtsOnlyFields !== undefined)
+      patch.defaultTtsOnlyFields = args.defaultTtsOnlyFields;
 
     await ctx.db.patch(link._id, patch);
 

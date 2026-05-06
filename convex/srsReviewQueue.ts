@@ -60,6 +60,7 @@ export const getHydratedQueue = query({
     const userSetCache = new Map<string, {
       defaultFrontFields: string[];
       defaultBackFields: string[];
+      defaultTtsOnlyFields: string[];
     }>();
 
     const hydrated = [];
@@ -89,6 +90,7 @@ export const getHydratedQueue = query({
         userSetCache.set(setIdStr, {
           defaultFrontFields: userSet.defaultFrontFields,
           defaultBackFields: userSet.defaultBackFields,
+          defaultTtsOnlyFields: userSet.defaultTtsOnlyFields ?? [],
         });
       }
 
@@ -102,6 +104,7 @@ export const getHydratedQueue = query({
         fieldDefinitions: setData.fieldDefinitions,
         frontFields: userSetData.defaultFrontFields,
         backFields: userSetData.defaultBackFields,
+        ttsOnlyFields: userSetData.defaultTtsOnlyFields,
       });
     }
 

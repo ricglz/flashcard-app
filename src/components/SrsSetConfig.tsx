@@ -5,12 +5,15 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
+import { getTtsConfig } from "@/lib/types";
+import { cycleFieldAssignment } from "@/lib/fieldToggle";
 
 type Props = {
   setId: Id<"flashcardSets">;
   srsEnabled: boolean;
   defaultFrontFields: string[];
   defaultBackFields: string[];
+  defaultTtsOnlyFields: string[];
   fieldDefinitions: FieldDefinition[];
 };
 
@@ -19,6 +22,7 @@ export default function SrsSetConfig({
   srsEnabled,
   defaultFrontFields,
   defaultBackFields,
+  defaultTtsOnlyFields,
   fieldDefinitions,
 }: Props) {
   const updateUserSet = useMutation(api.userSets.update);
@@ -26,6 +30,7 @@ export default function SrsSetConfig({
   const [localSrsEnabled, setLocalSrsEnabled] = useState(srsEnabled);
   const [localFront, setLocalFront] = useState<string[]>(defaultFrontFields);
   const [localBack, setLocalBack] = useState<string[]>(defaultBackFields);
+  const [localTtsOnly, setLocalTtsOnly] = useState<string[]>(defaultTtsOnlyFields);
 
   const sortedFields = [...fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -35,18 +40,20 @@ export default function SrsSetConfig({
   const hasChanges =
     localSrsEnabled !== srsEnabled ||
     JSON.stringify(localFront) !== JSON.stringify(defaultFrontFields) ||
-    JSON.stringify(localBack) !== JSON.stringify(defaultBackFields);
+    JSON.stringify(localBack) !== JSON.stringify(defaultBackFields) ||
+    JSON.stringify(localTtsOnly) !== JSON.stringify(defaultTtsOnlyFields);
 
   function toggleField(fieldName: string) {
-    if (localFront.includes(fieldName)) {
-      if (localFront.length <= 1) return;
-      setLocalFront((prev) => prev.filter((f) => f !== fieldName));
-      setLocalBack((prev) => [...prev, fieldName]);
-    } else {
-      if (localBack.length <= 1) return;
-      setLocalBack((prev) => prev.filter((f) => f !== fieldName));
-      setLocalFront((prev) => [...prev, fieldName]);
-    }
+    const fd = fieldDefinitions.find((d) => d.name === fieldName);
+    const hasTts = fd ? getTtsConfig(fd) !== null : false;
+    const result = cycleFieldAssignment(
+      fieldName,
+      { frontFields: localFront, backFields: localBack, ttsOnlyFields: localTtsOnly },
+      hasTts
+    );
+    setLocalFront(result.frontFields);
+    setLocalBack(result.backFields);
+    setLocalTtsOnly(result.ttsOnlyFields);
   }
 
   async function handleSave() {
@@ -57,6 +64,7 @@ export default function SrsSetConfig({
         srsEnabled: localSrsEnabled,
         defaultFrontFields: localFront,
         defaultBackFields: localBack,
+        defaultTtsOnlyFields: localTtsOnly,
       });
     } finally {
       setIsSaving(false);
@@ -94,17 +102,20 @@ export default function SrsSetConfig({
           <div className="flex flex-wrap gap-2">
             {allFieldNames.map((name) => {
               const isFront = localFront.includes(name);
+              const isTtsOnly = localTtsOnly.includes(name);
+              const label = isFront ? "Front" : isTtsOnly ? "TTS Only" : "Back";
+              const style = isFront
+                ? "bg-accent/10 border-accent text-accent"
+                : isTtsOnly
+                  ? "bg-info-surface border-info-edge text-muted"
+                  : "border-edge text-muted hover:border-accent/50";
               return (
                 <button
                   key={name}
                   onClick={() => toggleField(name)}
-                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                    isFront
-                      ? "bg-accent/10 border-accent text-accent"
-                      : "border-edge text-muted hover:border-accent/50"
-                  }`}
+                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${style}`}
                 >
-                  {name}: {isFront ? "Front" : "Back"}
+                  {name}: {label}
                 </button>
               );
             })}

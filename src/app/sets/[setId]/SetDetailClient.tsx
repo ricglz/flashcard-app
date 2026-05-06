@@ -77,6 +77,7 @@ export default function SetDetailClient({
               srsEnabled={userSet.srsEnabled}
               defaultFrontFields={userSet.defaultFrontFields}
               defaultBackFields={userSet.defaultBackFields}
+              defaultTtsOnlyFields={(userSet as Record<string, unknown>).defaultTtsOnlyFields as string[] ?? []}
               fieldDefinitions={set.fieldDefinitions}
             />
           </div>

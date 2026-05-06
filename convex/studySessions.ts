@@ -69,6 +69,7 @@ export const start = mutation({
     setId: v.id("flashcardSets"),
     frontFields: v.array(v.string()),
     backFields: v.array(v.string()),
+    ttsOnlyFields: v.optional(v.array(v.string())),
     shuffle: v.boolean(),
     cardLimit: v.optional(v.number()),
   },
@@ -95,6 +96,25 @@ export const start = mutation({
     for (const f of args.backFields) {
       if (!validFieldNames.has(f))
         throw new Error(`Invalid back field: ${f}`);
+    }
+
+    const resolvedTtsOnly = args.ttsOnlyFields ?? [];
+    if (resolvedTtsOnly.length > 0) {
+      const fieldDefsMap = new Map(
+        (set.fieldDefinitions as Array<{ name: string; metadata: Record<string, unknown> }>)
+          .map((fd) => [fd.name, fd])
+      );
+      const frontSet = new Set(args.frontFields);
+      const backSet = new Set(args.backFields);
+      for (const f of resolvedTtsOnly) {
+        if (!validFieldNames.has(f))
+          throw new Error(`Invalid TTS-only field: ${f}`);
+        if (frontSet.has(f) || backSet.has(f))
+          throw new Error(`Field "${f}" cannot be in both ttsOnlyFields and front/back`);
+        const fd = fieldDefsMap.get(f)!;
+        if (!fd.metadata?.tts)
+          throw new Error(`Field "${f}" has no TTS config and cannot be TTS-only`);
+      }
     }
 
     // Get all cards for this set
@@ -132,6 +152,7 @@ export const start = mutation({
       userId: identity.tokenIdentifier,
       frontFields: args.frontFields,
       backFields: args.backFields,
+      ttsOnlyFields: resolvedTtsOnly,
       cardOrder,
       currentIndex: 0,
       status: "in_progress",
