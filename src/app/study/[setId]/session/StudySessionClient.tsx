@@ -108,6 +108,7 @@ export default function StudySessionClient({
             onClick={() => setTtsEnabled((v) => !v)}
             className="text-sm text-muted hover:text-foreground transition-colors"
             title={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
+            aria-label={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
           >
             {ttsEnabled ? (
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">

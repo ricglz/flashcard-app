@@ -85,6 +85,7 @@ export default function SrsQueueStatus() {
             onClick={() => setShowSettings((v) => !v)}
             className="text-muted hover:text-foreground transition-colors"
             aria-label="SRS settings"
+            title="SRS settings"
           >
             <GearIcon />
           </button>
@@ -122,6 +123,7 @@ export default function SrsQueueStatus() {
             onClick={() => setShowSettings((v) => !v)}
             className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 transition-colors"
             aria-label="SRS settings"
+            title="SRS settings"
           >
             <GearIcon />
           </button>
@@ -160,6 +162,7 @@ export default function SrsQueueStatus() {
             onClick={() => setShowSettings((v) => !v)}
             className="text-muted hover:text-foreground transition-colors"
             aria-label="SRS settings"
+            title="SRS settings"
           >
             <GearIcon />
           </button>

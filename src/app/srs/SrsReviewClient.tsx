@@ -153,6 +153,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
             onClick={() => setTtsEnabled((v) => !v)}
             className="text-sm text-muted hover:text-foreground transition-colors"
             title={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
+            aria-label={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
           >
             {ttsEnabled ? (
               <svg

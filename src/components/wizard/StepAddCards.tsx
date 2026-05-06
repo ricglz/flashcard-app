@@ -91,6 +91,8 @@ function ManualPath({ state, dispatch }: Props) {
                 <button
                   onClick={() => removeField(i)}
                   className="text-muted hover:text-danger ml-1 transition-colors"
+                  aria-label={`Remove field ${fd.name}`}
+                  title={`Remove field ${fd.name}`}
                 >
                   x
                 </button>
