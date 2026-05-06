@@ -6,12 +6,8 @@
 ## Phase 1 — MVP (in manual testing)
 
 ### Next: Bug Fixes & Polish
-- [ ] UI/UX issues discovered during testing
-- [ ] Add labels/tooltips to make icon buttons more obvious (e.g., mute/unmute TTS)
-- [ ] TTS playback speed control (slider or preset buttons in session header)
 - [ ] Consider allowing fields to be excluded from the card entirely (e.g., Character used only for TTS, not displayed — currently all fields must be front or back)
 - [ ] Mobile responsiveness verification (responsive padding and layouts are in place, needs device testing)
-- [ ] "Create Another" option after set creation — reset wizard to step 1 instead of always navigating to the new set
 - [ ] Bulk set creation — quick-create mode or streamlined flow for adding many sets at once (noted: the full wizard is too heavyweight when creating several sets in a row)
 
 ### Next: Manual Testing (ongoing)
