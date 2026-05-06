@@ -71,10 +71,10 @@
 - [x] TTS playback speed control (slider or preset in session header)
 
 ## Phase 4 — Polish & Features
+- [x] Progress tracking dashboard (`/progress` route with activity chart, accuracy, card status, per-set mastery)
+- [x] Study streaks & daily goals (streak tracking, daily goal ring, dashboard widget)
 - [ ] Telemetry / analytics
 - [ ] Sharing via link
-- [ ] Progress tracking dashboard
-- [ ] Study streaks & daily goals
 
 ## Phase 5 — Mobile
 - [ ] Expo React Native app
