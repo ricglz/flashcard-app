@@ -130,12 +130,26 @@ export default defineSchema({
     newEaseFactor: v.number(),
   })
     .index("by_srsCardId", ["srsCardId"])
-    .index("by_userId", ["userId"]),
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_timestamp", ["userId", "timestamp"]),
+
+  dailyStats: defineTable({
+    userId: v.string(),
+    dayKey: v.string(),
+    dayStartMs: v.number(),
+    srsReviewCount: v.number(),
+    sessionCardCount: v.number(),
+    correctCount: v.number(),
+    totalRatingScore: v.number(),
+  })
+    .index("by_userId_and_dayKey", ["userId", "dayKey"])
+    .index("by_userId_and_dayStartMs", ["userId", "dayStartMs"]),
 
   userSettings: defineTable({
     userId: v.string(),
     maxNewCardsPerDay: v.number(),
     dayResetUtcHour: v.optional(v.number()),
     ttsPlaybackSpeed: v.optional(v.number()),
+    dailyGoal: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 });

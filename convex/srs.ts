@@ -91,6 +91,11 @@ export function computeDayStartMs(dayResetUtcHour: number): number {
   return now.getTime();
 }
 
+export function computeDayKey(dayResetUtcHour: number): string {
+  const ms = computeDayStartMs(dayResetUtcHour);
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
 export function selectNewCardsRoundRobin<T>(
   perSetCards: T[][],
   limit: number

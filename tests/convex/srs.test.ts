@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { computeSM2, computeNextReviewAt, selectNewCardsRoundRobin, computeDayStartMs, SRS_DEFAULTS } from "../../convex/srs";
+import { computeSM2, computeNextReviewAt, selectNewCardsRoundRobin, computeDayStartMs, computeDayKey, SRS_DEFAULTS } from "../../convex/srs";
 
 describe("computeSM2", () => {
   const defaults = {
@@ -232,5 +232,29 @@ describe("computeDayStartMs", () => {
     for (const hour of [0, 4, 12, 23]) {
       expect(computeDayStartMs(hour)).toBeLessThanOrEqual(Date.now());
     }
+  });
+});
+
+describe("computeDayKey", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("returns ISO date of the day boundary", () => {
+    vi.setSystemTime(new Date("2026-05-06T10:00:00Z"));
+    expect(computeDayKey(4)).toBe("2026-05-06");
+  });
+
+  it("returns previous day when before reset hour", () => {
+    vi.setSystemTime(new Date("2026-05-06T03:00:00Z"));
+    expect(computeDayKey(4)).toBe("2026-05-05");
+  });
+
+  it("handles midnight reset", () => {
+    vi.setSystemTime(new Date("2026-05-06T23:30:00Z"));
+    expect(computeDayKey(0)).toBe("2026-05-06");
+  });
+
+  it("handles reset at exactly the boundary", () => {
+    vi.setSystemTime(new Date("2026-05-06T04:00:00Z"));
+    expect(computeDayKey(4)).toBe("2026-05-06");
   });
 });
