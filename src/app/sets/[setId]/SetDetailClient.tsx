@@ -3,6 +3,7 @@
 import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import TtsButton from "@/components/TtsButton";
 import SrsSetConfig from "@/components/SrsSetConfig";
 import { getTtsConfig, TypedFlashcardSet } from "@/lib/types";
@@ -24,6 +25,7 @@ export default function SetDetailClient({
   const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
   const userSet = usePreloadedQuery(preloadedUserSet);
+  const router = useRouter();
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -34,9 +36,12 @@ export default function SetDetailClient({
   return (
     <div className="min-h-screen">
       <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
+        <button
+          onClick={() => router.back()}
+          className="text-sm text-muted hover:text-foreground"
+        >
           &larr; Back
-        </Link>
+        </button>
         <div className="flex gap-2">
           <Link
             href={`/study/${setId}`}
