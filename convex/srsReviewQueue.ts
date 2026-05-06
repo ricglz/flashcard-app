@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from "./srs";
+import { RATING_SCORES } from "./studySessions";
+import { incrementDailyStats } from "./progress";
 import type { CardRating } from "../src/lib/types";
 
 export const getQueueStats = query({
@@ -156,6 +158,14 @@ export const recordReview = mutation({
     });
 
     await ctx.db.delete(args.queueItemId);
+
+    const ratingScore = RATING_SCORES[args.rating] ?? 0;
+    await incrementDailyStats(
+      ctx,
+      identity.tokenIdentifier,
+      "srs",
+      ratingScore
+    );
 
     const remaining = await ctx.db
       .query("reviewQueue")

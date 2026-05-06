@@ -29,13 +29,14 @@ export const update = mutation({
     maxNewCardsPerDay: v.optional(v.number()),
     dayResetUtcHour: v.optional(v.number()),
     ttsPlaybackSpeed: v.optional(v.number()),
+    dailyGoal: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.tokenIdentifier;
 
-    const patch: Record<string, number> = {};
+    const patch: Record<string, number | undefined> = {};
     if (args.maxNewCardsPerDay !== undefined)
       patch.maxNewCardsPerDay = args.maxNewCardsPerDay;
     if (args.dayResetUtcHour !== undefined) {
@@ -48,6 +49,11 @@ export const update = mutation({
       if (s < 0.25 || s > 2.0) throw new Error("Speed must be 0.25-2.0");
       patch.ttsPlaybackSpeed = s;
     }
+    if (args.dailyGoal !== undefined) {
+      if (args.dailyGoal < 0 || args.dailyGoal > 500)
+        throw new Error("Daily goal must be 0-500");
+      patch.dailyGoal = args.dailyGoal === 0 ? undefined : args.dailyGoal;
+    }
 
     const existing = await ctx.db
       .query("userSettings")
@@ -59,10 +65,11 @@ export const update = mutation({
       await ctx.db.insert("userSettings", {
         userId,
         maxNewCardsPerDay:
-          patch.maxNewCardsPerDay ?? DEFAULTS.maxNewCardsPerDay,
-        dayResetUtcHour: patch.dayResetUtcHour ?? DEFAULTS.dayResetUtcHour,
+          (patch.maxNewCardsPerDay as number) ?? DEFAULTS.maxNewCardsPerDay,
+        dayResetUtcHour: (patch.dayResetUtcHour as number) ?? DEFAULTS.dayResetUtcHour,
         ttsPlaybackSpeed:
-          patch.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed,
+          (patch.ttsPlaybackSpeed as number) ?? DEFAULTS.ttsPlaybackSpeed,
+        ...(patch.dailyGoal !== undefined && { dailyGoal: patch.dailyGoal as number }),
       });
     }
   },

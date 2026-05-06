@@ -1,0 +1,368 @@
+import { v } from "convex/values";
+import { query, internalMutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import { computeDayStartMs, computeDayKey, SRS_DEFAULTS } from "./srs";
+import { RATING_SCORES } from "./studySessions";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export async function incrementDailyStats(
+  ctx: MutationCtx,
+  userId: string,
+  source: "srs" | "session",
+  ratingScore: number
+) {
+  const settings = await ctx.db
+    .query("userSettings")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .first();
+  const dayResetUtcHour =
+    settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+  const dayStartMs = computeDayStartMs(dayResetUtcHour);
+  const dayKey = computeDayKey(dayResetUtcHour);
+
+  const existing = await ctx.db
+    .query("dailyStats")
+    .withIndex("by_userId_and_dayKey", (q) =>
+      q.eq("userId", userId).eq("dayKey", dayKey)
+    )
+    .first();
+
+  const isCorrect = ratingScore >= 2;
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      srsReviewCount:
+        existing.srsReviewCount + (source === "srs" ? 1 : 0),
+      sessionCardCount:
+        existing.sessionCardCount + (source === "session" ? 1 : 0),
+      correctCount: existing.correctCount + (isCorrect ? 1 : 0),
+      totalRatingScore: existing.totalRatingScore + ratingScore,
+    });
+  } else {
+    await ctx.db.insert("dailyStats", {
+      userId,
+      dayKey,
+      dayStartMs,
+      srsReviewCount: source === "srs" ? 1 : 0,
+      sessionCardCount: source === "session" ? 1 : 0,
+      correctCount: isCorrect ? 1 : 0,
+      totalRatingScore: ratingScore,
+    });
+  }
+}
+
+export const getStreakStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .first();
+    const dayResetUtcHour =
+      settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+    const todayMs = computeDayStartMs(dayResetUtcHour);
+
+    const rows = await ctx.db
+      .query("dailyStats")
+      .withIndex("by_userId_and_dayStartMs", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .order("desc")
+      .take(365);
+
+    if (rows.length === 0) {
+      return { currentStreak: 0, longestStreak: 0 };
+    }
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let expectedMs = todayMs;
+
+    for (const row of rows) {
+      const totalCards =
+        row.srsReviewCount + row.sessionCardCount;
+      if (row.dayStartMs === expectedMs) {
+        if (totalCards > 0) {
+          currentStreak++;
+          expectedMs -= MS_PER_DAY;
+        } else {
+          break;
+        }
+      } else if (
+        row.dayStartMs === expectedMs - MS_PER_DAY &&
+        expectedMs === todayMs
+      ) {
+        // Today has no activity yet — check yesterday
+        expectedMs -= MS_PER_DAY;
+        if (totalCards > 0) {
+          currentStreak++;
+          expectedMs -= MS_PER_DAY;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    // Compute longest streak by walking all rows
+    let run = 0;
+    let prevMs: number | null = null;
+    for (const row of rows) {
+      const totalCards = row.srsReviewCount + row.sessionCardCount;
+      if (totalCards === 0) {
+        longestStreak = Math.max(longestStreak, run);
+        run = 0;
+        prevMs = null;
+        continue;
+      }
+      if (prevMs === null || prevMs - row.dayStartMs === MS_PER_DAY) {
+        run++;
+        prevMs = row.dayStartMs;
+      } else {
+        longestStreak = Math.max(longestStreak, run);
+        run = 1;
+        prevMs = row.dayStartMs;
+      }
+    }
+    longestStreak = Math.max(longestStreak, run);
+
+    return { currentStreak, longestStreak };
+  },
+});
+
+export const getDailyGoalProgress = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .first();
+
+    const dayResetUtcHour =
+      settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+    const dayKey = computeDayKey(dayResetUtcHour);
+
+    const todayStats = await ctx.db
+      .query("dailyStats")
+      .withIndex("by_userId_and_dayKey", (q) =>
+        q.eq("userId", identity.tokenIdentifier).eq("dayKey", dayKey)
+      )
+      .first();
+
+    const reviewed =
+      (todayStats?.srsReviewCount ?? 0) +
+      (todayStats?.sessionCardCount ?? 0);
+    const goal = settings?.dailyGoal ?? null;
+
+    return {
+      goal,
+      reviewed,
+      percentage: goal && goal > 0 ? Math.min(1, reviewed / goal) : null,
+    };
+  },
+});
+
+export const getDailyHistory = query({
+  args: { days: v.number() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .first();
+    const dayResetUtcHour =
+      settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+    const todayMs = computeDayStartMs(dayResetUtcHour);
+    const cutoffMs = todayMs - (args.days - 1) * MS_PER_DAY;
+
+    const rows = await ctx.db
+      .query("dailyStats")
+      .withIndex("by_userId_and_dayStartMs", (q) =>
+        q
+          .eq("userId", identity.tokenIdentifier)
+          .gte("dayStartMs", cutoffMs)
+      )
+      .take(args.days + 1);
+
+    return rows.map((row) => {
+      const totalCards = row.srsReviewCount + row.sessionCardCount;
+      return {
+        dayKey: row.dayKey,
+        dayStartMs: row.dayStartMs,
+        totalCards,
+        correctCount: row.correctCount,
+        accuracy: totalCards > 0 ? row.correctCount / totalCards : 0,
+      };
+    });
+  },
+});
+
+export const getCardStatusBreakdown = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const userSets = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .take(100);
+
+    const enabledSets = userSets.filter((us) => us.srsEnabled);
+    let newCount = 0;
+    let learningCount = 0;
+    let reviewCount = 0;
+
+    for (const us of enabledSets) {
+      const cards = await ctx.db
+        .query("srsCards")
+        .withIndex("by_userId_and_setId", (q) =>
+          q
+            .eq("userId", identity.tokenIdentifier)
+            .eq("setId", us.setId)
+        )
+        .take(1000);
+
+      for (const card of cards) {
+        if (card.status === "new") newCount++;
+        else if (card.status === "learning") learningCount++;
+        else reviewCount++;
+      }
+    }
+
+    return { new: newCount, learning: learningCount, review: reviewCount };
+  },
+});
+
+export const getPerSetMastery = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userSets = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .take(100);
+
+    const enabledSets = userSets.filter((us) => us.srsEnabled);
+    const results = [];
+
+    for (const us of enabledSets) {
+      const set = await ctx.db.get(us.setId);
+      if (!set) continue;
+
+      const cards = await ctx.db
+        .query("srsCards")
+        .withIndex("by_userId_and_setId", (q) =>
+          q
+            .eq("userId", identity.tokenIdentifier)
+            .eq("setId", us.setId)
+        )
+        .take(1000);
+
+      let newCount = 0;
+      let learningCount = 0;
+      let reviewCount = 0;
+      let totalEase = 0;
+
+      for (const card of cards) {
+        if (card.status === "new") newCount++;
+        else if (card.status === "learning") learningCount++;
+        else reviewCount++;
+        totalEase += card.easeFactor;
+      }
+
+      results.push({
+        setId: us.setId,
+        setName: set.name,
+        total: cards.length,
+        new: newCount,
+        learning: learningCount,
+        review: reviewCount,
+        avgEase: cards.length > 0 ? totalEase / cards.length : 0,
+      });
+    }
+
+    return results;
+  },
+});
+
+export const backfillDailyStats = internalMutation({
+  args: {
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    const dayResetUtcHour =
+      settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+
+    const reviews = await ctx.db
+      .query("srsReviews")
+      .withIndex("by_userId_and_timestamp", (q) =>
+        q.eq("userId", args.userId)
+      )
+      .take(5000);
+
+    for (const review of reviews) {
+      const ratingScore = RATING_SCORES[review.rating] ?? 0;
+      const isCorrect = ratingScore >= 2;
+
+      const reviewDate = new Date(review.timestamp);
+      reviewDate.setUTCHours(dayResetUtcHour, 0, 0, 0);
+      if (reviewDate.getTime() > review.timestamp) {
+        reviewDate.setUTCDate(reviewDate.getUTCDate() - 1);
+      }
+      const dayStartMs = reviewDate.getTime();
+      const dayKey = new Date(dayStartMs).toISOString().slice(0, 10);
+
+      const existing = await ctx.db
+        .query("dailyStats")
+        .withIndex("by_userId_and_dayKey", (q) =>
+          q.eq("userId", args.userId).eq("dayKey", dayKey)
+        )
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          srsReviewCount: existing.srsReviewCount + 1,
+          correctCount: existing.correctCount + (isCorrect ? 1 : 0),
+          totalRatingScore: existing.totalRatingScore + ratingScore,
+        });
+      } else {
+        await ctx.db.insert("dailyStats", {
+          userId: args.userId,
+          dayKey,
+          dayStartMs,
+          srsReviewCount: 1,
+          sessionCardCount: 0,
+          correctCount: isCorrect ? 1 : 0,
+          totalRatingScore: ratingScore,
+        });
+      }
+    }
+  },
+});

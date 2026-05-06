@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { assertMember } from "./userSets";
+import { incrementDailyStats } from "./progress";
 
 export const RATING_SCORES: Record<string, number> = {
   wrong: 0,
@@ -186,6 +187,14 @@ export const recordResult = mutation({
       rating: args.rating,
       timestamp: Date.now(),
     });
+
+    const ratingScore = RATING_SCORES[args.rating] ?? 0;
+    await incrementDailyStats(
+      ctx,
+      identity.tokenIdentifier,
+      "session",
+      ratingScore
+    );
 
     // Advance the session
     const nextIndex = session.currentIndex + 1;
