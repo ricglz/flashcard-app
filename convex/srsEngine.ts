@@ -31,6 +31,15 @@ export const populateQueueForUser = internalMutation({
     const { userId } = args;
     const now = Date.now();
 
+    const userSettingsRow = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    const dayResetUtcHour =
+      userSettingsRow?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+    const currentUtcHour = new Date(now).getUTCHours();
+    const isResetHour = currentUtcHour === dayResetUtcHour;
+
     const userSetLinks = await ctx.db
       .query("userSets")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -98,45 +107,45 @@ export const populateQueueForUser = internalMutation({
       (sc) => sc.status !== "new" && !alreadyQueued.has(sc._id)
     );
 
-    // Read global new-cards-per-day limit from userSettings
-    const userSettingsRow = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
-    const globalLimit = userSettingsRow?.maxNewCardsPerDay ?? SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY;
-
-    // Count total new cards already in the queue across all sets
-    let totalQueuedNew = 0;
-    for (const qi of existingQueue) {
-      const sc = await ctx.db.get(qi.srsCardId);
-      if (sc && sc.status === "new") totalQueuedNew++;
-    }
-    const globalRemaining = globalLimit - totalQueuedNew;
-
-    // Collect new cards round-robin across sets, capped at globalRemaining
     const newCards: typeof dueCards = [];
 
-    if (globalRemaining > 0) {
-      const perSetAvailable: (typeof dueCards)[] = [];
+    // Only introduce new cards during the user's reset hour
+    if (isResetHour) {
+      const globalLimit =
+        userSettingsRow?.maxNewCardsPerDay ??
+        SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY;
 
-      for (const setId of srsSetIds) {
-        const srsCardsForSet = await ctx.db
-          .query("srsCards")
-          .withIndex("by_userId_and_setId", (q) =>
-            q.eq("userId", userId).eq("setId", setId)
-          )
-          .take(500);
-
-        const available = srsCardsForSet.filter(
-          (sc) => sc.status === "new" && !alreadyQueued.has(sc._id)
-        );
-
-        if (available.length > 0) {
-          perSetAvailable.push(available);
-        }
+      let totalQueuedNew = 0;
+      for (const qi of existingQueue) {
+        const sc = await ctx.db.get(qi.srsCardId);
+        if (sc && sc.status === "new") totalQueuedNew++;
       }
+      const globalRemaining = globalLimit - totalQueuedNew;
 
-      newCards.push(...selectNewCardsRoundRobin(perSetAvailable, globalRemaining));
+      if (globalRemaining > 0) {
+        const perSetAvailable: (typeof dueCards)[] = [];
+
+        for (const setId of srsSetIds) {
+          const srsCardsForSet = await ctx.db
+            .query("srsCards")
+            .withIndex("by_userId_and_setId", (q) =>
+              q.eq("userId", userId).eq("setId", setId)
+            )
+            .take(500);
+
+          const available = srsCardsForSet.filter(
+            (sc) => sc.status === "new" && !alreadyQueued.has(sc._id)
+          );
+
+          if (available.length > 0) {
+            perSetAvailable.push(available);
+          }
+        }
+
+        newCards.push(
+          ...selectNewCardsRoundRobin(perSetAvailable, globalRemaining)
+        );
+      }
     }
 
     // Combine and shuffle (Fisher-Yates)
