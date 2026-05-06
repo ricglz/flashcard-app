@@ -6,9 +6,10 @@
 ## Phase 1 — MVP (in manual testing)
 
 ### Next: Bug Fixes & Polish
-- [ ] Consider allowing fields to be excluded from the card entirely (e.g., Character used only for TTS, not displayed — currently all fields must be front or back)
+- [x] "TTS Only" field display option — fields can be assigned to TTS Only (audio-only, not displayed) in study/browse/SRS config
+- [x] Bulk set creation — Quick Create modal on sets page with language presets
+- [x] PWA manifest + mobile meta tags + touch target improvements
 - [ ] Mobile responsiveness verification (responsive padding and layouts are in place, needs device testing)
-- [ ] Bulk set creation — quick-create mode or streamlined flow for adding many sets at once (noted: the full wizard is too heavyweight when creating several sets in a row)
 
 ### Next: Manual Testing (ongoing)
 - [x] Verify sign-in/sign-out flow works
@@ -67,7 +68,7 @@
 - [ ] PWA offline support — service worker caching app shell + static assets
 - [ ] Offline data access — cache sets/cards for offline reads
 - [ ] Offline write queue — queue mutations and sync when back online
-- [ ] TTS playback speed control (slider or preset in session header)
+- [x] TTS playback speed control (slider or preset in session header)
 
 ## Phase 4 — Polish & Features
 - [ ] Telemetry / analytics
