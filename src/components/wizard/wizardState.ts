@@ -20,7 +20,8 @@ export type WizardAction =
   | { type: "ADD_CARD"; payload: Record<string, string> }
   | { type: "REMOVE_CARD"; payload: number }
   | { type: "NEXT_STEP" }
-  | { type: "PREV_STEP" };
+  | { type: "PREV_STEP" }
+  | { type: "RESET" };
 
 export const initialState: WizardState = {
   step: 1,
@@ -61,6 +62,8 @@ export function wizardReducer(
       if (state.step > 1)
         return { ...state, step: (state.step - 1) as WizardState["step"] };
       return state;
+    case "RESET":
+      return initialState;
   }
 }
 

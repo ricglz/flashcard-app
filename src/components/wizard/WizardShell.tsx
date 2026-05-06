@@ -4,6 +4,7 @@ import { useReducer, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   wizardReducer,
   initialState,
@@ -22,6 +23,7 @@ export default function WizardShell() {
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdSetId, setCreatedSetId] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (isSubmitting) return;
@@ -38,12 +40,43 @@ export default function WizardShell() {
           cards: state.cards.map((fields, i) => ({ fields, order: i })),
         });
       }
-      router.push(`/sets/${setId}`);
+      setCreatedSetId(setId);
     } catch (err) {
       console.error("Failed to create set:", err);
       setIsSubmitting(false);
     }
   };
+
+  if (createdSetId) {
+    return (
+      <div className="text-center py-12 space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Set created!</h2>
+          <p className="text-muted">
+            Your flashcard set is ready to use.
+          </p>
+        </div>
+        <div className="flex justify-center gap-3">
+          <Link
+            href={`/sets/${createdSetId}`}
+            className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
+          >
+            View Set
+          </Link>
+          <button
+            onClick={() => {
+              dispatch({ type: "RESET" });
+              setCreatedSetId(null);
+              setIsSubmitting(false);
+            }}
+            className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
+          >
+            Create Another
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
