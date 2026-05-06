@@ -3,6 +3,8 @@
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import SrsQueueStatus from "@/components/SrsQueueStatus";
+import StreakBadge from "@/components/StreakBadge";
+import DailyGoalRing from "@/components/DailyGoalRing";
 import Link from "next/link";
 
 export default function Home() {
@@ -51,7 +53,12 @@ export default function Home() {
         <Authenticated>
           <SrsQueueStatus />
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="mb-6 p-4 border border-edge rounded-lg flex items-center justify-between">
+            <StreakBadge />
+            <DailyGoalRing />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
             <Link
               href="/sets"
               className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
@@ -68,6 +75,15 @@ export default function Home() {
               <h2 className="font-semibold text-lg mb-1">New Set</h2>
               <p className="text-sm text-muted">
                 Create a new flashcard set
+              </p>
+            </Link>
+            <Link
+              href="/progress"
+              className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
+            >
+              <h2 className="font-semibold text-lg mb-1">Progress</h2>
+              <p className="text-sm text-muted">
+                View your study stats
               </p>
             </Link>
           </div>

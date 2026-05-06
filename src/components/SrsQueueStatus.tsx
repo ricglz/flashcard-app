@@ -34,6 +34,7 @@ export default function SrsQueueStatus() {
   const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
   const [localResetHour, setLocalResetHour] = useState<string | null>(null);
   const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
+  const [localDailyGoal, setLocalDailyGoal] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   if (stats === undefined) return null;
@@ -51,6 +52,8 @@ export default function SrsQueueStatus() {
   );
   const currentTtsSpeed = settings?.ttsPlaybackSpeed ?? 0.75;
   const editTtsSpeed = localTtsSpeed ?? currentTtsSpeed;
+  const currentDailyGoal = settings?.dailyGoal ?? 0;
+  const editDailyGoal = localDailyGoal ?? String(currentDailyGoal);
 
   async function handleSave() {
     setIsSaving(true);
@@ -59,11 +62,13 @@ export default function SrsQueueStatus() {
         maxNewCardsPerDay: parsedMaxValue,
         dayResetUtcHour: localHourToUtc(parsedResetHour),
         ttsPlaybackSpeed: editTtsSpeed,
+        dailyGoal: Math.max(0, Math.min(500, Number(editDailyGoal) || 0)),
       });
       setShowSettings(false);
       setLocalMaxNew(null);
       setLocalResetHour(null);
       setLocalTtsSpeed(null);
+      setLocalDailyGoal(null);
     } finally {
       setIsSaving(false);
     }
@@ -95,10 +100,12 @@ export default function SrsQueueStatus() {
             editMaxValue={editMaxValue}
             editResetHour={editResetHour}
             editTtsSpeed={editTtsSpeed}
+            editDailyGoal={editDailyGoal}
             isSaving={isSaving}
             onChangeMaxValue={(v) => setLocalMaxNew(v)}
             onChangeResetHour={(v) => setLocalResetHour(v)}
             onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
+            onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
             onSave={handleSave}
           />
         )}
@@ -133,10 +140,12 @@ export default function SrsQueueStatus() {
             editMaxValue={editMaxValue}
             editResetHour={editResetHour}
             editTtsSpeed={editTtsSpeed}
+            editDailyGoal={editDailyGoal}
             isSaving={isSaving}
             onChangeMaxValue={(v) => setLocalMaxNew(v)}
             onChangeResetHour={(v) => setLocalResetHour(v)}
             onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
+            onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
             onSave={handleSave}
           />
         )}
@@ -179,10 +188,12 @@ export default function SrsQueueStatus() {
           editMaxValue={editMaxValue}
           editResetHour={editResetHour}
           editTtsSpeed={editTtsSpeed}
+          editDailyGoal={editDailyGoal}
           isSaving={isSaving}
           onChangeMaxValue={(v) => setLocalMaxNew(v)}
           onChangeResetHour={(v) => setLocalResetHour(v)}
           onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
+          onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
           onSave={handleSave}
         />
       )}
@@ -213,19 +224,23 @@ function SettingsPanel({
   editMaxValue,
   editResetHour,
   editTtsSpeed,
+  editDailyGoal,
   isSaving,
   onChangeMaxValue,
   onChangeResetHour,
   onChangeTtsSpeed,
+  onChangeDailyGoal,
   onSave,
 }: {
   editMaxValue: string;
   editResetHour: string;
   editTtsSpeed: number;
+  editDailyGoal: string;
   isSaving: boolean;
   onChangeMaxValue: (v: string) => void;
   onChangeResetHour: (v: string) => void;
   onChangeTtsSpeed: (v: number) => void;
+  onChangeDailyGoal: (v: string) => void;
   onSave: () => void;
 }) {
   return (
@@ -288,6 +303,26 @@ function SettingsPanel({
           <span>1x</span>
           <span>2x</span>
         </div>
+      </div>
+      <div>
+        <label className="text-xs text-muted block mb-1">
+          Daily card goal (0 = none)
+        </label>
+        <input
+          type="number"
+          min={0}
+          max={500}
+          value={editDailyGoal}
+          onChange={(e) => onChangeDailyGoal(e.target.value)}
+          onBlur={(e) => {
+            const clamped = Math.max(
+              0,
+              Math.min(500, Number(e.target.value) || 0)
+            );
+            onChangeDailyGoal(String(clamped));
+          }}
+          className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
+        />
       </div>
       <button
         onClick={onSave}
