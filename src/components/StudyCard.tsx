@@ -13,6 +13,7 @@ type Props = {
   backFields: string[];
   onRevealed?: () => void;
   autoPlayTts?: boolean;
+  ttsRate?: number;
 };
 
 export default function StudyCard({
@@ -22,6 +23,7 @@ export default function StudyCard({
   backFields,
   onRevealed,
   autoPlayTts,
+  ttsRate,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
 
@@ -39,7 +41,7 @@ export default function StudyCard({
           items.push({ text: value, lang: ttsConfig.lang });
         }
       }
-      if (items.length > 0) speakSequence(items);
+      if (items.length > 0) speakSequence(items, ttsRate);
     }
   };
 
@@ -71,7 +73,7 @@ export default function StudyCard({
                     {value}
                   </p>
                   {ttsConfig && (
-                    <TtsButton text={value} lang={ttsConfig.lang} />
+                    <TtsButton text={value} lang={ttsConfig.lang} rate={ttsRate} />
                   )}
                 </div>
               </div>

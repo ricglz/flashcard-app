@@ -134,5 +134,6 @@ export default defineSchema({
     userId: v.string(),
     maxNewCardsPerDay: v.number(),
     dayResetUtcHour: v.optional(v.number()),
+    ttsPlaybackSpeed: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 });

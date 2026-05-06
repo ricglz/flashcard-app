@@ -44,7 +44,7 @@ export function isTtsSupported(): boolean {
  * @param text - The text to speak
  * @param lang - BCP-47 language tag (e.g., "zh-CN", "es")
  */
-export async function speak(text: string, lang: string): Promise<void> {
+export async function speak(text: string, lang: string, rate = 0.75): Promise<void> {
   if (!isTtsSupported()) return;
 
   speechSynthesis.cancel();
@@ -56,7 +56,7 @@ export async function speak(text: string, lang: string): Promise<void> {
   const voice = pickVoice(voices, lang);
   if (voice) utterance.voice = voice;
 
-  utterance.rate = 0.75;
+  utterance.rate = rate;
   speechSynthesis.speak(utterance);
 }
 
@@ -65,7 +65,8 @@ export async function speak(text: string, lang: string): Promise<void> {
  * Cancels any ongoing speech before starting.
  */
 export async function speakSequence(
-  items: { text: string; lang: string }[]
+  items: { text: string; lang: string }[],
+  rate = 0.75,
 ): Promise<void> {
   if (!isTtsSupported() || items.length === 0) return;
 
@@ -80,7 +81,7 @@ export async function speakSequence(
       const voice = pickVoice(voices, item.lang);
       if (voice) utterance.voice = voice;
 
-      utterance.rate = 0.75;
+      utterance.rate = rate;
       utterance.onend = () => resolve();
       utterance.onerror = () => resolve();
       speechSynthesis.speak(utterance);

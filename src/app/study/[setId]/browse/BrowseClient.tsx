@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, useQuery, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
 import Link from "next/link";
@@ -39,6 +39,7 @@ export default function BrowseClient({
 }: Props) {
   const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
+  const settings = useQuery(api.userSettings.get);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
@@ -187,6 +188,7 @@ export default function BrowseClient({
           backFields={validBackFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
+          ttsRate={settings?.ttsPlaybackSpeed}
         />
 
         {revealed && (

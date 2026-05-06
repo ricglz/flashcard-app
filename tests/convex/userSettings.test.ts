@@ -19,6 +19,7 @@ describe("userSettings.get", () => {
     expect(settings).toMatchObject({
       maxNewCardsPerDay: 20,
       dayResetUtcHour: 4,
+      ttsPlaybackSpeed: 0.75,
     });
   });
 
@@ -100,5 +101,33 @@ describe("userSettings.update", () => {
     await expect(
       t.mutation(api.userSettings.update, { maxNewCardsPerDay: 10 })
     ).rejects.toThrow("Not authenticated");
+  });
+
+  it("saves ttsPlaybackSpeed", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    await as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 1.5 });
+
+    const settings = await as.query(api.userSettings.get);
+    expect(settings?.ttsPlaybackSpeed).toBe(1.5);
+  });
+
+  it("rejects ttsPlaybackSpeed below 0.25", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    await expect(
+      as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 0.1 })
+    ).rejects.toThrow("Speed must be 0.25-2.0");
+  });
+
+  it("rejects ttsPlaybackSpeed above 2.0", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    await expect(
+      as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 3.0 })
+    ).rejects.toThrow("Speed must be 0.25-2.0");
   });
 });

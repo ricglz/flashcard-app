@@ -23,6 +23,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const queue = usePreloadedQuery(preloadedQueue);
   const recordReview = useMutation(api.srsReviewQueue.recordReview);
   const stats = useQuery(api.srsReviewQueue.getQueueStats);
+  const settings = useQuery(api.userSettings.get);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -206,6 +207,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
           backFields={currentItem.backFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
+          ttsRate={settings?.ttsPlaybackSpeed}
         />
 
         {revealed && (

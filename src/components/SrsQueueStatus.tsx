@@ -33,6 +33,7 @@ export default function SrsQueueStatus() {
   const [showSettings, setShowSettings] = useState(false);
   const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
   const [localResetHour, setLocalResetHour] = useState<string | null>(null);
+  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   if (stats === undefined) return null;
@@ -48,6 +49,8 @@ export default function SrsQueueStatus() {
     0,
     Math.min(23, Math.round(Number(editResetHour) || 0))
   );
+  const currentTtsSpeed = settings?.ttsPlaybackSpeed ?? 0.75;
+  const editTtsSpeed = localTtsSpeed ?? currentTtsSpeed;
 
   async function handleSave() {
     setIsSaving(true);
@@ -55,10 +58,12 @@ export default function SrsQueueStatus() {
       await updateSettings({
         maxNewCardsPerDay: parsedMaxValue,
         dayResetUtcHour: localHourToUtc(parsedResetHour),
+        ttsPlaybackSpeed: editTtsSpeed,
       });
       setShowSettings(false);
       setLocalMaxNew(null);
       setLocalResetHour(null);
+      setLocalTtsSpeed(null);
     } finally {
       setIsSaving(false);
     }
@@ -88,9 +93,11 @@ export default function SrsQueueStatus() {
           <SettingsPanel
             editMaxValue={editMaxValue}
             editResetHour={editResetHour}
+            editTtsSpeed={editTtsSpeed}
             isSaving={isSaving}
             onChangeMaxValue={(v) => setLocalMaxNew(v)}
             onChangeResetHour={(v) => setLocalResetHour(v)}
+            onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
             onSave={handleSave}
           />
         )}
@@ -123,9 +130,11 @@ export default function SrsQueueStatus() {
           <SettingsPanel
             editMaxValue={editMaxValue}
             editResetHour={editResetHour}
+            editTtsSpeed={editTtsSpeed}
             isSaving={isSaving}
             onChangeMaxValue={(v) => setLocalMaxNew(v)}
             onChangeResetHour={(v) => setLocalResetHour(v)}
+            onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
             onSave={handleSave}
           />
         )}
@@ -166,9 +175,11 @@ export default function SrsQueueStatus() {
         <SettingsPanel
           editMaxValue={editMaxValue}
           editResetHour={editResetHour}
+          editTtsSpeed={editTtsSpeed}
           isSaving={isSaving}
           onChangeMaxValue={(v) => setLocalMaxNew(v)}
           onChangeResetHour={(v) => setLocalResetHour(v)}
+          onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
           onSave={handleSave}
         />
       )}
@@ -198,16 +209,20 @@ function GearIcon() {
 function SettingsPanel({
   editMaxValue,
   editResetHour,
+  editTtsSpeed,
   isSaving,
   onChangeMaxValue,
   onChangeResetHour,
+  onChangeTtsSpeed,
   onSave,
 }: {
   editMaxValue: string;
   editResetHour: string;
+  editTtsSpeed: number;
   isSaving: boolean;
   onChangeMaxValue: (v: string) => void;
   onChangeResetHour: (v: string) => void;
+  onChangeTtsSpeed: (v: number) => void;
   onSave: () => void;
 }) {
   return (
@@ -251,6 +266,25 @@ function SettingsPanel({
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
+      </div>
+      <div>
+        <label className="text-xs text-muted block mb-1">
+          TTS playback speed: {editTtsSpeed}x
+        </label>
+        <input
+          type="range"
+          min={0.25}
+          max={2}
+          step={0.25}
+          value={editTtsSpeed}
+          onChange={(e) => onChangeTtsSpeed(Number(e.target.value))}
+          className="w-full accent-accent"
+        />
+        <div className="flex justify-between text-xs text-muted mt-0.5">
+          <span>0.25x</span>
+          <span>1x</span>
+          <span>2x</span>
+        </div>
       </div>
       <button
         onClick={onSave}

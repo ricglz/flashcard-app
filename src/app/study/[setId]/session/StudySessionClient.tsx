@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation, useQuery, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -39,6 +39,7 @@ export default function StudySessionClient({
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
+  const settings = useQuery(api.userSettings.get);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -152,6 +153,7 @@ export default function StudySessionClient({
           backFields={session.backFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
+          ttsRate={settings?.ttsPlaybackSpeed}
         />
 
         {revealed && (

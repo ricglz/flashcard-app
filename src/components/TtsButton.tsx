@@ -5,15 +5,16 @@ import { speak, isTtsSupported } from "@/lib/tts";
 type Props = {
   text: string;
   lang: string;
+  rate?: number;
   className?: string;
 };
 
-export default function TtsButton({ text, lang, className = "" }: Props) {
+export default function TtsButton({ text, lang, rate, className = "" }: Props) {
   if (!isTtsSupported()) return null;
 
   return (
     <button
-      onClick={() => speak(text, lang)}
+      onClick={() => speak(text, lang, rate)}
       className={`inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-hover transition-colors ${className}`}
       title={`Listen (${lang})`}
       aria-label={`Listen to pronunciation`}

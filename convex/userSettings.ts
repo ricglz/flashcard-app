@@ -5,6 +5,7 @@ import { SRS_DEFAULTS } from "./srs";
 const DEFAULTS = {
   maxNewCardsPerDay: SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY,
   dayResetUtcHour: SRS_DEFAULTS.DAY_RESET_UTC_HOUR,
+  ttsPlaybackSpeed: 0.75,
 };
 
 export const get = query({
@@ -27,6 +28,7 @@ export const update = mutation({
   args: {
     maxNewCardsPerDay: v.optional(v.number()),
     dayResetUtcHour: v.optional(v.number()),
+    ttsPlaybackSpeed: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -41,6 +43,11 @@ export const update = mutation({
       if (h < 0 || h > 23) throw new Error("Hour must be 0-23");
       patch.dayResetUtcHour = h;
     }
+    if (args.ttsPlaybackSpeed !== undefined) {
+      const s = Math.round(args.ttsPlaybackSpeed * 100) / 100;
+      if (s < 0.25 || s > 2.0) throw new Error("Speed must be 0.25-2.0");
+      patch.ttsPlaybackSpeed = s;
+    }
 
     const existing = await ctx.db
       .query("userSettings")
@@ -54,6 +61,8 @@ export const update = mutation({
         maxNewCardsPerDay:
           patch.maxNewCardsPerDay ?? DEFAULTS.maxNewCardsPerDay,
         dayResetUtcHour: patch.dayResetUtcHour ?? DEFAULTS.dayResetUtcHour,
+        ttsPlaybackSpeed:
+          patch.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed,
       });
     }
   },
