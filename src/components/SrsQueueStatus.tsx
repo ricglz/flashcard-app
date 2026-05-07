@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import SrsSettingsPanel from "./SrsSettingsPanel";
 import SrsQueueEmpty from "./SrsQueueEmpty";
 import SrsQueueComplete from "./SrsQueueComplete";
@@ -30,8 +31,8 @@ function localHourToUtc(localHour: number): number {
 }
 
 export default function SrsQueueStatus() {
-  const stats = useQuery(api.srsReviewQueue.getQueueStats);
-  const settings = useQuery(api.userSettings.get);
+  const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
+  const settings = useOfflineQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
 

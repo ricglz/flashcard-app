@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import StreakBadge from "@/components/StreakBadge";
 import DailyGoalRing from "@/components/DailyGoalRing";
 
 export default function ProgressClient() {
   const [days, setDays] = useState<7 | 30>(7);
-  const history = useQuery(api.progress.getDailyHistory, { days });
-  const breakdown = useQuery(api.progress.getCardStatusBreakdown);
-  const mastery = useQuery(api.progress.getPerSetMastery);
+  const history = useOfflineQuery(api.progress.getDailyHistory, { days });
+  const breakdown = useOfflineQuery(api.progress.getCardStatusBreakdown);
+  const mastery = useOfflineQuery(api.progress.getPerSetMastery);
 
   const maxCards =
     history && history.length > 0

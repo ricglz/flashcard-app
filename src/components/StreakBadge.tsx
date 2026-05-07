@@ -1,10 +1,10 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { api } from "../../convex/_generated/api";
 
 export default function StreakBadge() {
-  const stats = useQuery(api.progress.getStreakStats);
+  const stats = useOfflineQuery(api.progress.getStreakStats);
 
   if (stats === undefined) return null;
   if (!stats) return null;

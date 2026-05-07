@@ -1,13 +1,13 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { api } from "../../convex/_generated/api";
 
 const RADIUS = 36;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function DailyGoalRing() {
-  const progress = useQuery(api.progress.getDailyGoalProgress);
+  const progress = useOfflineQuery(api.progress.getDailyGoalProgress);
 
   if (progress === undefined) return null;
   if (!progress) return null;

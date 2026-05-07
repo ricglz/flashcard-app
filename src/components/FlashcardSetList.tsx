@@ -1,11 +1,12 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
 
 export default function FlashcardSetList() {
-  const sets = useQuery(api.flashcardSets.list);
+  const sets = useOfflineQuery(api.flashcardSets.list);
   const removeSet = useMutation(api.flashcardSets.remove);
 
   if (sets === undefined) {

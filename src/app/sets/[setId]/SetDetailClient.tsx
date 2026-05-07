@@ -1,7 +1,8 @@
 "use client";
 
-import { usePreloadedQuery, useQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TtsButton from "@/components/TtsButton";
@@ -26,7 +27,7 @@ export default function SetDetailClient({
   const cards = usePreloadedQuery(preloadedCards);
   const userSet = usePreloadedQuery(preloadedUserSet);
   const router = useRouter();
-  const settings = useQuery(api.userSettings.get);
+  const settings = useOfflineQuery(api.userSettings.get);
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order

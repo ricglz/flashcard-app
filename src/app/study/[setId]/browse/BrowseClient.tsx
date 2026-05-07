@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { usePreloadedQuery, useQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { Id } from "../../../../../convex/_generated/dataModel";
 import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
@@ -41,7 +42,7 @@ export default function BrowseClient({
 }: Props) {
   const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
   const cards = usePreloadedQuery(preloadedCards);
-  const settings = useQuery(api.userSettings.get);
+  const settings = useOfflineQuery(api.userSettings.get);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());

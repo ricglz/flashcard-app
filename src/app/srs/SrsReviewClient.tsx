@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { usePreloadedQuery, useMutation, useQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { CardRating } from "@/lib/types";
+import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 
@@ -17,8 +18,8 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const queue = usePreloadedQuery(preloadedQueue);
   const recordReview = useMutation(api.srsReviewQueue.recordReview);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
-  const stats = useQuery(api.srsReviewQueue.getQueueStats);
-  const settings = useQuery(api.userSettings.get);
+  const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
+  const settings = useOfflineQuery(api.userSettings.get);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
