@@ -1,7 +1,6 @@
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
-import TtsButton from "@/components/TtsButton";
-import { getTtsConfig } from "@/lib/types";
 import { WizardAction, WizardState } from "./wizardState";
+import CardPreview from "./CardPreview";
 
 type Props = {
   state: WizardState;
@@ -19,7 +18,6 @@ export default function StepConfigureFields({ state, dispatch }: Props) {
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Field editor */}
         <div className="lg:col-span-3">
           <FieldDefinitionEditor
             value={state.fieldDefinitions}
@@ -31,7 +29,6 @@ export default function StepConfigureFields({ state, dispatch }: Props) {
           />
         </div>
 
-        {/* Card preview — matches StudyCard visual style */}
         <div className="lg:col-span-2">
           <label className="block text-sm font-medium mb-2">Card Preview</label>
           {sampleCards.length === 0 ? (
@@ -48,52 +45,6 @@ export default function StepConfigureFields({ state, dispatch }: Props) {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function CardPreview({
-  card,
-  fieldDefinitions,
-}: {
-  card: Record<string, string>;
-  fieldDefinitions: WizardState["fieldDefinitions"];
-}) {
-  const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
-
-  return (
-    <div className="bg-card-bg border-2 border-card-border rounded-xl p-8 shadow-sm">
-      <div className="space-y-4">
-        {sorted.map((fd) => {
-          const value = card[fd.name] ?? "";
-          const ttsConfig = getTtsConfig(fd);
-          return (
-            <div key={fd.name} className="text-center">
-              <p className="text-xs text-muted uppercase tracking-wider mb-1">
-                {fd.name}
-              </p>
-              <div className="flex items-center justify-center gap-2">
-                <p
-                  className={
-                    fd.role === "primary"
-                      ? "text-4xl font-bold"
-                      : fd.role === "pronunciation"
-                        ? "text-2xl"
-                        : fd.role === "note"
-                          ? "text-lg text-muted"
-                          : "text-2xl"
-                  }
-                >
-                  {value || "—"}
-                </p>
-                {ttsConfig && value && (
-                  <TtsButton text={value} lang={ttsConfig.lang} />
-                )}
-              </div>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

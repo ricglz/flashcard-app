@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import Link from "next/link";
+import SrsSettingsPanel from "./SrsSettingsPanel";
+import SrsQueueEmpty from "./SrsQueueEmpty";
+import SrsQueueComplete from "./SrsQueueComplete";
+import SrsQueueActive from "./SrsQueueActive";
 
 function formatResetTime(dayResetUtcHour: number): string {
   const d = new Date();
@@ -30,12 +33,16 @@ export default function SrsQueueStatus() {
   const stats = useQuery(api.srsReviewQueue.getQueueStats);
   const settings = useQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
+  const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
+
   const [showSettings, setShowSettings] = useState(false);
   const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
   const [localResetHour, setLocalResetHour] = useState<string | null>(null);
   const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
   const [localDailyGoal, setLocalDailyGoal] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [noMoreCards, setNoMoreCards] = useState(false);
 
   if (stats === undefined) return null;
   if (stats === null) return null;
@@ -74,263 +81,67 @@ export default function SrsQueueStatus() {
     }
   }
 
+  async function handleLoadMore() {
+    setIsLoadingMore(true);
+    setNoMoreCards(false);
+    try {
+      const result = await forceRefresh();
+      if (result.added === 0) {
+        setNoMoreCards(true);
+      }
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
   const resetTimeStr = formatResetTime(stats.dayResetUtcHour);
+  const onToggleSettings = () => setShowSettings((v) => !v);
+
+  const settingsPanel = showSettings ? (
+    <SrsSettingsPanel
+      editMaxValue={editMaxValue}
+      editResetHour={editResetHour}
+      editTtsSpeed={editTtsSpeed}
+      editDailyGoal={editDailyGoal}
+      isSaving={isSaving}
+      onChangeMaxValue={(v) => setLocalMaxNew(v)}
+      onChangeResetHour={(v) => setLocalResetHour(v)}
+      onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
+      onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
+      onSave={handleSave}
+    />
+  ) : null;
 
   if (stats.remaining === 0 && stats.reviewedToday === 0) {
     return (
-      <div className="mb-6 p-4 border border-edge rounded-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-muted text-sm">No cards to review right now.</p>
-            <p className="text-xs text-muted mt-1">
-              Next reset at {resetTimeStr}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowSettings((v) => !v)}
-            className="text-muted hover:text-foreground transition-colors"
-            aria-label="SRS settings"
-            title="SRS settings"
-          >
-            <GearIcon />
-          </button>
-        </div>
-        {showSettings && (
-          <SettingsPanel
-            editMaxValue={editMaxValue}
-            editResetHour={editResetHour}
-            editTtsSpeed={editTtsSpeed}
-            editDailyGoal={editDailyGoal}
-            isSaving={isSaving}
-            onChangeMaxValue={(v) => setLocalMaxNew(v)}
-            onChangeResetHour={(v) => setLocalResetHour(v)}
-            onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
-            onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
-            onSave={handleSave}
-          />
-        )}
-      </div>
+      <SrsQueueEmpty
+        resetTimeStr={resetTimeStr}
+        onToggleSettings={onToggleSettings}
+        settingsPanel={settingsPanel}
+      />
     );
   }
 
   if (stats.remaining === 0) {
     return (
-      <div className="mb-6 p-4 border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-green-700 dark:text-green-300 font-medium">
-              All done for today! You reviewed {stats.reviewedToday} card
-              {stats.reviewedToday !== 1 ? "s" : ""}.
-            </p>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              Next reset at {resetTimeStr}
-            </p>
-          </div>
-          <button
-            onClick={() => setShowSettings((v) => !v)}
-            className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 transition-colors"
-            aria-label="SRS settings"
-            title="SRS settings"
-          >
-            <GearIcon />
-          </button>
-        </div>
-        {showSettings && (
-          <SettingsPanel
-            editMaxValue={editMaxValue}
-            editResetHour={editResetHour}
-            editTtsSpeed={editTtsSpeed}
-            editDailyGoal={editDailyGoal}
-            isSaving={isSaving}
-            onChangeMaxValue={(v) => setLocalMaxNew(v)}
-            onChangeResetHour={(v) => setLocalResetHour(v)}
-            onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
-            onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
-            onSave={handleSave}
-          />
-        )}
-      </div>
+      <SrsQueueComplete
+        reviewedToday={stats.reviewedToday}
+        resetTimeStr={resetTimeStr}
+        onToggleSettings={onToggleSettings}
+        onLoadMore={handleLoadMore}
+        isLoadingMore={isLoadingMore}
+        noMoreCards={noMoreCards}
+        settingsPanel={settingsPanel}
+      />
     );
   }
 
   return (
-    <div className="mb-6 p-4 border border-accent/30 bg-accent/5 rounded-lg">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium">
-            {stats.remaining} card{stats.remaining !== 1 ? "s" : ""} to review
-          </p>
-          {stats.reviewedToday > 0 && (
-            <p className="text-sm text-muted">
-              {stats.reviewedToday} reviewed today
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowSettings((v) => !v)}
-            className="text-muted hover:text-foreground transition-colors"
-            aria-label="SRS settings"
-            title="SRS settings"
-          >
-            <GearIcon />
-          </button>
-          <Link
-            href="/srs"
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm font-medium transition-colors"
-          >
-            Start Review
-          </Link>
-        </div>
-      </div>
-      {showSettings && (
-        <SettingsPanel
-          editMaxValue={editMaxValue}
-          editResetHour={editResetHour}
-          editTtsSpeed={editTtsSpeed}
-          editDailyGoal={editDailyGoal}
-          isSaving={isSaving}
-          onChangeMaxValue={(v) => setLocalMaxNew(v)}
-          onChangeResetHour={(v) => setLocalResetHour(v)}
-          onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
-          onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
-          onSave={handleSave}
-        />
-      )}
-    </div>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function SettingsPanel({
-  editMaxValue,
-  editResetHour,
-  editTtsSpeed,
-  editDailyGoal,
-  isSaving,
-  onChangeMaxValue,
-  onChangeResetHour,
-  onChangeTtsSpeed,
-  onChangeDailyGoal,
-  onSave,
-}: {
-  editMaxValue: string;
-  editResetHour: string;
-  editTtsSpeed: number;
-  editDailyGoal: string;
-  isSaving: boolean;
-  onChangeMaxValue: (v: string) => void;
-  onChangeResetHour: (v: string) => void;
-  onChangeTtsSpeed: (v: number) => void;
-  onChangeDailyGoal: (v: string) => void;
-  onSave: () => void;
-}) {
-  return (
-    <div className="mt-3 pt-3 border-t border-edge space-y-3">
-      <div>
-        <label className="text-xs text-muted block mb-1">
-          New cards per day (across all sets)
-        </label>
-        <input
-          type="number"
-          min={1}
-          max={100}
-          value={editMaxValue}
-          onChange={(e) => onChangeMaxValue(e.target.value)}
-          onBlur={(e) => {
-            const clamped = Math.max(
-              1,
-              Math.min(100, Number(e.target.value) || 1)
-            );
-            onChangeMaxValue(String(clamped));
-          }}
-          className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
-        />
-      </div>
-      <div>
-        <label className="text-xs text-muted block mb-1">
-          Day resets at (local hour, 0-23)
-        </label>
-        <input
-          type="number"
-          min={0}
-          max={23}
-          value={editResetHour}
-          onChange={(e) => onChangeResetHour(e.target.value)}
-          onBlur={(e) => {
-            const clamped = Math.max(
-              0,
-              Math.min(23, Math.round(Number(e.target.value) || 0))
-            );
-            onChangeResetHour(String(clamped));
-          }}
-          className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
-        />
-      </div>
-      <div>
-        <label className="text-xs text-muted block mb-1">
-          TTS playback speed: {editTtsSpeed}x
-        </label>
-        <input
-          type="range"
-          min={0.25}
-          max={2}
-          step={0.25}
-          value={editTtsSpeed}
-          onChange={(e) => onChangeTtsSpeed(Number(e.target.value))}
-          className="w-full accent-accent"
-        />
-        <div className="flex justify-between text-xs text-muted mt-0.5">
-          <span>0.25x</span>
-          <span>1x</span>
-          <span>2x</span>
-        </div>
-      </div>
-      <div>
-        <label className="text-xs text-muted block mb-1">
-          Daily card goal (0 = none)
-        </label>
-        <input
-          type="number"
-          min={0}
-          max={500}
-          value={editDailyGoal}
-          onChange={(e) => onChangeDailyGoal(e.target.value)}
-          onBlur={(e) => {
-            const clamped = Math.max(
-              0,
-              Math.min(500, Number(e.target.value) || 0)
-            );
-            onChangeDailyGoal(String(clamped));
-          }}
-          className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
-        />
-      </div>
-      <button
-        onClick={onSave}
-        disabled={isSaving}
-        className="px-3 py-1 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
-      >
-        {isSaving ? "..." : "Save"}
-      </button>
-    </div>
+    <SrsQueueActive
+      remaining={stats.remaining}
+      reviewedToday={stats.reviewedToday}
+      onToggleSettings={onToggleSettings}
+      settingsPanel={settingsPanel}
+    />
   );
 }

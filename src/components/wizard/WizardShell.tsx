@@ -3,7 +3,6 @@
 import { useReducer, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   wizardReducer,
@@ -18,7 +17,6 @@ import StepReview from "./StepReview";
 const STEP_LABELS = ["Name & Source", "Add Cards", "Configure Fields", "Review"];
 
 export default function WizardShell() {
-  const router = useRouter();
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
   const [state, dispatch] = useReducer(wizardReducer, initialState);
