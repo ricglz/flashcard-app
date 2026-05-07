@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { CardRating } from "@/lib/types";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 
@@ -16,7 +17,7 @@ type Props = {
 export default function SrsReviewClient({ preloadedQueue }: Props) {
   const router = useRouter();
   const queue = usePreloadedQuery(preloadedQueue);
-  const recordReview = useMutation(api.srsReviewQueue.recordReview);
+  const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
   const settings = useOfflineQuery(api.userSettings.get);
@@ -31,11 +32,13 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
     good: 0,
     easy: 0,
   });
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
 
-  const totalCards = queue.length + reviewedCount;
-  const currentItem = queue.length > 0 ? queue[0] : null;
+  const visibleQueue = queue.filter((item) => !reviewedIds.has(item._id));
+  const totalCards = visibleQueue.length + reviewedCount;
+  const currentItem = visibleQueue.length > 0 ? visibleQueue[0] : null;
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
@@ -53,6 +56,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
           ...prev,
           [rating]: prev[rating] + 1,
         }));
+        setReviewedIds((prev) => new Set(prev).add(currentItem._id));
       } finally {
         setIsSubmitting(false);
       }
@@ -73,7 +77,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
     }
   }
 
-  if (!currentItem || queue.length === 0) {
+  if (!currentItem || visibleQueue.length === 0) {
     return (
       <SrsReviewComplete
         reviewedCount={reviewedCount}

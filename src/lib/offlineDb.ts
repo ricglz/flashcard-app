@@ -1,5 +1,14 @@
 import { openDB, type IDBPDatabase, type DBSchema } from "idb";
 
+export interface OutboxEntry {
+  id: number;
+  mutationName: string;
+  args: unknown;
+  createdAt: number;
+  status: "pending" | "syncing" | "failed";
+  retries: number;
+}
+
 interface OfflineCacheSchema extends DBSchema {
   queryCache: {
     key: string;
@@ -9,19 +18,29 @@ interface OfflineCacheSchema extends DBSchema {
       updatedAt: number;
     };
   };
+  outbox: {
+    key: number;
+    value: OutboxEntry;
+  };
 }
 
 const DB_NAME = "flashcard-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<OfflineCacheSchema>> | null = null;
 
-function getDb() {
+export function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<OfflineCacheSchema>(DB_NAME, DB_VERSION, {
       upgrade(db) {
         if (!db.objectStoreNames.contains("queryCache")) {
           db.createObjectStore("queryCache", { keyPath: "key" });
+        }
+        if (!db.objectStoreNames.contains("outbox")) {
+          db.createObjectStore("outbox", {
+            keyPath: "id",
+            autoIncrement: true,
+          });
         }
       },
     });
