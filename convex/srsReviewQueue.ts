@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from "./srs";
+import { populateQueue } from "./srsEngine";
 import { RATING_SCORES } from "./studySessions";
 import { incrementDailyStats } from "./progress";
 import type { CardRating } from "../src/lib/types";
@@ -175,5 +176,32 @@ export const recordReview = mutation({
       .take(500);
 
     return { remaining: remaining.length };
+  },
+});
+
+export const forceRefreshQueue = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.tokenIdentifier;
+
+    const existing = await ctx.db
+      .query("reviewQueue")
+      .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
+      .take(1);
+    if (existing.length > 0) {
+      throw new Error("Queue is not empty");
+    }
+
+    const userSettings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+    const newCardLimit =
+      userSettings?.maxNewCardsPerDay ?? SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY;
+
+    const added = await populateQueue(ctx, userId, newCardLimit);
+    return { added };
   },
 });
