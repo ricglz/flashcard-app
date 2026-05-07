@@ -26,6 +26,8 @@ const eslintConfig = defineConfig([
         destructuredArrayIgnorePattern: "^_",
       }],
       "react/no-multi-comp": ["error", { ignoreStateless: false }],
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "eqeqeq": ["error", "always"],
     },
   },
 ]);
