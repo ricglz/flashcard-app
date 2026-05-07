@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "test:e2e": "playwright test",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.8",
+    "@serwist/next": "^9.5.11",
     "convex": "^1.34.1",
     "next": "16.2.2",
     "papaparse": "^5.5.3",
@@ -32,6 +33,7 @@
     "convex-test": "^0.0.47",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "serwist": "^9.5.11",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.4"
