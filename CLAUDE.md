@@ -16,9 +16,7 @@ e2e/               # Playwright E2E tests
 ```
 
 ## Progress Tracking
-- **PROGRESS.md** tracks current status, forward-looking tasks, and completed items for the active phase only — once a phase is done, remove its completed items (git has the record)
-- When a phase is completed, create a commit marking the phase as done (update PROGRESS.md to clear completed items and advance status)
-- Git history is the authoritative record of what was built and when
+- **PROGRESS.md** is forward-looking only — it tracks what's next, not what's done. Never list completed items; git history is the authoritative record.
 - Test plans live in `docs/testing-plan.md` until replaced by actual test code
 
 ## Testing
