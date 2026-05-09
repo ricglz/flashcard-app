@@ -64,9 +64,9 @@ export default function ProgressClient() {
           <div className="border border-edge rounded-lg p-4">
             <div className="flex items-end gap-1 h-32">
               {history.map((day) => {
-                const height =
+                const heightPx =
                   maxCards > 0
-                    ? Math.max(4, (day.totalCards / maxCards) * 100)
+                    ? Math.max(4, (day.totalCards / maxCards) * 112)
                     : 4;
                 const label = day.dayKey.slice(5);
                 return (
@@ -79,7 +79,7 @@ export default function ProgressClient() {
                     </span>
                     <div
                       className="w-full rounded-t bg-accent transition-all"
-                      style={{ height: `${height}%` }}
+                      style={{ height: `${heightPx}px` }}
                     />
                     <span className="text-[9px] text-muted">{label}</span>
                   </div>
@@ -97,7 +97,7 @@ export default function ProgressClient() {
           <div className="border border-edge rounded-lg p-4">
             <div className="flex items-end gap-1 h-24">
               {history.map((day) => {
-                const height = Math.max(4, day.accuracy * 100);
+                const heightPx = Math.max(4, day.accuracy * 80);
                 return (
                   <div
                     key={day.dayKey}
@@ -116,7 +116,7 @@ export default function ProgressClient() {
                             ? "bg-yellow-500"
                             : "bg-red-500"
                       }`}
-                      style={{ height: `${height}%` }}
+                      style={{ height: `${heightPx}px` }}
                     />
                   </div>
                 );
@@ -194,11 +194,19 @@ export default function ProgressClient() {
                     <span className="text-sm font-medium">{s.setName}</span>
                     <span className="text-xs text-muted">{pct}% mastered</span>
                   </div>
-                  <div className="h-2 bg-raised rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="h-2 bg-raised rounded-full overflow-hidden flex">
+                    {s.review > 0 && (
+                      <div
+                        className="h-full bg-green-500 transition-all"
+                        style={{ width: `${(s.review / s.total) * 100}%` }}
+                      />
+                    )}
+                    {s.learning > 0 && (
+                      <div
+                        className="h-full bg-yellow-500 transition-all"
+                        style={{ width: `${(s.learning / s.total) * 100}%` }}
+                      />
+                    )}
                   </div>
                   <div className="flex gap-3 mt-1.5 text-xs text-muted">
                     <span>{s.review} review</span>
