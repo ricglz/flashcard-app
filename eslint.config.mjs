@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Auto-generated Convex files:
     "convex/_generated/**",
+    // Generated service worker:
+    "public/sw.js",
   ]),
   {
     linterOptions: {
