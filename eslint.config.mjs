@@ -28,6 +28,11 @@ const eslintConfig = defineConfig([
       "react/no-multi-comp": ["error", { ignoreStateless: false }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "eqeqeq": ["error", "always"],
+      "max-lines-per-function": ["warn", {
+        max: 175,
+        skipBlankLines: true,
+        skipComments: true,
+      }],
     },
   },
 ]);

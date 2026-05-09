@@ -8,6 +8,9 @@ import Link from "next/link";
 import { TypedFlashcardSet, getTtsConfig } from "@/lib/types";
 import { asId } from "@/lib/convexHelpers";
 import { cycleFieldAssignment } from "@/lib/fieldToggle";
+import ResumeSessionBanner from "./ResumeSessionBanner";
+import FieldSelectionList from "./FieldSelectionList";
+import CardLimitSelector from "./CardLimitSelector";
 
 type Props = {
   setId: string;
@@ -48,7 +51,6 @@ export default function StudyConfigClient({
 
   const fieldDefs = set.fieldDefinitions;
 
-  // Initialize front/back defaults from userSet (SRS defaults) or field order
   if (!initialized && fieldDefs.length > 0) {
     if (userSet) {
       setFrontFields(userSet.defaultFrontFields);
@@ -120,22 +122,14 @@ export default function StudyConfigClient({
   return (
     <div className="min-h-screen">
       <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
-          &larr; Back
-        </Link>
-        <Link
-          href={`/sets/${setId}/edit`}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          Edit Set
-        </Link>
+        <Link href="/" className="text-sm text-muted hover:text-foreground">&larr; Back</Link>
+        <Link href={`/sets/${setId}/edit`} className="text-sm text-muted hover:text-foreground">Edit Set</Link>
       </header>
 
       <main className="max-w-md mx-auto p-4 sm:p-6 space-y-6">
         <h1 className="text-2xl font-bold">Study: {set.name}</h1>
         <p className="text-sm text-muted">{cards.length} cards</p>
 
-        {/* Mode selector */}
         <div className="flex gap-2">
           {(["study", "browse"] as const).map((m) => (
             <button
@@ -161,79 +155,18 @@ export default function StudyConfigClient({
           ))}
         </div>
 
-        {/* Resume existing session */}
         {mode === "study" && activeSession && (
-          <div className="p-4 bg-info-surface border border-info-edge rounded-lg">
-            <p className="text-sm font-medium mb-2">
-              You have an active session ({activeSession.currentIndex}/
-              {activeSession.cardOrder.length} cards done)
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  router.push(
-                    `/study/${setId}/session?sessionId=${activeSession._id}`
-                  )
-                }
-                className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
-              >
-                Resume
-              </button>
-              <Link
-                href={`/study/${setId}/results?sessionId=${activeSession._id}`}
-                className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
-              >
-                View Results So Far
-              </Link>
-            </div>
-          </div>
+          <ResumeSessionBanner setId={setId} activeSession={activeSession} />
         )}
 
-        {/* Field selection */}
-        <div className="space-y-4">
-          <h2 className="font-semibold">Study Direction</h2>
-          <p className="text-xs text-muted">
-            Tap a field to cycle: Front → Back{" "}
-            {fieldDefs.some((fd) => getTtsConfig(fd) !== null) && "→ TTS Only "}→ Front
-          </p>
+        <FieldSelectionList
+          fieldDefs={fieldDefs}
+          frontFields={frontFields}
+          backFields={backFields}
+          ttsOnlyFields={ttsOnlyFields}
+          onToggle={handleToggle}
+        />
 
-          <div className="space-y-2">
-            {fieldDefs
-              .sort((a, b) => a.order - b.order)
-              .map((fd) => {
-                const name = fd.name;
-                const isFront = frontFields.includes(name);
-                const isBack = backFields.includes(name);
-                const isTtsOnly = ttsOnlyFields.includes(name);
-                const label = isFront
-                  ? "Front"
-                  : isBack
-                    ? "Back"
-                    : isTtsOnly
-                      ? "TTS Only"
-                      : "Front";
-                const style = isFront
-                  ? "bg-accent/10 border-accent text-accent"
-                  : isBack
-                    ? "bg-warning/10 border-warning text-warning"
-                    : isTtsOnly
-                      ? "bg-info-surface border-info-edge text-muted"
-                      : "border-edge text-muted";
-                return (
-                  <button
-                    key={name}
-                    onClick={() => handleToggle(name)}
-                    className={`w-full text-left px-3 py-2 text-sm rounded-lg border transition-colors hover:bg-surface-hover flex justify-between items-center ${style}`}
-                  >
-                    <span>{name}</span>
-                    <span className="text-xs font-medium">{label}</span>
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-
-        {/* Shuffle toggle */}
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -244,38 +177,12 @@ export default function StudyConfigClient({
           <span className="text-sm">Shuffle cards</span>
         </label>
 
-        {/* Card limit */}
-        <div className="space-y-2">
-          <h2 className="font-semibold text-sm">Cards to study</h2>
-          <div className="flex gap-2">
-            {[10, 20, 50].map((n) => (
-              <button
-                key={n}
-                onClick={() => setCardLimit(n)}
-                disabled={cards.length < n}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  cardLimit === n
-                    ? "bg-accent text-white"
-                    : "border border-edge hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-            <button
-              onClick={() => setCardLimit(null)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                cardLimit === null
-                  ? "bg-accent text-white"
-                  : "border border-edge hover:bg-surface-hover"
-              }`}
-            >
-              All
-            </button>
-          </div>
-        </div>
+        <CardLimitSelector
+          cardLimit={cardLimit}
+          onCardLimitChange={setCardLimit}
+          totalCards={cards.length}
+        />
 
-        {/* Start button */}
         <div className="space-y-2">
           <button
             onClick={mode === "study" ? handleStart : handleBrowse}
