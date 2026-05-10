@@ -1,6 +1,7 @@
 "use client";
 
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { useState } from "react";
+import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
@@ -14,26 +15,42 @@ type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
-  preloadedUserSet: Preloaded<typeof api.userSets.get>;
 };
 
 export default function SetDetailClient({
   setId,
   preloadedSet,
   preloadedCards,
-  preloadedUserSet,
 }: Props) {
-  const set = useTypedFlashcardSet(preloadedSet);
+  const { set, viewer } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
-  const userSet = usePreloadedQuery(preloadedUserSet);
   const router = useRouter();
   const settings = useOfflineQuery(api.userSettings.get);
+  const addToLibrary = useMutation(api.sharing.addToLibrary);
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
   );
 
-  const isOwner = userSet?.role === "owner";
+  const isOwner = viewer.role === "owner";
+  const isMember = viewer.role !== "visitor";
+
+  const handleAddToLibrary = async () => {
+    setIsAdding(true);
+    setAddError(null);
+    try {
+      await addToLibrary({ setId: set._id });
+      router.refresh();
+    } catch (err) {
+      setAddError(
+        err instanceof Error ? err.message : "Failed to add to library"
+      );
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -45,12 +62,14 @@ export default function SetDetailClient({
           &larr; Back
         </button>
         <div className="flex gap-2">
-          <Link
-            href={`/study/${setId}`}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-          >
-            Study
-          </Link>
+          {isMember && (
+            <Link
+              href={`/study/${setId}`}
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
+            >
+              Study
+            </Link>
+          )}
           {isOwner && (
             <Link
               href={`/sets/${setId}/edit`}
@@ -71,14 +90,32 @@ export default function SetDetailClient({
           {cards.length} card{cards.length !== 1 ? "s" : ""}
         </p>
 
-        {userSet && (
+        {viewer.role === "visitor" && (
+          <div className="mb-6 p-4 border border-edge rounded-lg">
+            <p className="text-sm text-muted mb-3">
+              This set is not in your library yet.
+            </p>
+            <button
+              onClick={handleAddToLibrary}
+              disabled={isAdding}
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors disabled:opacity-50"
+            >
+              {isAdding ? "Adding..." : "Add to My Library"}
+            </button>
+            {addError && (
+              <p className="text-sm text-danger mt-2">{addError}</p>
+            )}
+          </div>
+        )}
+
+        {viewer.userSet && (
           <div className="mb-6">
             <SrsSetConfig
               setId={set._id}
-              srsEnabled={userSet.srsEnabled}
-              defaultFrontFields={userSet.defaultFrontFields}
-              defaultBackFields={userSet.defaultBackFields}
-              defaultTtsOnlyFields={userSet.defaultTtsOnlyFields ?? []}
+              srsEnabled={viewer.userSet.srsEnabled}
+              defaultFrontFields={viewer.userSet.defaultFrontFields}
+              defaultBackFields={viewer.userSet.defaultBackFields}
+              defaultTtsOnlyFields={viewer.userSet.defaultTtsOnlyFields ?? []}
               fieldDefinitions={set.fieldDefinitions}
             />
           </div>

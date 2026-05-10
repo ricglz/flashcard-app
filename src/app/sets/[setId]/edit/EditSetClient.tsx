@@ -20,7 +20,7 @@ export default function EditSetClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const updateSet = useMutation(api.flashcardSets.update);
   const createCard = useMutation(api.flashcards.create);

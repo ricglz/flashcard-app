@@ -16,6 +16,7 @@ export default async function StudyConfigPage({
   const { mode: modeParam } = await searchParams;
   const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
+  if (!token) redirect("/");
 
   const preloadedSet = await preloadQuery(
     api.flashcardSets.get,
@@ -23,11 +24,11 @@ export default async function StudyConfigPage({
     { token }
   );
 
-  if (!preloadedQueryResult(preloadedSet)) {
-    redirect("/");
-  }
+  const result = preloadedQueryResult(preloadedSet);
+  if (!result) redirect("/");
+  if (result.viewer.role === "visitor") redirect(`/sets/${setId}`);
 
-  const [preloadedCards, preloadedActiveSession, preloadedUserSet] =
+  const [preloadedCards, preloadedActiveSession] =
     await Promise.all([
       preloadQuery(
         api.flashcards.list,
@@ -36,11 +37,6 @@ export default async function StudyConfigPage({
       ),
       preloadQuery(
         api.studySessions.getActiveSession,
-        { setId: flashcardSetId },
-        { token }
-      ),
-      preloadQuery(
-        api.userSets.get,
         { setId: flashcardSetId },
         { token }
       ),
@@ -55,7 +51,7 @@ export default async function StudyConfigPage({
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
       preloadedActiveSession={preloadedActiveSession}
-      preloadedUserSet={preloadedUserSet}
+      userSet={result.viewer.userSet}
     />
   );
 }

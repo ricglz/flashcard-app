@@ -16,6 +16,7 @@ export default async function ResultsPage({
   const { sessionId } = await searchParams;
   const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
+  if (!token) redirect(`/`);
 
   if (!sessionId) {
     redirect(`/study/${setId}`);

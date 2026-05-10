@@ -12,6 +12,7 @@ import { cycleFieldAssignment } from "@/lib/fieldToggle";
 import ResumeSessionBanner from "./ResumeSessionBanner";
 import FieldSelectionList from "./FieldSelectionList";
 import CardLimitSelector from "./CardLimitSelector";
+import type { Doc } from "../../../../convex/_generated/dataModel";
 
 type Props = {
   setId: string;
@@ -21,7 +22,7 @@ type Props = {
   preloadedActiveSession: Preloaded<
     typeof api.studySessions.getActiveSession
   >;
-  preloadedUserSet: Preloaded<typeof api.userSets.get>;
+  userSet: Doc<"userSets">;
 };
 
 export default function StudyConfigClient({
@@ -30,12 +31,11 @@ export default function StudyConfigClient({
   preloadedSet,
   preloadedCards,
   preloadedActiveSession,
-  preloadedUserSet,
+  userSet,
 }: Props) {
-  const set = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const activeSession = usePreloadedQuery(preloadedActiveSession);
-  const userSet = usePreloadedQuery(preloadedUserSet);
   const startSession = useMutation(api.studySessions.start);
   const router = useRouter();
   const flashcardSetId = asId<"flashcardSets">(setId);

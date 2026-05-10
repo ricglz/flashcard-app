@@ -12,6 +12,7 @@ import type * as crons from "../crons.js";
 import type * as flashcardSets from "../flashcardSets.js";
 import type * as flashcards from "../flashcards.js";
 import type * as progress from "../progress.js";
+import type * as sharing from "../sharing.js";
 import type * as srs from "../srs.js";
 import type * as srsEngine from "../srsEngine.js";
 import type * as srsReviewQueue from "../srsReviewQueue.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   flashcardSets: typeof flashcardSets;
   flashcards: typeof flashcards;
   progress: typeof progress;
+  sharing: typeof sharing;
   srs: typeof srs;
   srsEngine: typeof srsEngine;
   srsReviewQueue: typeof srsReviewQueue;

@@ -22,6 +22,7 @@ export default async function BrowsePage({
   const sp = await searchParams;
   const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
+  if (!token) redirect("/");
 
   const preloadedSet = await preloadQuery(
     api.flashcardSets.get,

@@ -13,6 +13,7 @@ export default async function EditSetPage({
   const { setId } = await params;
   const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
+  if (!token) redirect("/");
 
   const preloadedSet = await preloadQuery(
     api.flashcardSets.get,

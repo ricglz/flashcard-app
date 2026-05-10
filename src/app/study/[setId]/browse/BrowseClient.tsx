@@ -41,7 +41,7 @@ export default function BrowseClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const settings = useOfflineQuery(api.userSettings.get);
 

@@ -22,6 +22,7 @@ export default async function StudySessionPage({
   const typedSessionId = asId<"studySessions">(sessionId);
   const flashcardSetId = asId<"flashcardSets">(setId);
   const token = await getAuthToken();
+  if (!token) redirect("/");
 
   const [preloadedSession, preloadedSet, preloadedCards] = await Promise.all([
     preloadQuery(api.studySessions.get, { id: typedSessionId }, { token }),

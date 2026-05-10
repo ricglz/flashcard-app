@@ -38,7 +38,7 @@ export default function StudySessionClient({
   const isOnline = useOnlineStatus();
 
   const session = usePreloadedQuery(preloadedSession) as ActiveSession;
-  const set = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
