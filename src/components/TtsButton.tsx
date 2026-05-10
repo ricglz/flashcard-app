@@ -1,33 +1,123 @@
 "use client";
 
-import { speak, isTtsSupported } from "@/lib/tts";
+import { useEffect, useState } from "react";
+import {
+  isTtsSupported,
+  preloadTtsVoices,
+  speak,
+  TtsEvent,
+  TtsStatus,
+} from "@/lib/tts";
+import TtsButtonIcon from "./TtsButtonIcon";
 
 type Props = {
   text: string;
   lang: string;
   rate?: number;
   className?: string;
+  showMessage?: boolean;
+  onTtsEvent?: (event: TtsEvent) => void;
 };
 
-export default function TtsButton({ text, lang, rate, className = "" }: Props) {
-  if (!isTtsSupported()) return null;
+function isBusy(status: TtsStatus): boolean {
+  return status === "preparing" || status === "queued" || status === "speaking";
+}
+
+function isProblem(status: TtsStatus): boolean {
+  return status === "unsupported" || status === "timeout" || status === "error";
+}
+
+function ariaLabel(status: TtsStatus): string {
+  if (status === "speaking") return "Playing pronunciation";
+  if (status === "preparing" || status === "queued") return "Preparing pronunciation";
+  if (isProblem(status)) return "Could not play pronunciation";
+  return "Listen to pronunciation";
+}
+
+function buttonClasses(status: TtsStatus, className: string): string {
+  const stateClasses = status === "speaking"
+    ? "bg-accent text-white shadow-sm"
+    : status === "preparing" || status === "queued"
+      ? "bg-accent-surface text-accent-surface-text"
+      : isProblem(status)
+        ? "bg-danger-surface text-danger border border-danger/40"
+        : "hover:bg-surface-hover";
+
+  return `inline-flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 rounded-full transition-colors ${stateClasses} ${className}`;
+}
+
+export default function TtsButton({
+  text,
+  lang,
+  rate,
+  className = "",
+  showMessage = false,
+  onTtsEvent,
+}: Props) {
+  const [status, setStatus] = useState<TtsStatus>("idle");
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    preloadTtsVoices();
+  }, []);
+
+  useEffect(() => {
+    if (status !== "ended" && status !== "cancelled") return;
+    const timeout = window.setTimeout(() => setStatus("idle"), 700);
+    return () => window.clearTimeout(timeout);
+  }, [status]);
+
+  const handleClick = async () => {
+    if (!isTtsSupported()) {
+      const event: TtsEvent = {
+        status: "unsupported",
+        text,
+        lang,
+        message: "Text-to-speech is not supported in this browser.",
+      };
+      setStatus(event.status);
+      setMessage(event.message ?? null);
+      onTtsEvent?.(event);
+      return;
+    }
+
+    setMessage(null);
+
+    const result = await speak(text, lang, {
+      rate,
+      onEvent: (event) => {
+        setStatus(event.status);
+        if (event.message) setMessage(event.message);
+        onTtsEvent?.(event);
+      },
+    });
+
+    if (!result.ok) {
+      setStatus(result.status);
+      setMessage(result.message);
+    }
+  };
 
   return (
-    <button
-      onClick={() => speak(text, lang, rate)}
-      className={`inline-flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 rounded-full hover:bg-surface-hover transition-colors ${className}`}
-      title={`Listen (${lang})`}
-      aria-label={`Listen to pronunciation`}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className="w-5 h-5"
+    <span className="inline-flex flex-col items-center gap-1 align-middle">
+      <button
+        type="button"
+        onClick={handleClick}
+        className={buttonClasses(status, className)}
+        title={message ?? `Listen (${lang})`}
+        aria-label={ariaLabel(status)}
+        aria-busy={isBusy(status)}
       >
-        <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 01-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
-        <path d="M15.932 7.757a.75.75 0 011.061 0 6 6 0 010 8.486.75.75 0 01-1.06-1.061 4.5 4.5 0 000-6.364.75.75 0 010-1.06z" />
-      </svg>
-    </button>
+        <TtsButtonIcon status={status} />
+      </button>
+      {showMessage && message && (
+        <span
+          className="max-w-40 text-center text-xs text-muted"
+          aria-live="polite"
+        >
+          {message}
+        </span>
+      )}
+    </span>
   );
 }
