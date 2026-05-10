@@ -124,6 +124,17 @@ export const start = mutation({
       }
     }
 
+    const existingActive = await ctx.db
+      .query("studySessions")
+      .withIndex("by_setId_and_userId_and_status", (q) =>
+        q
+          .eq("setId", args.setId)
+          .eq("userId", identity.tokenIdentifier)
+          .eq("status", "in_progress")
+      )
+      .first();
+    if (existingActive) return existingActive._id;
+
     // Get all cards for this set
     const cards = await ctx.db
       .query("flashcards")

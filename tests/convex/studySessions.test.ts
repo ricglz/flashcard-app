@@ -119,6 +119,36 @@ describe("studySessions.start", () => {
     expect(session!.cardOrder).toHaveLength(2);
   });
 
+  it("returns existing active session instead of creating a duplicate", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 3);
+
+    const firstSessionId = await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    });
+
+    const secondSessionId = await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Back"],
+      backFields: ["Front"],
+      shuffle: true,
+      cardLimit: 1,
+    });
+
+    expect(secondSessionId).toBe(firstSessionId);
+
+    const active = await as.query(api.studySessions.getActiveSession, {
+      setId,
+    });
+    expect(active?._id).toBe(firstSessionId);
+    expect(active?.frontFields).toEqual(["Front"]);
+    expect(active?.backFields).toEqual(["Back"]);
+  });
+
   it("rejects empty frontFields", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
