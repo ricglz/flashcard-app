@@ -70,7 +70,12 @@ export default defineSchema({
     overallScore: v.optional(v.number()),
   })
     .index("by_setId_and_userId", ["setId", "userId"])
-    .index("by_userId_and_status", ["userId", "status"]),
+    .index("by_userId_and_status", ["userId", "status"])
+    .index("by_setId_and_userId_and_status", [
+      "setId",
+      "userId",
+      "status",
+    ]),
 
   cardResults: defineTable({
     sessionId: v.id("studySessions"),

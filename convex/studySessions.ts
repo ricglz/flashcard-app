@@ -30,13 +30,17 @@ export const getActiveSession = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const sessions = await ctx.db
+    const session = await ctx.db
       .query("studySessions")
-      .withIndex("by_setId_and_userId", (q) =>
-        q.eq("setId", args.setId).eq("userId", identity.tokenIdentifier)
+      .withIndex("by_setId_and_userId_and_status", (q) =>
+        q
+          .eq("setId", args.setId)
+          .eq("userId", identity.tokenIdentifier)
+          .eq("status", "in_progress")
       )
-      .take(50);
-    return sessions.find((s) => s.status === "in_progress") ?? null;
+      .first();
+    if (!session || session.status !== "in_progress") return null;
+    return session;
   },
 });
 

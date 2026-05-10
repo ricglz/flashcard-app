@@ -374,6 +374,36 @@ describe("studySessions.getActiveSession", () => {
     });
     expect(active).toBeNull();
   });
+
+  it("finds an active session after many historical sessions", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+
+    for (let i = 0; i < 60; i++) {
+      const sessionId = await as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Front"],
+        backFields: ["Back"],
+        shuffle: false,
+      });
+      await as.mutation(api.studySessions.abandon, { sessionId });
+    }
+
+    const activeId = await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    });
+
+    const active = await as.query(api.studySessions.getActiveSession, {
+      setId,
+    });
+    expect(active).not.toBeNull();
+    expect(active!._id).toBe(activeId);
+    expect(active!.status).toBe("in_progress");
+  });
 });
 
 describe("studySessions.start — ttsOnlyFields", () => {
