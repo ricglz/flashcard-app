@@ -23,19 +23,23 @@ export async function populateQueue(
   if (srsSetIds.length === 0) return 0;
 
   for (const setId of srsSetIds) {
-    const cards = await ctx.db
-      .query("flashcards")
-      .withIndex("by_setId", (q) => q.eq("setId", setId))
-      .take(1000);
+    const [cards, existingSrsCards] = await Promise.all([
+      ctx.db
+        .query("flashcards")
+        .withIndex("by_setId", (q) => q.eq("setId", setId))
+        .take(1000),
+      ctx.db
+        .query("srsCards")
+        .withIndex("by_userId_and_setId", (q) =>
+          q.eq("userId", userId).eq("setId", setId)
+        )
+        .take(1000),
+    ]);
+
+    const enrolledCardIds = new Set(existingSrsCards.map((sc) => sc.cardId));
 
     for (const card of cards) {
-      const existing = await ctx.db
-        .query("srsCards")
-        .withIndex("by_cardId_and_userId", (q) =>
-          q.eq("cardId", card._id).eq("userId", userId)
-        )
-        .first();
-      if (!existing) {
+      if (!enrolledCardIds.has(card._id)) {
         await ctx.db.insert("srsCards", {
           userId,
           cardId: card._id,
@@ -170,9 +174,19 @@ export const populateQueueForUser = internalMutation({
         .take(500);
 
       let totalQueuedNew = 0;
-      for (const qi of existingQueue) {
-        const sc = await ctx.db.get(qi.srsCardId);
-        if (sc && sc.status === "new") totalQueuedNew++;
+      const queuedSrsCardIds = existingQueue.map((qi) => qi.srsCardId);
+      if (queuedSrsCardIds.length > 0) {
+        const allUserSrsCards = await ctx.db
+          .query("srsCards")
+          .withIndex("by_userId_and_nextReviewAt", (q) =>
+            q.eq("userId", userId)
+          )
+          .take(2000);
+        const srsCardMap = new Map(allUserSrsCards.map((sc) => [sc._id, sc]));
+        for (const srsCardId of queuedSrsCardIds) {
+          const sc = srsCardMap.get(srsCardId);
+          if (sc && sc.status === "new") totalQueuedNew++;
+        }
       }
       newCardLimit = Math.max(0, globalLimit - totalQueuedNew);
     }

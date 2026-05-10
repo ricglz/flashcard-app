@@ -227,25 +227,26 @@ export const getCardStatusBreakdown = query({
       .take(100);
 
     const enabledSets = userSets.filter((us) => us.srsEnabled);
+    if (enabledSets.length === 0)
+      return { new: 0, learning: 0, review: 0 };
+
+    const enabledSetIds = new Set(enabledSets.map((us) => us.setId));
     let newCount = 0;
     let learningCount = 0;
     let reviewCount = 0;
 
-    for (const us of enabledSets) {
-      const cards = await ctx.db
-        .query("srsCards")
-        .withIndex("by_userId_and_setId", (q) =>
-          q
-            .eq("userId", identity.tokenIdentifier)
-            .eq("setId", us.setId)
-        )
-        .take(1000);
+    const allCards = await ctx.db
+      .query("srsCards")
+      .withIndex("by_userId_and_nextReviewAt", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .take(5000);
 
-      for (const card of cards) {
-        if (card.status === "new") newCount++;
-        else if (card.status === "learning") learningCount++;
-        else reviewCount++;
-      }
+    for (const card of allCards) {
+      if (!enabledSetIds.has(card.setId)) continue;
+      if (card.status === "new") newCount++;
+      else if (card.status === "learning") learningCount++;
+      else reviewCount++;
     }
 
     return { new: newCount, learning: learningCount, review: reviewCount };
@@ -266,41 +267,55 @@ export const getPerSetMastery = query({
       .take(100);
 
     const enabledSets = userSets.filter((us) => us.srsEnabled);
-    const results = [];
+    if (enabledSets.length === 0) return [];
 
-    for (const us of enabledSets) {
-      const set = await ctx.db.get(us.setId);
-      if (!set) continue;
-
-      const cards = await ctx.db
+    const setIds = enabledSets.map((us) => us.setId);
+    const [sets, allCards] = await Promise.all([
+      Promise.all(setIds.map((id) => ctx.db.get(id))),
+      ctx.db
         .query("srsCards")
-        .withIndex("by_userId_and_setId", (q) =>
-          q
-            .eq("userId", identity.tokenIdentifier)
-            .eq("setId", us.setId)
+        .withIndex("by_userId_and_nextReviewAt", (q) =>
+          q.eq("userId", identity.tokenIdentifier)
         )
-        .take(1000);
+        .take(5000),
+    ]);
 
-      let newCount = 0;
-      let learningCount = 0;
-      let reviewCount = 0;
-      let totalEase = 0;
+    const setNameMap = new Map(
+      sets.filter((s) => s !== null).map((s) => [s._id, s.name])
+    );
+    const enabledSetIds = new Set(setIds);
 
-      for (const card of cards) {
-        if (card.status === "new") newCount++;
-        else if (card.status === "learning") learningCount++;
-        else reviewCount++;
-        totalEase += card.easeFactor;
-      }
+    const perSet = new Map<string, {
+      newCount: number; learningCount: number; reviewCount: number;
+      totalEase: number; total: number;
+    }>();
+    for (const setId of setIds) {
+      perSet.set(setId, { newCount: 0, learningCount: 0, reviewCount: 0, totalEase: 0, total: 0 });
+    }
 
+    for (const card of allCards) {
+      if (!enabledSetIds.has(card.setId)) continue;
+      const entry = perSet.get(card.setId);
+      if (!entry) continue;
+      entry.total++;
+      entry.totalEase += card.easeFactor;
+      if (card.status === "new") entry.newCount++;
+      else if (card.status === "learning") entry.learningCount++;
+      else entry.reviewCount++;
+    }
+
+    const results = [];
+    for (const [setId, stats] of perSet) {
+      const setName = setNameMap.get(setId as typeof setIds[0]);
+      if (!setName) continue;
       results.push({
-        setId: us.setId,
-        setName: set.name,
-        total: cards.length,
-        new: newCount,
-        learning: learningCount,
-        review: reviewCount,
-        avgEase: cards.length > 0 ? totalEase / cards.length : 0,
+        setId: setId as typeof setIds[0],
+        setName,
+        total: stats.total,
+        new: stats.newCount,
+        learning: stats.learningCount,
+        review: stats.reviewCount,
+        avgEase: stats.total > 0 ? stats.totalEase / stats.total : 0,
       });
     }
 
