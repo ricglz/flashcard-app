@@ -119,6 +119,42 @@ describe("studySessions.start", () => {
     expect(session!.cardOrder).toHaveLength(2);
   });
 
+  it("rejects invalid cardLimit values", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 5);
+
+    await expect(
+      as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Front"],
+        backFields: ["Back"],
+        shuffle: false,
+        cardLimit: 0,
+      })
+    ).rejects.toThrow("cardLimit must be an integer between 1 and 1000");
+
+    await expect(
+      as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Front"],
+        backFields: ["Back"],
+        shuffle: false,
+        cardLimit: 1.5,
+      })
+    ).rejects.toThrow("cardLimit must be an integer between 1 and 1000");
+
+    await expect(
+      as.mutation(api.studySessions.start, {
+        setId,
+        frontFields: ["Front"],
+        backFields: ["Back"],
+        shuffle: false,
+        cardLimit: 1001,
+      })
+    ).rejects.toThrow("cardLimit must be an integer between 1 and 1000");
+  });
+
   it("returns existing active session instead of creating a duplicate", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);

@@ -86,6 +86,15 @@ export const start = mutation({
     if (!set) throw new Error("Not found");
     await assertMember(ctx, identity.tokenIdentifier, args.setId);
 
+    if (
+      args.cardLimit !== undefined &&
+      (!Number.isInteger(args.cardLimit) ||
+        args.cardLimit < 1 ||
+        args.cardLimit > 1000)
+    ) {
+      throw new Error("cardLimit must be an integer between 1 and 1000");
+    }
+
     // Validate front/back fields
     if (args.frontFields.length === 0)
       throw new Error("frontFields must not be empty");
