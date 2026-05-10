@@ -1,6 +1,27 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { assertMember, assertOwner } from "./userSets";
+import type { Doc } from "./_generated/dataModel";
+
+function validateCardFields(
+  set: Doc<"flashcardSets">,
+  fields: Record<string, string>
+) {
+  const validFieldNames = new Set(
+    set.fieldDefinitions.map((field) => field.name)
+  );
+  const fieldNames = Object.keys(fields);
+
+  for (const fieldName of fieldNames) {
+    if (!validFieldNames.has(fieldName)) {
+      throw new Error(`Unknown field: ${fieldName}`);
+    }
+  }
+
+  if (!fieldNames.some((fieldName) => fields[fieldName].trim().length > 0)) {
+    throw new Error("At least one field value is required");
+  }
+}
 
 export const list = query({
   args: { setId: v.id("flashcardSets") },
@@ -29,6 +50,9 @@ export const create = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     await assertOwner(ctx, identity.tokenIdentifier, args.setId);
+    const set = await ctx.db.get(args.setId);
+    if (!set) throw new Error("Set not found");
+    validateCardFields(set, args.fields);
     return await ctx.db.insert("flashcards", args);
   },
 });
@@ -47,8 +71,11 @@ export const batchCreate = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
     await assertOwner(ctx, identity.tokenIdentifier, args.setId);
+    const set = await ctx.db.get(args.setId);
+    if (!set) throw new Error("Set not found");
     const ids = [];
     for (const card of args.cards) {
+      validateCardFields(set, card.fields);
       const id = await ctx.db.insert("flashcards", {
         setId: args.setId,
         ...card,
@@ -71,6 +98,11 @@ export const update = mutation({
     const card = await ctx.db.get(args.id);
     if (!card) throw new Error("Not found");
     await assertOwner(ctx, identity.tokenIdentifier, card.setId);
+    if (args.fields !== undefined) {
+      const set = await ctx.db.get(card.setId);
+      if (!set) throw new Error("Set not found");
+      validateCardFields(set, args.fields);
+    }
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
