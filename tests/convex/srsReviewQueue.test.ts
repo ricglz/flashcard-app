@@ -63,6 +63,68 @@ async function setupSetWithSrsReviews(
   return { setId, as };
 }
 
+describe("getHydratedQueue", () => {
+  it("returns hydrated items with correct fields", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const setId = await as.mutation(api.flashcardSets.create, {
+      name: "Test Set",
+      fieldDefinitions: fieldDefs,
+    });
+
+    const cards = [
+      { fields: { Front: "Q0", Back: "A0" }, order: 0 },
+      { fields: { Front: "Q1", Back: "A1" }, order: 1 },
+      { fields: { Front: "Q2", Back: "A2" }, order: 2 },
+    ];
+    await as.mutation(api.flashcards.batchCreate, { setId, cards });
+    const cardList = await as.query(api.flashcards.list, { setId });
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < cardList.length; i++) {
+        const srsCardId = await ctx.db.insert("srsCards", {
+          userId: TEST_USER.tokenIdentifier,
+          cardId: cardList[i]._id,
+          setId,
+          easeFactor: 2.5,
+          interval: 1,
+          repetitions: 1,
+          nextReviewAt: 0,
+          status: "learning",
+        });
+
+        await ctx.db.insert("reviewQueue", {
+          userId: TEST_USER.tokenIdentifier,
+          cardId: cardList[i]._id,
+          srsCardId,
+          setId,
+          queuedAt: Date.now(),
+          order: i,
+        });
+      }
+    });
+
+    const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
+    expect(queue).toHaveLength(3);
+
+    expect(queue[0].card.fields).toEqual({ Front: "Q0", Back: "A0" });
+    expect(queue[0].fieldDefinitions).toHaveLength(2);
+    expect(queue[0].fieldDefinitions[0].name).toBe("Front");
+    expect(queue[0].frontFields).toEqual(["Front"]);
+    expect(queue[0].backFields).toEqual(["Back"]);
+    expect(queue[0].srsCardId).toBeDefined();
+  });
+
+  it("returns empty array when queue is empty", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
+    expect(queue).toEqual([]);
+  });
+});
+
 describe("getQueueStats", () => {
   afterEach(() => {
     vi.useRealTimers();
