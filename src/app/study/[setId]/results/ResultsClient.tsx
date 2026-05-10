@@ -8,9 +8,9 @@ import {
   CARD_RATING_SCORES,
   CARD_RATINGS,
   CardRating,
-  TypedFlashcardSet,
   TypedCardResult,
 } from "@/lib/types";
+import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 
 type Props = {
   setId: string;
@@ -27,7 +27,7 @@ export default function ResultsClient({
 }: Props) {
   const data = usePreloadedQuery(preloadedResults)!;
   const cards = usePreloadedQuery(preloadedCards);
-  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
+  const set = useTypedFlashcardSet(preloadedSet);
 
   const { session } = data;
   const results = data.results as TypedCardResult[];

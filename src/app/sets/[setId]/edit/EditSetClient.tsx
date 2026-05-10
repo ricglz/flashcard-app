@@ -6,7 +6,7 @@ import { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
 import CardForm from "@/components/CardForm";
 import CsvImporter from "@/components/CsvImporter";
-import { TypedFlashcardSet } from "@/lib/types";
+import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import SetInfoEditor from "./SetInfoEditor";
 
 type Props = {
@@ -20,7 +20,7 @@ export default function EditSetClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
+  const set = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const updateSet = useMutation(api.flashcardSets.update);
   const createCard = useMutation(api.flashcards.create);

@@ -5,7 +5,8 @@ import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TypedFlashcardSet, getTtsConfig } from "@/lib/types";
+import { getTtsConfig } from "@/lib/types";
+import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import { asId } from "@/lib/convexHelpers";
 import { cycleFieldAssignment } from "@/lib/fieldToggle";
 import ResumeSessionBanner from "./ResumeSessionBanner";
@@ -31,7 +32,7 @@ export default function StudyConfigClient({
   preloadedActiveSession,
   preloadedUserSet,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
+  const set = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const activeSession = usePreloadedQuery(preloadedActiveSession);
   const userSet = usePreloadedQuery(preloadedUserSet);

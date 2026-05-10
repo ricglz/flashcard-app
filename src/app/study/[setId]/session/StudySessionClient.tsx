@@ -11,7 +11,8 @@ import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import SpeakerIcon from "@/components/SpeakerIcon";
-import { CardRating, TypedFlashcardSet } from "@/lib/types";
+import { CardRating } from "@/lib/types";
+import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import Link from "next/link";
 
 type ActiveSession = Omit<Doc<"studySessions">, "status"> & {
@@ -37,7 +38,7 @@ export default function StudySessionClient({
   const isOnline = useOnlineStatus();
 
   const session = usePreloadedQuery(preloadedSession) as ActiveSession;
-  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
+  const set = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);

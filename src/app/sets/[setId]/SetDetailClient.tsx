@@ -7,7 +7,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TtsButton from "@/components/TtsButton";
 import SrsSetConfig from "@/components/SrsSetConfig";
-import { getTtsConfig, TypedFlashcardSet } from "@/lib/types";
+import { getTtsConfig } from "@/lib/types";
+import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 
 type Props = {
   setId: string;
@@ -22,7 +23,7 @@ export default function SetDetailClient({
   preloadedCards,
   preloadedUserSet,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
+  const set = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const userSet = usePreloadedQuery(preloadedUserSet);
   const router = useRouter();

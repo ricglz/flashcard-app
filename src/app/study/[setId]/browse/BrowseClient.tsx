@@ -9,7 +9,7 @@ import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import SpeakerIcon from "@/components/SpeakerIcon";
-import { TypedFlashcardSet } from "@/lib/types";
+import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -41,7 +41,7 @@ export default function BrowseClient({
   preloadedSet,
   preloadedCards,
 }: Props) {
-  const set = usePreloadedQuery(preloadedSet) as TypedFlashcardSet;
+  const set = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const settings = useOfflineQuery(api.userSettings.get);
 
