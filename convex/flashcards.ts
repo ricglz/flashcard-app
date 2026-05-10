@@ -1,12 +1,17 @@
+import { Effect, Either } from "effect";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { assertMember, assertOwner } from "./userSets";
 import type { Doc } from "./_generated/dataModel";
 
-function validateCardFields(
+type CardFieldsValidationError =
+  | { readonly _tag: "UnknownCardField"; readonly fieldName: string }
+  | { readonly _tag: "EmptyCardFields" };
+
+function validateCardFieldsEffect(
   set: Doc<"flashcardSets">,
   fields: Record<string, string>
-) {
+): Effect.Effect<void, CardFieldsValidationError> {
   const validFieldNames = new Set(
     set.fieldDefinitions.map((field) => field.name)
   );
@@ -14,12 +19,35 @@ function validateCardFields(
 
   for (const fieldName of fieldNames) {
     if (!validFieldNames.has(fieldName)) {
-      throw new Error(`Unknown field: ${fieldName}`);
+      return Effect.fail({ _tag: "UnknownCardField", fieldName });
     }
   }
 
   if (!fieldNames.some((fieldName) => fields[fieldName].trim().length > 0)) {
-    throw new Error("At least one field value is required");
+    return Effect.fail({ _tag: "EmptyCardFields" });
+  }
+
+  return Effect.void;
+}
+
+function toCardFieldsValidationError(error: CardFieldsValidationError): Error {
+  switch (error._tag) {
+    case "UnknownCardField":
+      return new Error(`Unknown field: ${error.fieldName}`);
+    case "EmptyCardFields":
+      return new Error("At least one field value is required");
+  }
+}
+
+function validateCardFields(
+  set: Doc<"flashcardSets">,
+  fields: Record<string, string>
+) {
+  const result = Effect.runSync(
+    Effect.either(validateCardFieldsEffect(set, fields))
+  );
+  if (Either.isLeft(result)) {
+    throw toCardFieldsValidationError(result.left);
   }
 }
 
