@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { Show, ClerkLoading } from "@clerk/nextjs";
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import FlashcardSetList from "@/components/FlashcardSetList";
@@ -25,7 +25,7 @@ export default function SetsPage() {
           <h1 className="text-xl font-bold">My Sets</h1>
         </div>
         <div className="flex items-center gap-4">
-          <Authenticated>
+          <Show when="signed-in">
             <button
               onClick={() => setShowQuickCreate(true)}
               className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
@@ -39,33 +39,33 @@ export default function SetsPage() {
               New Set
             </Link>
             <UserButton />
-          </Authenticated>
-          <Unauthenticated>
+          </Show>
+          <Show when="signed-out">
             <SignInButton mode="modal">
               <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors">
                 Sign In
               </button>
             </SignInButton>
-          </Unauthenticated>
+          </Show>
         </div>
       </header>
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <AuthLoading>
+        <ClerkLoading>
           <div className="flex justify-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
           </div>
-        </AuthLoading>
+        </ClerkLoading>
 
-        <Unauthenticated>
+        <Show when="signed-out">
           <div className="text-center py-20">
             <p className="text-muted">Sign in to manage your flashcard sets.</p>
           </div>
-        </Unauthenticated>
+        </Show>
 
-        <Authenticated>
+        <Show when="signed-in">
           <FlashcardSetList />
-        </Authenticated>
+        </Show>
       </main>
 
       {showQuickCreate && (

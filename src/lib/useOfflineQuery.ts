@@ -6,7 +6,6 @@ import type { OptionalRestArgsOrSkip } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { getFunctionName } from "convex/server";
 import { putCachedQuery, getCachedQuery } from "./offlineDb";
-import { useOnlineStatus } from "./useOnlineStatus";
 
 function buildCacheKey(
   query: FunctionReference<"query">,
@@ -23,7 +22,6 @@ export function useOfflineQuery<Query extends FunctionReference<"query">>(
   ...args: OptionalRestArgsOrSkip<Query>
 ): Query["_returnType"] | undefined {
   const liveData = useQuery(query, ...args);
-  const isOnline = useOnlineStatus();
   const [cachedData, setCachedData] = useState<
     Query["_returnType"] | undefined
   >(undefined);
@@ -32,14 +30,12 @@ export function useOfflineQuery<Query extends FunctionReference<"query">>(
   const isSkipped = actualArgs === "skip";
   const cacheKey = isSkipped ? null : buildCacheKey(query, actualArgs);
 
-  // Load cache on mount so offline cold-starts have data immediately
   useEffect(() => {
     if (cacheKey) {
       getCachedQuery<Query["_returnType"]>(cacheKey).then(setCachedData);
     }
   }, [cacheKey]);
 
-  // When live data arrives, write to IndexedDB
   useEffect(() => {
     if (liveData !== undefined && cacheKey) {
       putCachedQuery(cacheKey, liveData);
@@ -47,6 +43,5 @@ export function useOfflineQuery<Query extends FunctionReference<"query">>(
   }, [liveData, cacheKey]);
 
   if (liveData !== undefined) return liveData;
-  if (!isOnline) return cachedData;
-  return undefined;
+  return cachedData;
 }

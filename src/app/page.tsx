@@ -1,6 +1,6 @@
 "use client";
 
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { Show, ClerkLoading } from "@clerk/nextjs";
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import SrsQueueStatus from "@/components/SrsQueueStatus";
 import StreakBadge from "@/components/StreakBadge";
@@ -13,27 +13,27 @@ export default function Home() {
       <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold">Flashcard App</h1>
         <div className="flex items-center gap-4">
-          <Authenticated>
+          <Show when="signed-in">
             <UserButton />
-          </Authenticated>
-          <Unauthenticated>
+          </Show>
+          <Show when="signed-out">
             <SignInButton mode="modal">
               <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors">
                 Sign In
               </button>
             </SignInButton>
-          </Unauthenticated>
+          </Show>
         </div>
       </header>
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <AuthLoading>
+        <ClerkLoading>
           <div className="flex justify-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
           </div>
-        </AuthLoading>
+        </ClerkLoading>
 
-        <Unauthenticated>
+        <Show when="signed-out">
           <div className="text-center py-20">
             <h2 className="text-3xl font-bold mb-4">
               Learn with Flashcards
@@ -48,9 +48,9 @@ export default function Home() {
               </button>
             </SignInButton>
           </div>
-        </Unauthenticated>
+        </Show>
 
-        <Authenticated>
+        <Show when="signed-in">
           <SrsQueueStatus />
 
           <div className="mb-6 p-4 border border-edge rounded-lg flex items-center justify-between">
@@ -87,7 +87,7 @@ export default function Home() {
               </p>
             </Link>
           </div>
-        </Authenticated>
+        </Show>
       </main>
     </div>
   );
