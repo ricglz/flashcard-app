@@ -57,51 +57,63 @@ export const getHydratedQueue = query({
       )
       .take(200);
 
-    const setCache = new Map<string, {
-      fieldDefinitions: FieldDefinition[];
-    }>();
-    const userSetCache = new Map<string, {
+    if (queueItems.length === 0) return [];
+
+    const uniqueSetIds = [...new Set(queueItems.map((qi) => qi.setId))];
+
+    const perSetData = await Promise.all(
+      uniqueSetIds.map(async (setId) => {
+        const [set, userSet, cards] = await Promise.all([
+          ctx.db.get(setId),
+          ctx.db
+            .query("userSets")
+            .withIndex("by_userId_and_setId", (q) =>
+              q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
+            )
+            .first(),
+          ctx.db
+            .query("flashcards")
+            .withIndex("by_setId", (q) => q.eq("setId", setId))
+            .take(1000),
+        ]);
+        return { setId, set, userSet, cards };
+      })
+    );
+
+    const cardMap = new Map<string, { _id: string; fields: Record<string, string> }>();
+    const setMap = new Map<string, { fieldDefinitions: FieldDefinition[] }>();
+    const userSetMap = new Map<string, {
       defaultFrontFields: string[];
       defaultBackFields: string[];
       defaultTtsOnlyFields: string[];
     }>();
 
+    for (const { setId, set, userSet, cards } of perSetData) {
+      if (!set || !userSet) continue;
+      for (const card of cards) {
+        cardMap.set(card._id, { _id: card._id, fields: card.fields });
+      }
+      setMap.set(setId, {
+        fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
+      });
+      userSetMap.set(setId, {
+        defaultFrontFields: userSet.defaultFrontFields,
+        defaultBackFields: userSet.defaultBackFields,
+        defaultTtsOnlyFields: userSet.defaultTtsOnlyFields ?? [],
+      });
+    }
+
     const hydrated = [];
     for (const item of queueItems) {
-      const card = await ctx.db.get(item.cardId);
-      if (!card) continue;
-
-      const setIdStr = item.setId;
-      if (!setCache.has(setIdStr)) {
-        const set = await ctx.db.get(item.setId);
-        if (!set) continue;
-        setCache.set(setIdStr, {
-          fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
-        });
-      }
-
-      if (!userSetCache.has(setIdStr)) {
-        const userSet = await ctx.db
-          .query("userSets")
-          .withIndex("by_userId_and_setId", (q) =>
-            q.eq("userId", identity.tokenIdentifier).eq("setId", item.setId)
-          )
-          .first();
-        if (!userSet) continue;
-        userSetCache.set(setIdStr, {
-          defaultFrontFields: userSet.defaultFrontFields,
-          defaultBackFields: userSet.defaultBackFields,
-          defaultTtsOnlyFields: userSet.defaultTtsOnlyFields ?? [],
-        });
-      }
-
-      const setData = setCache.get(setIdStr)!;
-      const userSetData = userSetCache.get(setIdStr)!;
+      const card = cardMap.get(item.cardId);
+      const setData = setMap.get(item.setId);
+      const userSetData = userSetMap.get(item.setId);
+      if (!card || !setData || !userSetData) continue;
 
       hydrated.push({
         _id: item._id,
         srsCardId: item.srsCardId,
-        card: { _id: card._id, fields: card.fields },
+        card,
         fieldDefinitions: setData.fieldDefinitions,
         frontFields: userSetData.defaultFrontFields,
         backFields: userSetData.defaultBackFields,
