@@ -30,11 +30,11 @@ export const getQueueStats = query({
 
     const todayReviews = await ctx.db
       .query("srsReviews")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .withIndex("by_userId_and_timestamp", (q) =>
+        q.eq("userId", identity.tokenIdentifier).gte("timestamp", todayMs)
+      )
       .take(500);
-    const reviewedToday = todayReviews.filter(
-      (r) => r.timestamp >= todayMs
-    ).length;
+    const reviewedToday = todayReviews.length;
 
     return {
       remaining: remaining.length,

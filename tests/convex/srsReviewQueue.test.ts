@@ -152,6 +152,28 @@ describe("getQueueStats", () => {
     expect(stats?.reviewedToday).toBe(2);
   });
 
+  it("counts reviewedToday after more than 500 older reviews", async () => {
+    // Current time: 2025-06-15 10:00 UTC, default reset hour = 4
+    // Day boundary: 2025-06-15 04:00 UTC
+    vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
+    const t = convexTest(schema, modules);
+
+    const beforeBoundary = new Date("2025-06-15T03:00:00Z").getTime();
+    const afterBoundary = new Date("2025-06-15T05:00:00Z").getTime();
+    const afterBoundary2 = new Date("2025-06-15T09:00:00Z").getTime();
+
+    await setupSetWithSrsReviews(t, [
+      ...Array.from({ length: 501 }, () => beforeBoundary),
+      afterBoundary,
+      afterBoundary2,
+    ]);
+
+    const as = t.withIdentity(TEST_USER);
+    const stats = await as.query(api.srsReviewQueue.getQueueStats);
+
+    expect(stats?.reviewedToday).toBe(2);
+  });
+
   it("counts reviewedToday using custom day boundary", async () => {
     // Current time: 2025-06-15 10:00 UTC, custom reset hour = 8
     // Day boundary: 2025-06-15 08:00 UTC
