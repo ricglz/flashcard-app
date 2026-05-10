@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
+import type { FieldDefinition } from "../src/lib/types";
 
 export const RATING_SCORES: Record<string, number> = {
   wrong: 0,
@@ -87,8 +88,10 @@ export const start = mutation({
     if (args.backFields.length === 0)
       throw new Error("backFields must not be empty");
 
+    const fieldDefs = set.fieldDefinitions as FieldDefinition[];
+
     const validFieldNames = new Set(
-      (set.fieldDefinitions as Array<{ name: string }>).map((fd) => fd.name)
+      fieldDefs.map((fd) => fd.name)
     );
     for (const f of args.frontFields) {
       if (!validFieldNames.has(f))
@@ -102,8 +105,7 @@ export const start = mutation({
     const resolvedTtsOnly = args.ttsOnlyFields ?? [];
     if (resolvedTtsOnly.length > 0) {
       const fieldDefsMap = new Map(
-        (set.fieldDefinitions as Array<{ name: string; metadata: Record<string, unknown> }>)
-          .map((fd) => [fd.name, fd])
+        fieldDefs.map((fd) => [fd.name, fd])
       );
       const frontSet = new Set(args.frontFields);
       const backSet = new Set(args.backFields);

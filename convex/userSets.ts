@@ -3,6 +3,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { userSetRoleValidator } from "./schema";
+import type { FieldDefinition } from "../src/lib/types";
 import { SRS_DEFAULTS } from "./srs";
 
 // ---------------------------------------------------------------------------
@@ -259,7 +260,7 @@ export const backfillExistingSets = internalMutation({
         .first();
       if (existing) continue;
 
-      const fieldDefs = set.fieldDefinitions as Array<{ name: string; order: number }>;
+      const fieldDefs = set.fieldDefinitions as FieldDefinition[];
       const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
       const defaultFrontFields = sorted.length > 0 ? [sorted[0].name] : [];
       const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
