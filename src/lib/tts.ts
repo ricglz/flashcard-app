@@ -17,11 +17,23 @@ function ensureVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
-/** Pick the best voice for a language from the available voices. */
-function pickVoice(
-  voices: SpeechSynthesisVoice[],
-  lang: string
-): SpeechSynthesisVoice | undefined {
+/** Pick the best voice for a language, re-fetching the voice list each time. */
+async function pickVoice(lang: string): Promise<SpeechSynthesisVoice | undefined> {
+  let voices = speechSynthesis.getVoices();
+
+  // After reconnect, remote voices may not be registered yet — wait briefly
+  if (navigator.onLine && voices.length > 0 && voices.every((v) => v.localService)) {
+    voices = await new Promise<SpeechSynthesisVoice[]>((resolve) => {
+      const timeout = setTimeout(() => resolve(speechSynthesis.getVoices()), 2000);
+      speechSynthesis.onvoiceschanged = () => {
+        clearTimeout(timeout);
+        resolve(speechSynthesis.getVoices());
+      };
+    });
+  }
+
+  if (voices.length === 0) voices = await ensureVoices();
+
   const prefix = lang.split("-")[0];
   const candidates = voices.filter(
     (v) => v.lang === lang || v.lang.startsWith(prefix)
@@ -30,7 +42,9 @@ function pickVoice(
   const enhanced = candidates.find((v) =>
     /enhanced|premium/i.test(v.name)
   );
+  const local = candidates.find((v) => v.localService);
   const remote = candidates.find((v) => !v.localService);
+  if (!navigator.onLine) return enhanced ?? local ?? candidates[0];
   return enhanced ?? remote ?? candidates[0];
 }
 
@@ -49,11 +63,10 @@ export async function speak(text: string, lang: string, rate = 0.75): Promise<vo
 
   speechSynthesis.cancel();
 
-  const voices = await ensureVoices();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = lang;
 
-  const voice = pickVoice(voices, lang);
+  const voice = await pickVoice(lang);
   if (voice) utterance.voice = voice;
 
   utterance.rate = rate;
@@ -71,20 +84,19 @@ export async function speakSequence(
   if (!isTtsSupported() || items.length === 0) return;
 
   speechSynthesis.cancel();
-  const voices = await ensureVoices();
 
   for (const item of items) {
     await new Promise<void>((resolve) => {
       const utterance = new SpeechSynthesisUtterance(item.text);
       utterance.lang = item.lang;
 
-      const voice = pickVoice(voices, item.lang);
-      if (voice) utterance.voice = voice;
-
-      utterance.rate = rate;
-      utterance.onend = () => resolve();
-      utterance.onerror = () => resolve();
-      speechSynthesis.speak(utterance);
+      pickVoice(item.lang).then((voice) => {
+        if (voice) utterance.voice = voice;
+        utterance.rate = rate;
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        speechSynthesis.speak(utterance);
+      });
     });
   }
 }
