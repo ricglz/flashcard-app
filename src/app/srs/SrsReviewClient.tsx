@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,11 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
   const settings = useOfflineQuery(api.userSettings.get);
 
+  // Snapshot the queue so auth drops don't wipe it
+  const stableQueue = useRef(queue);
+  if (queue.length > 0) stableQueue.current = queue;
+  const effectiveQueue = queue.length > 0 ? queue : stableQueue.current;
+
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
@@ -35,10 +40,15 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
+  const initialQueueSize = useRef(effectiveQueue.length);
 
-  const visibleQueue = queue.filter((item) => !reviewedIds.has(item._id));
+  const visibleQueue = effectiveQueue.filter((item) => !reviewedIds.has(item._id));
   const totalCards = visibleQueue.length + reviewedCount;
   const currentItem = visibleQueue.length > 0 ? visibleQueue[0] : null;
+
+  // Queue dropped to 0 without the user reviewing all cards — auth likely failed
+  const isSessionComplete =
+    visibleQueue.length === 0 && reviewedCount >= initialQueueSize.current;
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
@@ -47,7 +57,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
 
       try {
         await recordReview({
-          queueItemId: currentItem._id,
+          srsCardId: currentItem.srsCardId,
           rating,
         });
         setRevealed(false);
@@ -77,7 +87,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
     }
   }
 
-  if (!currentItem || visibleQueue.length === 0) {
+  if (isSessionComplete) {
     return (
       <SrsReviewComplete
         reviewedCount={reviewedCount}
@@ -87,6 +97,14 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
         isLoadingMore={isLoadingMore}
         noMoreCards={noMoreCards}
       />
+    );
+  }
+
+  if (!currentItem) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted">Reconnecting...</p>
+      </div>
     );
   }
 

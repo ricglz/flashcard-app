@@ -87,7 +87,7 @@ describe("forceRefreshQueue", () => {
     const queue = await getQueueItems(t);
     for (const item of queue) {
       await as.mutation(api.srsReviewQueue.recordReview, {
-        queueItemId: item._id,
+        srsCardId: item.srsCardId,
         rating: "good",
       });
     }

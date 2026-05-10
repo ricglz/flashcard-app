@@ -117,19 +117,24 @@ export const getHydratedQueue = query({
 
 export const recordReview = mutation({
   args: {
-    queueItemId: v.id("reviewQueue"),
+    srsCardId: v.id("srsCards"),
     rating: ratingValidator,
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    const queueItem = await ctx.db.get(args.queueItemId);
-    if (!queueItem || queueItem.userId !== identity.tokenIdentifier)
-      throw new Error("Not found");
+    const srsCard = await ctx.db.get(args.srsCardId);
+    if (!srsCard || srsCard.userId !== identity.tokenIdentifier)
+      throw new Error("SRS card not found");
 
-    const srsCard = await ctx.db.get(queueItem.srsCardId);
-    if (!srsCard) throw new Error("SRS card not found");
+    const queueItem = await ctx.db
+      .query("reviewQueue")
+      .withIndex("by_srsCardId", (q) => q.eq("srsCardId", args.srsCardId))
+      .first();
+
+    // Already reviewed (offline replay) — no-op
+    if (!queueItem) return { remaining: 0 };
 
     const now = Date.now();
     const result = computeSM2({
@@ -139,7 +144,7 @@ export const recordReview = mutation({
       repetitions: srsCard.repetitions,
     });
 
-    await ctx.db.patch(queueItem.srsCardId, {
+    await ctx.db.patch(args.srsCardId, {
       easeFactor: result.easeFactor,
       interval: result.interval,
       repetitions: result.repetitions,
@@ -151,14 +156,14 @@ export const recordReview = mutation({
     await ctx.db.insert("srsReviews", {
       userId: identity.tokenIdentifier,
       cardId: queueItem.cardId,
-      srsCardId: queueItem.srsCardId,
+      srsCardId: args.srsCardId,
       rating: args.rating,
       timestamp: now,
       newInterval: result.interval,
       newEaseFactor: result.easeFactor,
     });
 
-    await ctx.db.delete(args.queueItemId);
+    await ctx.db.delete(queueItem._id);
 
     const ratingScore = RATING_SCORES[args.rating] ?? 0;
     await incrementDailyStats(
