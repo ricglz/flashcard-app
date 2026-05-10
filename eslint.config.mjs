@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "convex/_generated/**",
     // Generated service worker:
     "public/sw.js",
+    // Build scripts:
+    "scripts/**",
   ]),
   {
     linterOptions: {
