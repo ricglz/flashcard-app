@@ -7,10 +7,7 @@
 - [ ] Mobile responsiveness verification (responsive padding and layouts are in place, needs device testing)
 
 ## Phase 3 — Offline & Local-First
-- [ ] Research: evaluate local-first options (Convex offline caching vs. local DB + sync layer)
-- [ ] PWA offline support — service worker caching app shell + static assets
-- [ ] Offline data access — cache sets/cards for offline reads
-- [ ] Offline write queue — queue mutations and sync when back online
+- [ ] E2E tests for offline→online flows (auth recovery, sync drain, SRS continuity, TTS voice switching) — see `docs/testing-plan.md`
 
 ## Phase 4 — Polish & Features
 - [ ] Telemetry / analytics

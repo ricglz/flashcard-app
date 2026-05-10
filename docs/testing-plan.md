@@ -69,3 +69,20 @@ Test files go inside `convex/` directory.
 #### Study session (unchanged)
 - Happy path: sign in → create set → add cards → study → complete → view results
 - Session resume: start session → navigate away → return → resume prompt shown
+
+#### Offline → Online transitions
+- **Auth recovery after reconnect**: go offline → come back online → verify user is still authenticated → navigate to dashboard → verify still authenticated
+- **SRS offline review + sync**: start SRS → go offline → review 2-3 cards → come back online → verify "Syncing N changes" banner appears and clears → verify reviewed cards are no longer in the queue
+- **SRS session continuity**: start SRS with 10+ cards → go offline → review 2 cards → come back online → verify session continues (not kicked to summary) → verify remaining cards are still reviewable
+- **Outbox drain retry**: go offline → review a card → come back online with slow connection (throttle network) → verify sync retries and eventually succeeds
+- **Outbox idempotency**: go offline → review a card → come back online → wait for sync → refresh page → verify card is not duplicated in review history
+- **TTS voice recovery**: start SRS with TTS enabled → go offline → verify TTS uses local voice → come back online → advance to next card → verify TTS switches back to remote/enhanced voice
+
+#### Offline data access
+- **Cached queries**: visit dashboard online (loads sets, stats) → go offline → refresh page → verify cached data is displayed (not blank/error)
+- **Offline navigation**: go offline → navigate between cached pages (dashboard, sets, progress) → verify pages render with last-known data
+
+#### Network edge cases
+- **Flaky connection**: rapidly toggle offline/online 3-4 times → verify app stabilizes (no stuck banners, auth resolves, no duplicate syncs)
+- **Offline cold start**: install PWA → close app → go offline → reopen → verify app shell loads from service worker cache
+- **Long offline period**: go offline for 5+ minutes (Clerk token expiry) → come back online → verify auth recovers without manual refresh
