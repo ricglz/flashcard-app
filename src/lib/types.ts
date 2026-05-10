@@ -115,6 +115,15 @@ export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
 import type { Doc } from "../../convex/_generated/dataModel";
 
+// ---------------------------------------------------------------------------
+// Viewer (set access role for the current user)
+// ---------------------------------------------------------------------------
+
+export type Viewer =
+  | { role: "owner"; userSet: Doc<"userSets"> }
+  | { role: "member"; userSet: Doc<"userSets"> }
+  | { role: "visitor"; userSet: null };
+
 /** Flashcard set with typed fieldDefinitions (narrows Convex's any metadata). */
 export type TypedFlashcardSet = Omit<Doc<"flashcardSets">, "fieldDefinitions"> & {
   fieldDefinitions: FieldDefinition[];

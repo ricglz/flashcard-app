@@ -205,7 +205,7 @@ export const remove = mutation({
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-async function enrollCardsForSetHelper(
+export async function enrollCardsForSetHelper(
   ctx: MutationCtx,
   userId: string,
   setId: Id<"flashcardSets">

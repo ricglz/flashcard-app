@@ -1,7 +1,7 @@
 import { Effect, Either } from "effect";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { assertMember, assertOwner } from "./userSets";
+import { assertOwner } from "./userSets";
 import type { Doc } from "./_generated/dataModel";
 
 type CardFieldsValidationError =
@@ -56,11 +56,6 @@ export const list = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    try {
-      await assertMember(ctx, identity.tokenIdentifier, args.setId);
-    } catch {
-      return [];
-    }
     return await ctx.db
       .query("flashcards")
       .withIndex("by_setId", (q) => q.eq("setId", args.setId))

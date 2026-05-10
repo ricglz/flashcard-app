@@ -47,18 +47,20 @@ export const list = query({
 export const get = query({
   args: { id: v.id("flashcardSets") },
   handler: async (ctx, args) => {
-    const set = await ctx.db.get(args.id);
-    if (!set) return null;
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
+    const set = await ctx.db.get(args.id);
+    if (!set) return null;
     const link = await ctx.db
       .query("userSets")
       .withIndex("by_userId_and_setId", (q) =>
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.id)
       )
       .first();
-    if (!link) return null;
-    return set;
+    if (link) {
+      return { ...set, viewer: { role: link.role, userSet: link } };
+    }
+    return { ...set, viewer: { role: "visitor" as const, userSet: null } };
   },
 });
 
