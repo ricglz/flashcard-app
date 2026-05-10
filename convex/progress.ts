@@ -179,6 +179,9 @@ export const getDailyHistory = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
+    if (!Number.isInteger(args.days) || args.days < 1 || args.days > 365) {
+      throw new Error("days must be an integer between 1 and 365");
+    }
 
     const settings = await ctx.db
       .query("userSettings")

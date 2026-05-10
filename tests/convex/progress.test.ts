@@ -198,6 +198,23 @@ describe("getDailyHistory", () => {
     expect(history[0].totalCards).toBe(1);
     expect(history[0].accuracy).toBe(1);
   });
+
+  it("rejects invalid day ranges", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    await expect(
+      as.query(api.progress.getDailyHistory, { days: 0 })
+    ).rejects.toThrow("days must be an integer between 1 and 365");
+
+    await expect(
+      as.query(api.progress.getDailyHistory, { days: 1.5 })
+    ).rejects.toThrow("days must be an integer between 1 and 365");
+
+    await expect(
+      as.query(api.progress.getDailyHistory, { days: 366 })
+    ).rejects.toThrow("days must be an integer between 1 and 365");
+  });
 });
 
 describe("getPerSetMastery", () => {
