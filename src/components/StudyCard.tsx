@@ -36,26 +36,23 @@ export default function StudyCard({
   const updateTtsStatus = (event: TtsEvent) => {
     setTtsStatus(event.status);
 
-    if (event.message) {
-      setTtsMessage(event.message);
+    if (
+      event.status === "error" ||
+      event.status === "timeout" ||
+      event.status === "unsupported"
+    ) {
+      setTtsMessage(
+        event.message ?? "Couldn’t play audio. Check volume or tap again.",
+      );
       return;
     }
 
-    if (event.status === "preparing" || event.status === "queued") {
-      setTtsMessage("Preparing audio…");
-    } else if (event.status === "speaking") {
-      setTtsMessage("Playing pronunciation…");
-    } else if (event.status === "ended") {
-      setTtsMessage("Audio finished");
-    }
+    setTtsMessage(null);
   };
 
   useEffect(() => {
     if (ttsStatus !== "ended" && ttsStatus !== "cancelled") return;
-    const timeout = window.setTimeout(() => {
-      setTtsStatus("idle");
-      setTtsMessage(null);
-    }, 1200);
+    const timeout = window.setTimeout(() => setTtsStatus("idle"), 700);
     return () => window.clearTimeout(timeout);
   }, [ttsStatus]);
 
@@ -173,13 +170,7 @@ export default function StudyCard({
 
         {ttsMessage && (
           <div
-            className={`mt-4 rounded-lg px-3 py-2 text-center text-sm ${
-              ttsStatus === "error" ||
-              ttsStatus === "timeout" ||
-              ttsStatus === "unsupported"
-                ? "bg-danger-surface text-danger"
-                : "bg-info-surface text-muted"
-            }`}
+            className="mt-4 rounded-lg bg-danger-surface px-3 py-2 text-center text-sm text-danger"
             aria-live="polite"
           >
             {ttsMessage}
