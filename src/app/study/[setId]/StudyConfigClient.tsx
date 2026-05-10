@@ -55,9 +55,7 @@ export default function StudyConfigClient({
     if (userSet) {
       setFrontFields(userSet.defaultFrontFields);
       setBackFields(userSet.defaultBackFields);
-      setTtsOnlyFields(
-        (userSet as Record<string, unknown>).defaultTtsOnlyFields as string[] ?? []
-      );
+      setTtsOnlyFields(userSet.defaultTtsOnlyFields ?? []);
     } else {
       const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
       setFrontFields([sorted[0].name]);

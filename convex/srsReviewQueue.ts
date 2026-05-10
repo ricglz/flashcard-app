@@ -5,7 +5,7 @@ import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from
 import { populateQueue } from "./srsEngine";
 import { RATING_SCORES } from "./studySessions";
 import { incrementDailyStats } from "./progress";
-import type { CardRating } from "../src/lib/types";
+import type { FieldDefinition } from "../src/lib/types";
 
 export const getQueueStats = query({
   args: {},
@@ -58,7 +58,7 @@ export const getHydratedQueue = query({
       .take(200);
 
     const setCache = new Map<string, {
-      fieldDefinitions: Array<{ name: string; role: string; metadata: Record<string, unknown>; order: number }>;
+      fieldDefinitions: FieldDefinition[];
     }>();
     const userSetCache = new Map<string, {
       defaultFrontFields: string[];
@@ -71,14 +71,12 @@ export const getHydratedQueue = query({
       const card = await ctx.db.get(item.cardId);
       if (!card) continue;
 
-      const setIdStr = item.setId as string;
+      const setIdStr = item.setId;
       if (!setCache.has(setIdStr)) {
         const set = await ctx.db.get(item.setId);
         if (!set) continue;
         setCache.set(setIdStr, {
-          fieldDefinitions: set.fieldDefinitions as Array<{
-            name: string; role: string; metadata: Record<string, unknown>; order: number;
-          }>,
+          fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
         });
       }
 
@@ -138,7 +136,7 @@ export const recordReview = mutation({
 
     const now = Date.now();
     const result = computeSM2({
-      rating: args.rating as CardRating,
+      rating: args.rating,
       easeFactor: srsCard.easeFactor,
       interval: srsCard.interval,
       repetitions: srsCard.repetitions,

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import TtsButton from "@/components/TtsButton";
 import SrsSetConfig from "@/components/SrsSetConfig";
 import { getTtsConfig, TypedFlashcardSet } from "@/lib/types";
-import type { Id } from "../../../../convex/_generated/dataModel";
 
 type Props = {
   setId: string;
@@ -74,11 +73,11 @@ export default function SetDetailClient({
         {userSet && (
           <div className="mb-6">
             <SrsSetConfig
-              setId={set._id as Id<"flashcardSets">}
+              setId={set._id}
               srsEnabled={userSet.srsEnabled}
               defaultFrontFields={userSet.defaultFrontFields}
               defaultBackFields={userSet.defaultBackFields}
-              defaultTtsOnlyFields={(userSet as Record<string, unknown>).defaultTtsOnlyFields as string[] ?? []}
+              defaultTtsOnlyFields={userSet.defaultTtsOnlyFields ?? []}
               fieldDefinitions={set.fieldDefinitions}
             />
           </div>

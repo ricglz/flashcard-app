@@ -5,7 +5,7 @@ import SpeakerIcon from "@/components/SpeakerIcon";
 import {
   CardRating,
   SRS_RATING_LABELS,
-  FieldDefinition,
+  type FieldDefinition,
 } from "@/lib/types";
 
 export default function SrsReviewActive({
@@ -25,7 +25,7 @@ export default function SrsReviewActive({
     _id: string;
     srsCardId: string;
     card: { _id: string; fields: Record<string, string> };
-    fieldDefinitions: Array<{ name: string; role: string; metadata: Record<string, unknown>; order: number }>;
+    fieldDefinitions: FieldDefinition[];
     frontFields: string[];
     backFields: string[];
     ttsOnlyFields?: string[];
@@ -86,7 +86,7 @@ export default function SrsReviewActive({
         <StudyCard
           key={currentItem._id}
           card={currentItem.card}
-          fieldDefinitions={currentItem.fieldDefinitions as FieldDefinition[]}
+          fieldDefinitions={currentItem.fieldDefinitions}
           frontFields={currentItem.frontFields}
           backFields={currentItem.backFields}
           ttsOnlyFields={currentItem.ttsOnlyFields ?? []}
