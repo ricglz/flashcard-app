@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useConvex } from "convex/react";
+import { useConvex, type ConvexReactClient } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { FunctionReference } from "convex/server";
 import { useOnlineStatus } from "./useOnlineStatus";
@@ -19,6 +19,9 @@ import {
   removeEntry,
   getPendingCount,
 } from "./offlineOutbox";
+
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 2000;
 
 interface SyncContextValue {
   pendingCount: number;
@@ -34,6 +37,25 @@ export function useSyncStatus() {
   return useContext(SyncContext);
 }
 
+async function flushEntries(client: ConvexReactClient): Promise<boolean> {
+  const entries = await getPendingEntries();
+  let allSucceeded = true;
+  for (const entry of entries) {
+    try {
+      await markSyncing(entry.id);
+      const ref = makeFunctionReference<"mutation">(
+        entry.mutationName,
+      ) as FunctionReference<"mutation">;
+      await client.mutation(ref, entry.args as Record<string, unknown>);
+      await removeEntry(entry.id);
+    } catch {
+      await markFailed(entry.id, (entry.retries || 0) + 1);
+      allSucceeded = false;
+    }
+  }
+  return allSucceeded;
+}
+
 export default function SyncProvider({ children }: { children: ReactNode }) {
   const client = useConvex();
   const isOnline = useOnlineStatus();
@@ -41,48 +63,36 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const refreshCount = useCallback(async () => {
-    const count = await getPendingCount();
-    setPendingCount(count);
+    setPendingCount(await getPendingCount());
   }, []);
 
-  // Listen for outbox changes
   useEffect(() => {
-    const handler = () => {
-      refreshCount();
-    };
+    const handler = () => refreshCount();
     window.addEventListener("outbox-changed", handler);
     return () => window.removeEventListener("outbox-changed", handler);
   }, [refreshCount]);
 
-  // Load initial count on mount
   useEffect(() => {
     getPendingCount().then(setPendingCount);
   }, []);
 
-  // Drain outbox when coming online
   useEffect(() => {
     if (!isOnline || isSyncing) return;
 
     let cancelled = false;
 
     async function drain() {
-      const entries = await getPendingEntries();
-      if (entries.length === 0 || cancelled) return;
+      if (cancelled || (await getPendingCount()) === 0) return;
 
       setIsSyncing(true);
 
-      for (const entry of entries) {
-        if (cancelled) break;
-        try {
-          await markSyncing(entry.id);
-          const ref = makeFunctionReference<"mutation">(
-            entry.mutationName
-          ) as FunctionReference<"mutation">;
-          await client.mutation(ref, entry.args as Record<string, unknown>);
-          await removeEntry(entry.id);
-        } catch {
-          await markFailed(entry.id, (entry.retries || 0) + 1);
+      for (let attempt = 0; attempt < MAX_ATTEMPTS && !cancelled; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+          if (cancelled) break;
         }
+        const success = await flushEntries(client);
+        if (success) break;
       }
 
       if (!cancelled) {
@@ -92,10 +102,7 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
     }
 
     drain();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [isOnline, isSyncing, client, refreshCount]);
 
   return (

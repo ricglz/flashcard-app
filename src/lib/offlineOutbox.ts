@@ -55,6 +55,7 @@ export async function markFailed(
         status: retries >= 3 ? "failed" : "pending",
         retries,
       });
+      window.dispatchEvent(new Event("outbox-changed"));
     }
   } catch {
     // ignore
