@@ -343,7 +343,7 @@ export const backfillDailyStats = internalMutation({
       .take(5000);
 
     for (const review of reviews) {
-      const ratingScore = RATING_SCORES[review.rating] ?? 0;
+      const ratingScore = RATING_SCORES[review.rating];
       const isCorrect = ratingScore >= 2;
 
       const reviewDate = new Date(review.timestamp);

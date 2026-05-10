@@ -175,7 +175,7 @@ export const recordReview = mutation({
 
     await ctx.db.delete(queueItem._id);
 
-    const ratingScore = RATING_SCORES[args.rating] ?? 0;
+    const ratingScore = RATING_SCORES[args.rating];
     await incrementDailyStats(
       ctx,
       identity.tokenIdentifier,

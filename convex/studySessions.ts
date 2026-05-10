@@ -3,9 +3,9 @@ import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
-import type { FieldDefinition } from "../src/lib/types";
+import type { CardRating, FieldDefinition } from "../src/lib/types";
 
-export const RATING_SCORES: Record<string, number> = {
+export const RATING_SCORES: Record<CardRating, number> = {
   wrong: 0,
   hard: 1,
   good: 2,
@@ -14,11 +14,11 @@ export const RATING_SCORES: Record<string, number> = {
 
 /** Compute overall score from an array of card result ratings. */
 export function computeOverallScore(
-  ratings: Array<{ rating: string }>
+  ratings: Array<{ rating: CardRating }>
 ): number {
   if (ratings.length === 0) return 0;
   const totalScore = ratings.reduce(
-    (sum, r) => sum + (RATING_SCORES[r.rating] ?? 0),
+    (sum, r) => sum + RATING_SCORES[r.rating],
     0
   );
   const maxScore = ratings.length * 3;
@@ -214,7 +214,7 @@ export const recordResult = mutation({
       timestamp: Date.now(),
     });
 
-    const ratingScore = RATING_SCORES[args.rating] ?? 0;
+    const ratingScore = RATING_SCORES[args.rating];
     await incrementDailyStats(
       ctx,
       identity.tokenIdentifier,
