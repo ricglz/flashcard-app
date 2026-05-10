@@ -16,9 +16,6 @@
 ## Marketplace & Multi-User
 
 ### Sharing
-- [ ] Share sets via link (generate unique share token, shareable URL)
-- [ ] Shared set detail page (read-only view for non-owners visiting a share link)
-- [ ] Import shared set into own library (creates `userSets` entry for the viewer)
 - [ ] Visibility settings on sets (private / unlisted-link-only / public)
 
 ### Forking
@@ -33,9 +30,6 @@
 - [ ] Set preview cards (name, description, card count, field definitions, sample cards)
 - [ ] Pagination / infinite scroll for large catalogs
 - [ ] User public profile page — list of their public sets
-
-### Multi-User Infrastructure
-- [ ] Ownership vs. linked distinction (owner can edit, linked users get read-only + fork)
 
 ## AI Capabilities
 
