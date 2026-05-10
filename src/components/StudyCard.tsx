@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
-import { speakSequence } from "@/lib/tts";
+import { speakSequence, TtsEvent, TtsStatus } from "@/lib/tts";
 import TtsButton from "./TtsButton";
 
 type Props = {
@@ -28,6 +28,36 @@ export default function StudyCard({
   ttsRate,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
+  const [ttsStatus, setTtsStatus] = useState<TtsStatus>("idle");
+  const [ttsMessage, setTtsMessage] = useState<string | null>(null);
+
+  const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
+
+  const updateTtsStatus = (event: TtsEvent) => {
+    setTtsStatus(event.status);
+
+    if (event.message) {
+      setTtsMessage(event.message);
+      return;
+    }
+
+    if (event.status === "preparing" || event.status === "queued") {
+      setTtsMessage("Preparing audio…");
+    } else if (event.status === "speaking") {
+      setTtsMessage("Playing pronunciation…");
+    } else if (event.status === "ended") {
+      setTtsMessage("Audio finished");
+    }
+  };
+
+  useEffect(() => {
+    if (ttsStatus !== "ended" && ttsStatus !== "cancelled") return;
+    const timeout = window.setTimeout(() => {
+      setTtsStatus("idle");
+      setTtsMessage(null);
+    }, 1200);
+    return () => window.clearTimeout(timeout);
+  }, [ttsStatus]);
 
   const handleReveal = () => {
     setRevealed(true);
@@ -43,11 +73,14 @@ export default function StudyCard({
           items.push({ text: value, lang: ttsConfig.lang });
         }
       }
-      if (items.length > 0) speakSequence(items, ttsRate);
+      if (items.length > 0) {
+        void speakSequence(items, {
+          rate: ttsRate,
+          onEvent: updateTtsStatus,
+        });
+      }
     }
   };
-
-  const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
   return (
     <div className="w-full max-w-lg mx-auto">
@@ -75,7 +108,12 @@ export default function StudyCard({
                     {value}
                   </p>
                   {ttsConfig && (
-                    <TtsButton text={value} lang={ttsConfig.lang} rate={ttsRate} />
+                    <TtsButton
+                      text={value}
+                      lang={ttsConfig.lang}
+                      rate={ttsRate}
+                      onTtsEvent={updateTtsStatus}
+                    />
                   )}
                 </div>
               </div>
@@ -109,7 +147,12 @@ export default function StudyCard({
                         {value}
                       </p>
                       {ttsConfig && (
-                        <TtsButton text={value} lang={ttsConfig.lang} />
+                        <TtsButton
+                          text={value}
+                          lang={ttsConfig.lang}
+                          rate={ttsRate}
+                          onTtsEvent={updateTtsStatus}
+                        />
                       )}
                     </div>
                   </div>
@@ -125,6 +168,21 @@ export default function StudyCard({
             >
               Reveal Answer
             </button>
+          </div>
+        )}
+
+        {ttsMessage && (
+          <div
+            className={`mt-4 rounded-lg px-3 py-2 text-center text-sm ${
+              ttsStatus === "error" ||
+              ttsStatus === "timeout" ||
+              ttsStatus === "unsupported"
+                ? "bg-danger-surface text-danger"
+                : "bg-info-surface text-muted"
+            }`}
+            aria-live="polite"
+          >
+            {ttsMessage}
           </div>
         )}
       </div>
