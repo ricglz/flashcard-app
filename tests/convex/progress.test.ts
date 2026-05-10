@@ -200,6 +200,53 @@ describe("getDailyHistory", () => {
   });
 });
 
+describe("getPerSetMastery", () => {
+  it("returns per-set breakdown with avgEase", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 3);
+
+    await t.mutation(internal.userSets.enrollCardsForSet, {
+      userId: TEST_USER.tokenIdentifier,
+      setId,
+    });
+
+    // Promote one card to "learning" with a different ease
+    await t.run(async (ctx) => {
+      const cards = await ctx.db
+        .query("srsCards")
+        .withIndex("by_userId_and_setId", (q) =>
+          q
+            .eq("userId", TEST_USER.tokenIdentifier)
+            .eq("setId", setId)
+        )
+        .take(10);
+      await ctx.db.patch(cards[0]._id, {
+        status: "learning",
+        easeFactor: 2.0,
+      });
+    });
+
+    const mastery = await as.query(api.progress.getPerSetMastery, {});
+    expect(mastery).toHaveLength(1);
+    expect(mastery[0].setName).toBe("Test");
+    expect(mastery[0].total).toBe(3);
+    expect(mastery[0].new).toBe(2);
+    expect(mastery[0].learning).toBe(1);
+    expect(mastery[0].review).toBe(0);
+    // avgEase: (2.0 + 2.5 + 2.5) / 3 ≈ 2.333
+    expect(mastery[0].avgEase).toBeCloseTo(2.333, 2);
+  });
+
+  it("returns empty array when no SRS-enabled sets", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const mastery = await as.query(api.progress.getPerSetMastery, {});
+    expect(mastery).toEqual([]);
+  });
+});
+
 describe("getCardStatusBreakdown", () => {
   it("counts cards by SRS status", async () => {
     const t = convexTest(schema, modules);
