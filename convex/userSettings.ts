@@ -37,8 +37,12 @@ export const update = mutation({
     const userId = identity.tokenIdentifier;
 
     const patch: Record<string, number | undefined> = {};
-    if (args.maxNewCardsPerDay !== undefined)
-      patch.maxNewCardsPerDay = args.maxNewCardsPerDay;
+    if (args.maxNewCardsPerDay !== undefined) {
+      const n = Math.round(args.maxNewCardsPerDay);
+      if (n < 0 || n > 200)
+        throw new Error("Max new cards per day must be 0-200");
+      patch.maxNewCardsPerDay = n;
+    }
     if (args.dayResetUtcHour !== undefined) {
       const h = Math.round(args.dayResetUtcHour);
       if (h < 0 || h > 23) throw new Error("Hour must be 0-23");

@@ -42,6 +42,29 @@ describe("userSettings.update", () => {
     expect(settings?.dayResetUtcHour).toBe(4);
   });
 
+  it("rounds maxNewCardsPerDay to nearest integer", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    await as.mutation(api.userSettings.update, { maxNewCardsPerDay: 10.6 });
+
+    const settings = await as.query(api.userSettings.get);
+    expect(settings?.maxNewCardsPerDay).toBe(11);
+  });
+
+  it("rejects maxNewCardsPerDay outside the allowed range", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    await expect(
+      as.mutation(api.userSettings.update, { maxNewCardsPerDay: -1 })
+    ).rejects.toThrow("Max new cards per day must be 0-200");
+
+    await expect(
+      as.mutation(api.userSettings.update, { maxNewCardsPerDay: 201 })
+    ).rejects.toThrow("Max new cards per day must be 0-200");
+  });
+
   it("saves dayResetUtcHour", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
