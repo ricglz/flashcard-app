@@ -3,15 +3,86 @@
 > Initial plan: `docs/initial-plan.md`
 > Product decisions: `docs/product-decisions.md`
 
-## Code Quality — Effect Adoption Candidates
-- [ ] Evaluate `effect` for domain validation and typed expected failures before expanding usage broadly.
-  - Good fits:
-    - Card/set validation where runtime database state defines valid values (e.g. flashcard field keys).
-    - CSV/import pipelines with recoverable row/header errors.
-    - Study-session setup validation and result unions for user-actionable failures.
-    - External integrations such as TTS, where retries, timeouts, and provider fallbacks may become useful.
-  - Use sparingly at Convex boundaries: Convex functions should keep normal validators and convert Effect failures into either structured thrown errors or explicit result unions.
-  - Avoid rewriting simple handlers wholesale until the small validation spike proves readability, bundle/runtime compatibility, and test ergonomics.
+## Code Quality — Typed Domain Validation Candidates
+### Card / Set Domain Validation
+- [ ] Validate field definition invariants before creating/updating sets:
+  - unique field names after trimming,
+  - non-empty names,
+  - stable `order` values,
+  - supported roles,
+  - metadata shape such as TTS language.
+- [ ] Validate card field payloads against a set's runtime field definitions:
+  - unknown fields,
+  - missing expected fields when required,
+  - all-empty cards,
+  - duplicate/normalized field-name collisions.
+- [ ] Share validation rules between manual card creation, CSV import, batch create, and card update paths.
+- [ ] Convert domain failures into actionable UI copy instead of generic thrown errors.
+
+### CSV / Import Pipeline
+- [ ] Replace string-only CSV errors with typed recoverable failures:
+  - missing headers,
+  - duplicate headers,
+  - empty rows,
+  - malformed rows,
+  - rows with no useful field values,
+  - unsupported inferred metadata.
+- [ ] Track row-level warnings separately from import-blocking errors.
+- [ ] Add preview-friendly result unions for "valid cards + warnings" vs "cannot continue".
+- [ ] Add tests for partial-success import behavior and error display ordering.
+
+### Set Creation Wizard / Client State
+- [ ] Add typed validation for each wizard step rather than only boolean `canProceed`.
+- [ ] Return per-field/per-step reasons that the UI can render near the invalid input.
+- [ ] Validate transitions (`NEXT_STEP`, source-method switching, reset) so impossible wizard states are prevented or normalized.
+- [ ] Ensure CSV and manual paths use the same domain validation before final submit.
+
+### Study Session Setup / Results
+- [ ] Validate session start inputs:
+  - set exists and is accessible,
+  - selected front/back/TTS-only fields exist,
+  - card limit is within allowed bounds,
+  - there are studyable cards.
+- [ ] Return user-actionable setup failures such as "no cards", "field was removed", or "set access changed".
+- [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
+
+### SRS Queue / Scheduling
+- [ ] Add typed guardrails around SRS settings:
+  - daily new-card limit range,
+  - reset UTC hour range,
+  - enabled set membership.
+- [ ] Validate review actions before scheduling:
+  - SRS card belongs to user,
+  - queue item exists or action is an idempotent replay,
+  - rating is supported.
+- [ ] Keep pure scheduling math in plain/testable TypeScript unless a richer result type adds meaningful typed failure handling.
+- [ ] Add tests for queue population edge cases: empty sets, duplicate queue entries, carry-over cards, and new-card limit exhaustion.
+
+### TTS / External Integration Boundary
+- [ ] Model TTS outcomes as typed failures where useful:
+  - unsupported browser,
+  - permission blocked,
+  - no voice for language,
+  - timeout,
+  - network/local voice fallback.
+- [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
+- [ ] Keep UI-facing TTS results serializable and independent of server/domain internals.
+- [ ] Add tests for `friendlySpeechError`, voice selection, timeout behavior, and empty text handling.
+
+### Offline Sync / Outbox
+- [ ] Type offline mutation outcomes:
+  - queued,
+  - replayed,
+  - duplicate/idempotent no-op,
+  - permanent failure,
+  - auth-required retry.
+- [ ] Normalize server errors into stable categories for reconnect/retry UI.
+- [ ] Add tests for outbox drain ordering, duplicate review replay, and failure recovery.
+
+### Shared Types / Metadata
+- [ ] Runtime-validate `FieldMetadata` and narrow Convex `any` metadata at query/mutation boundaries.
+- [ ] Add typed helpers for TTS-enabled fields, displayable fields, and studyable field selections.
+- [ ] Keep `src/lib/types.ts` as the canonical static type source, with runtime validation colocated or clearly linked.
 
 ## Marketplace & Multi-User
 

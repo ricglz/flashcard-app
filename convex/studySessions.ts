@@ -3,6 +3,8 @@ import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
+import { validateStudySessionSetup } from "./domain/studySessionSetup";
+import { assertDomainResult } from "./domain/result";
 import type { CardRating, FieldDefinition } from "../src/lib/types";
 
 export const RATING_SCORES: Record<CardRating, number> = {
@@ -86,52 +88,15 @@ export const start = mutation({
     if (!set) throw new Error("Not found");
     await assertMember(ctx, identity.tokenIdentifier, args.setId);
 
-    if (
-      args.cardLimit !== undefined &&
-      (!Number.isInteger(args.cardLimit) ||
-        args.cardLimit < 1 ||
-        args.cardLimit > 1000)
-    ) {
-      throw new Error("cardLimit must be an integer between 1 and 1000");
-    }
-
-    // Validate front/back fields
-    if (args.frontFields.length === 0)
-      throw new Error("frontFields must not be empty");
-    if (args.backFields.length === 0)
-      throw new Error("backFields must not be empty");
-
-    const fieldDefs = set.fieldDefinitions as FieldDefinition[];
-
-    const validFieldNames = new Set(
-      fieldDefs.map((fd) => fd.name)
-    );
-    for (const f of args.frontFields) {
-      if (!validFieldNames.has(f))
-        throw new Error(`Invalid front field: ${f}`);
-    }
-    for (const f of args.backFields) {
-      if (!validFieldNames.has(f))
-        throw new Error(`Invalid back field: ${f}`);
-    }
-
-    const resolvedTtsOnly = args.ttsOnlyFields ?? [];
-    if (resolvedTtsOnly.length > 0) {
-      const fieldDefsMap = new Map(
-        fieldDefs.map((fd) => [fd.name, fd])
-      );
-      const frontSet = new Set(args.frontFields);
-      const backSet = new Set(args.backFields);
-      for (const f of resolvedTtsOnly) {
-        if (!validFieldNames.has(f))
-          throw new Error(`Invalid TTS-only field: ${f}`);
-        if (frontSet.has(f) || backSet.has(f))
-          throw new Error(`Field "${f}" cannot be in both ttsOnlyFields and front/back`);
-        const fd = fieldDefsMap.get(f)!;
-        if (!fd.metadata?.tts)
-          throw new Error(`Field "${f}" has no TTS config and cannot be TTS-only`);
-      }
-    }
+    const setupResult = validateStudySessionSetup({
+      fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
+      frontFields: args.frontFields,
+      backFields: args.backFields,
+      ttsOnlyFields: args.ttsOnlyFields,
+      cardLimit: args.cardLimit,
+    });
+    assertDomainResult(setupResult);
+    const setup = setupResult.value;
 
     const existingActive = await ctx.db
       .query("studySessions")
@@ -167,19 +132,19 @@ export const start = mutation({
 
     // Limit number of cards if specified
     if (
-      args.cardLimit &&
-      args.cardLimit > 0 &&
-      args.cardLimit < cardOrder.length
+      setup.cardLimit !== undefined &&
+      setup.cardLimit > 0 &&
+      setup.cardLimit < cardOrder.length
     ) {
-      cardOrder = cardOrder.slice(0, args.cardLimit);
+      cardOrder = cardOrder.slice(0, setup.cardLimit);
     }
 
     return await ctx.db.insert("studySessions", {
       setId: args.setId,
       userId: identity.tokenIdentifier,
-      frontFields: args.frontFields,
-      backFields: args.backFields,
-      ttsOnlyFields: resolvedTtsOnly,
+      frontFields: setup.frontFields,
+      backFields: setup.backFields,
+      ttsOnlyFields: setup.ttsOnlyFields,
       cardOrder,
       currentIndex: 0,
       status: "in_progress",
