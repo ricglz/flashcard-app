@@ -25,6 +25,10 @@ export const FIELD_ROLE_LABELS: Record<FieldRole, string> = {
   note: "Note",
 };
 
+export function isFieldRole(value: unknown): value is FieldRole {
+  return typeof value === "string" && FIELD_ROLES.includes(value as FieldRole);
+}
+
 // ---------------------------------------------------------------------------
 // Field Metadata — typed blocks, presence = enabled
 // ---------------------------------------------------------------------------
@@ -44,6 +48,29 @@ export type FieldMetadata = {
   // display?: { fontSize: "small" | "normal" | "large" };
   // validation?: { pattern: string };
 };
+
+export function isFieldMetadata(value: unknown): value is FieldMetadata {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const metadata = value as Record<string, unknown>;
+  if (metadata.tts === undefined) return true;
+  if (
+    metadata.tts === null ||
+    typeof metadata.tts !== "object" ||
+    Array.isArray(metadata.tts)
+  ) {
+    return false;
+  }
+  const tts = metadata.tts as Record<string, unknown>;
+  return typeof tts.lang === "string" && tts.lang.trim().length > 0;
+}
+
+export function normalizeFieldMetadata(value: unknown): FieldMetadata {
+  if (!isFieldMetadata(value)) return {};
+  const metadata = value as FieldMetadata;
+  return metadata.tts ? { tts: { lang: metadata.tts.lang.trim() } } : {};
+}
 
 // ---------------------------------------------------------------------------
 // Field Definitions
@@ -65,6 +92,24 @@ export function getTtsConfig(
   field: FieldDefinition
 ): { lang: string } | null {
   return field.metadata.tts ?? null;
+}
+
+export function getTtsEnabledFields(
+  fieldDefinitions: readonly FieldDefinition[]
+): FieldDefinition[] {
+  return fieldDefinitions.filter((field) => getTtsConfig(field) !== null);
+}
+
+export function getDisplayableFields(
+  fieldDefinitions: readonly FieldDefinition[]
+): FieldDefinition[] {
+  return [...fieldDefinitions].sort((a, b) => a.order - b.order);
+}
+
+export function getStudyableFieldNames(
+  fieldDefinitions: readonly FieldDefinition[]
+): string[] {
+  return getDisplayableFields(fieldDefinitions).map((field) => field.name);
 }
 
 // ---------------------------------------------------------------------------
