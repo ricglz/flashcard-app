@@ -156,10 +156,10 @@
 - [ ] Generation history — see past prompts and re-generate with tweaks
 
 ### AI Weak Spot Analysis
-- [ ] Analyze SRS performance data (low ease factors, high lapse counts, frequent "wrong" ratings)
-- [ ] LLM summarizes weak areas and suggests targeted card sets to address gaps
-- [ ] One-click generation of suggested remedial cards
-- [ ] Design doc: `docs/ai-card-suggestions.md`
+- [ ] Add assistant prompt/eval examples for producing high-quality remedial sets from exported weak context.
+- [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
+- [ ] Future in-app LLM flow: LLM summarizes weak areas and suggests/generated targeted card sets without external assistant dependency.
+- [ ] Legacy BYOK/in-app design doc: `docs/ai-card-suggestions.md`
 
 ### In-App LLM Assistant
 - [ ] Chat-style interface for asking questions about study content
