@@ -1,18 +1,16 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { assertOwner } from "./userSets";
-import { validateCardFields } from "./domain/cardFields";
-import { assertDomainResult } from "./domain/result";
+import { validateCardFields, type CardFieldsValidationFailure } from "./domain/cardFields";
+import { fail, ok, unauthenticated, notFound, type CommonFailure } from "./domain/result";
 
-function assertValidCardFields(
+function validateAgainstSet(
   set: { fieldDefinitions: Array<{ name: string }> },
   fields: Record<string, string>
 ) {
-  assertDomainResult(
-    validateCardFields(
-      set.fieldDefinitions.map((field) => field.name),
-      fields
-    )
+  return validateCardFields(
+    set.fieldDefinitions.map((field) => field.name),
+    fields
   );
 }
 
@@ -36,12 +34,19 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    await assertOwner(ctx, identity.tokenIdentifier, args.setId);
+    if (!identity) return fail(unauthenticated());
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.setId);
+    if (!owner.ok) return owner;
     const set = await ctx.db.get(args.setId);
-    if (!set) throw new Error("Set not found");
-    assertValidCardFields(set, args.fields);
-    return await ctx.db.insert("flashcards", args);
+    if (!set) return fail(notFound("Set not found"));
+    const fields = validateAgainstSet(set, args.fields);
+    if (!fields.ok) return fields;
+    const id = await ctx.db.insert("flashcards", {
+      setId: args.setId,
+      fields: fields.value,
+      order: args.order,
+    });
+    return id;
   },
 });
 
@@ -57,13 +62,21 @@ export const batchCreate = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    await assertOwner(ctx, identity.tokenIdentifier, args.setId);
+    if (!identity) return fail(unauthenticated());
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.setId);
+    if (!owner.ok) return owner;
     const set = await ctx.db.get(args.setId);
-    if (!set) throw new Error("Set not found");
-    const ids = [];
+    if (!set) return fail(notFound("Set not found"));
+
+    const normalizedCards: Array<{ fields: Record<string, string>; order: number }> = [];
     for (const card of args.cards) {
-      assertValidCardFields(set, card.fields);
+      const fields = validateAgainstSet(set, card.fields);
+      if (!fields.ok) return fields;
+      normalizedCards.push({ fields: fields.value, order: card.order });
+    }
+
+    const ids = [];
+    for (const card of normalizedCards) {
       const id = await ctx.db.insert("flashcards", {
         setId: args.setId,
         ...card,
@@ -82,20 +95,23 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const card = await ctx.db.get(args.id);
-    if (!card) throw new Error("Not found");
-    await assertOwner(ctx, identity.tokenIdentifier, card.setId);
+    if (!card) return fail(notFound("Card not found"));
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, card.setId);
+    if (!owner.ok) return owner;
+
+    const patch: { fields?: Record<string, string>; order?: number } = {};
     if (args.fields !== undefined) {
       const set = await ctx.db.get(card.setId);
-      if (!set) throw new Error("Set not found");
-      assertValidCardFields(set, args.fields);
+      if (!set) return fail(notFound("Set not found"));
+      const fields = validateAgainstSet(set, args.fields);
+      if (!fields.ok) return fields;
+      patch.fields = fields.value;
     }
-    const { id, ...updates } = args;
-    const filtered = Object.fromEntries(
-      Object.entries(updates).filter(([, v]) => v !== undefined)
-    );
-    await ctx.db.patch(id, filtered);
+    if (args.order !== undefined) patch.order = args.order;
+    await ctx.db.patch(args.id, patch);
+    return ok(null);
   },
 });
 
@@ -103,10 +119,14 @@ export const remove = mutation({
   args: { id: v.id("flashcards") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const card = await ctx.db.get(args.id);
-    if (!card) throw new Error("Not found");
-    await assertOwner(ctx, identity.tokenIdentifier, card.setId);
+    if (!card) return fail(notFound("Card not found"));
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, card.setId);
+    if (!owner.ok) return owner;
     await ctx.db.delete(args.id);
+    return ok(null);
   },
 });
+
+export type FlashcardMutationFailure = CommonFailure | CardFieldsValidationFailure;
