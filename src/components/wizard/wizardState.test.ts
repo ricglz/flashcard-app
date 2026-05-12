@@ -14,7 +14,7 @@ const sampleField: FieldDefinition = {
   order: 0,
 };
 
-const sampleCard = { Character: "你", Pinyin: "nǐ", Meaning: "you" };
+const sampleCard = { Character: "你" };
 
 function stateWith(overrides: Partial<WizardState>): WizardState {
   return { ...initialState, ...overrides };
@@ -82,9 +82,9 @@ describe("wizardReducer", () => {
     expect(result.cards).toEqual([{ a: "1" }, { a: "3" }]);
   });
 
-  it("advances step with NEXT_STEP", () => {
+  it("does not advance with NEXT_STEP when current step is invalid", () => {
     const result = wizardReducer(initialState, { type: "NEXT_STEP" });
-    expect(result.step).toBe(2);
+    expect(result.step).toBe(1);
   });
 
   it("does not advance past step 4", () => {
@@ -143,12 +143,12 @@ describe("canProceed", () => {
     expect(canProceed(stateWith({ step: 3 }))).toBe(false);
     expect(
       canProceed(
-        stateWith({ step: 3, fieldDefinitions: [sampleField] })
+        stateWith({ step: 3, fieldDefinitions: [sampleField], cards: [sampleCard] })
       )
     ).toBe(true);
   });
 
   it("step 4: always true", () => {
-    expect(canProceed(stateWith({ step: 4 }))).toBe(true);
+    expect(canProceed(stateWith({ step: 4, fieldDefinitions: [sampleField], cards: [sampleCard] }))).toBe(true);
   });
 });

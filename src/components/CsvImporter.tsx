@@ -21,8 +21,9 @@ export default function CsvImporter({
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       const result = parseCsv(text);
-      if (result.cards.length === 0) {
-        setError("No valid rows found in the CSV.");
+      if (!result.ok) {
+        setError(result.errors.map((err) => err.message).join("\n"));
+        setPreview(result);
         return;
       }
       setPreview(result);
@@ -81,7 +82,7 @@ export default function CsvImporter({
         </p>
       </div>
 
-      {error && <p className="text-danger text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm whitespace-pre-line">{error}</p>}
 
       {preview && (
         <div className="border rounded p-4 space-y-3">
@@ -91,11 +92,11 @@ export default function CsvImporter({
             {preview.fieldDefinitions.length} fields
           </p>
 
-          {preview.errors.length > 0 && (
+          {preview.warnings.length > 0 && (
             <div className="text-sm text-warning bg-warning-surface p-2 rounded-lg">
               <p className="font-medium">Warnings:</p>
-              {preview.errors.map((e, i) => (
-                <p key={i}>{e}</p>
+              {preview.warnings.map((warning, i) => (
+                <p key={i}>{warning.message}</p>
               ))}
             </div>
           )}
@@ -139,12 +140,14 @@ export default function CsvImporter({
           </div>
 
           <div className="flex gap-2">
-            <button
-              onClick={handleConfirm}
-              className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
-            >
-              Import {preview.cards.length} Cards
-            </button>
+            {preview.ok && (
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
+              >
+                Import {preview.cards.length} Cards
+              </button>
+            )}
             <button
               onClick={() => {
                 setPreview(null);

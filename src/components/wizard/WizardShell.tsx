@@ -1,13 +1,16 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useReducer, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
 import {
   wizardReducer,
   initialState,
   canProceed,
+  validateWizardStep,
 } from "./wizardState";
 import StepNameAndSource from "./StepNameAndSource";
 import StepAddCards from "./StepAddCards";
@@ -22,25 +25,45 @@ export default function WizardShell() {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdSetId, setCreatedSetId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setSubmitError(null);
+    const validation = validateWizardStep({ ...state, step: 4 });
+    if (!validation.ok) {
+      setSubmitError(validation.issues[0]?.message ?? "Fix validation errors before creating the set.");
+      setIsSubmitting(false);
+      return;
+    }
     try {
-      const setId = await createSet({
+      const setResult = await createSet({
         name: state.name.trim(),
         description: state.description.trim() || undefined,
         fieldDefinitions: state.fieldDefinitions,
       });
+      if (isFailureResult(setResult)) {
+        setSubmitError(setResult.error.message);
+        setIsSubmitting(false);
+        return;
+      }
+      const setId = (setResult as { ok: true; value: Id<"flashcardSets"> }).value;
       if (state.cards.length > 0) {
-        await batchCreateCards({
+        const cardResult = await batchCreateCards({
           setId,
           cards: state.cards.map((fields, i) => ({ fields, order: i })),
         });
+        if (isFailureResult(cardResult)) {
+          setSubmitError(cardResult.error.message);
+          setIsSubmitting(false);
+          return;
+        }
       }
       setCreatedSetId(setId);
     } catch (err) {
       console.error("Failed to create set:", err);
+      setSubmitError(err instanceof Error ? err.message : "Failed to create set");
       setIsSubmitting(false);
     }
   };
@@ -134,11 +157,16 @@ export default function WizardShell() {
           <StepConfigureFields state={state} dispatch={dispatch} />
         )}
         {state.step === 4 && (
-          <StepReview
-            state={state}
-            isSubmitting={isSubmitting}
-            onSubmit={handleCreate}
-          />
+          <>
+            <StepReview
+              state={state}
+              isSubmitting={isSubmitting}
+              onSubmit={handleCreate}
+            />
+            {submitError && (
+              <p className="mt-3 text-sm text-danger">{submitError}</p>
+            )}
+          </>
         )}
       </div>
 

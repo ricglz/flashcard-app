@@ -12,6 +12,7 @@ export default function CsvPath({
     <div className="space-y-4">
       <CsvImporter
         onImport={(result) => {
+          if (!result.ok) return;
           dispatch({ type: "SET_CARDS", payload: result.cards });
           dispatch({ type: "SET_FIELD_DEFINITIONS", payload: result.fieldDefinitions });
         }}
