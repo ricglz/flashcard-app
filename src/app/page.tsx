@@ -58,7 +58,7 @@ export default function Home() {
             <DailyGoalRing />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Link
               href="/sets"
               className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
@@ -84,6 +84,15 @@ export default function Home() {
               <h2 className="font-semibold text-lg mb-1">Progress</h2>
               <p className="text-sm text-muted">
                 View your study stats
+              </p>
+            </Link>
+            <Link
+              href="/settings"
+              className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
+            >
+              <h2 className="font-semibold text-lg mb-1">Settings</h2>
+              <p className="text-sm text-muted">
+                Manage CLI assistant access
               </p>
             </Link>
           </div>
