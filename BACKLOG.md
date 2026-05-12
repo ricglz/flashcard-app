@@ -1,5 +1,8 @@
-# Flashcard App — Progress
+# Flashcard App — Backlog & Ideas
 
+> This is a historical planning document and backlog of ideas.
+> For current status, see git history and README.md.
+> 
 > Initial plan: `docs/initial-plan.md`
 > Product decisions: `docs/product-decisions.md`
 
