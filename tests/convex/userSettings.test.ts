@@ -56,13 +56,9 @@ describe("userSettings.update", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await expect(
-      as.mutation(api.userSettings.update, { maxNewCardsPerDay: -1 })
-    ).rejects.toThrow("Max new cards per day must be 0-200");
+    expect(await as.mutation(api.userSettings.update, { maxNewCardsPerDay: -1 })).toMatchObject({ ok: false, error: { message: "Max new cards per day must be 0-200" } });
 
-    await expect(
-      as.mutation(api.userSettings.update, { maxNewCardsPerDay: 201 })
-    ).rejects.toThrow("Max new cards per day must be 0-200");
+    expect(await as.mutation(api.userSettings.update, { maxNewCardsPerDay: 201 })).toMatchObject({ ok: false, error: { message: "Max new cards per day must be 0-200" } });
   });
 
   it("saves dayResetUtcHour", async () => {
@@ -94,18 +90,14 @@ describe("userSettings.update", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await expect(
-      as.mutation(api.userSettings.update, { dayResetUtcHour: 24 })
-    ).rejects.toThrow("Hour must be 0-23");
+    expect(await as.mutation(api.userSettings.update, { dayResetUtcHour: 24 })).toMatchObject({ ok: false, error: { message: "Hour must be 0-23" } });
   });
 
   it("rejects negative hour", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await expect(
-      as.mutation(api.userSettings.update, { dayResetUtcHour: -1 })
-    ).rejects.toThrow("Hour must be 0-23");
+    expect(await as.mutation(api.userSettings.update, { dayResetUtcHour: -1 })).toMatchObject({ ok: false, error: { message: "Hour must be 0-23" } });
   });
 
   it("rounds fractional hour to nearest integer", async () => {
@@ -121,9 +113,7 @@ describe("userSettings.update", () => {
   it("rejects unauthenticated users", async () => {
     const t = convexTest(schema, modules);
 
-    await expect(
-      t.mutation(api.userSettings.update, { maxNewCardsPerDay: 10 })
-    ).rejects.toThrow("Not authenticated");
+    expect(await t.mutation(api.userSettings.update, { maxNewCardsPerDay: 10 })).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
 
   it("saves ttsPlaybackSpeed", async () => {
@@ -140,17 +130,13 @@ describe("userSettings.update", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await expect(
-      as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 0.1 })
-    ).rejects.toThrow("Speed must be 0.25-2.0");
+    expect(await as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 0.1 })).toMatchObject({ ok: false, error: { message: "Speed must be 0.25-2.0" } });
   });
 
   it("rejects ttsPlaybackSpeed above 2.0", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await expect(
-      as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 3.0 })
-    ).rejects.toThrow("Speed must be 0.25-2.0");
+    expect(await as.mutation(api.userSettings.update, { ttsPlaybackSpeed: 3.0 })).toMatchObject({ ok: false, error: { message: "Speed must be 0.25-2.0" } });
   });
 });

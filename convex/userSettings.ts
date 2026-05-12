@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { SRS_DEFAULTS } from "./srs";
+import { fail, ok, unauthenticated, type CommonFailure } from "./domain/result";
+import { validateUserSettingsPatch, type SrsSettingsFailure } from "./domain/srsSettings";
 
 const DEFAULTS = {
   maxNewCardsPerDay: SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY,
@@ -33,31 +35,12 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const userId = identity.tokenIdentifier;
 
-    const patch: Record<string, number | undefined> = {};
-    if (args.maxNewCardsPerDay !== undefined) {
-      const n = Math.round(args.maxNewCardsPerDay);
-      if (n < 0 || n > 200)
-        throw new Error("Max new cards per day must be 0-200");
-      patch.maxNewCardsPerDay = n;
-    }
-    if (args.dayResetUtcHour !== undefined) {
-      const h = Math.round(args.dayResetUtcHour);
-      if (h < 0 || h > 23) throw new Error("Hour must be 0-23");
-      patch.dayResetUtcHour = h;
-    }
-    if (args.ttsPlaybackSpeed !== undefined) {
-      const s = Math.round(args.ttsPlaybackSpeed * 100) / 100;
-      if (s < 0.25 || s > 2.0) throw new Error("Speed must be 0.25-2.0");
-      patch.ttsPlaybackSpeed = s;
-    }
-    if (args.dailyGoal !== undefined) {
-      if (args.dailyGoal < 0 || args.dailyGoal > 500)
-        throw new Error("Daily goal must be 0-500");
-      patch.dailyGoal = args.dailyGoal === 0 ? undefined : args.dailyGoal;
-    }
+    const patchResult = validateUserSettingsPatch(args);
+    if (!patchResult.ok) return patchResult;
+    const patch = patchResult.value;
 
     const existing = await ctx.db
       .query("userSettings")
@@ -68,13 +51,14 @@ export const update = mutation({
     } else {
       await ctx.db.insert("userSettings", {
         userId,
-        maxNewCardsPerDay:
-          (patch.maxNewCardsPerDay as number) ?? DEFAULTS.maxNewCardsPerDay,
-        dayResetUtcHour: (patch.dayResetUtcHour as number) ?? DEFAULTS.dayResetUtcHour,
-        ttsPlaybackSpeed:
-          (patch.ttsPlaybackSpeed as number) ?? DEFAULTS.ttsPlaybackSpeed,
-        ...(patch.dailyGoal !== undefined && { dailyGoal: patch.dailyGoal as number }),
+        maxNewCardsPerDay: patch.maxNewCardsPerDay ?? DEFAULTS.maxNewCardsPerDay,
+        dayResetUtcHour: patch.dayResetUtcHour ?? DEFAULTS.dayResetUtcHour,
+        ttsPlaybackSpeed: patch.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed,
+        ...(patch.dailyGoal !== undefined && { dailyGoal: patch.dailyGoal }),
       });
     }
+    return ok(null);
   },
 });
+
+export type UserSettingsFailure = CommonFailure | SrsSettingsFailure;

@@ -5,6 +5,8 @@ import type { Id } from "./_generated/dataModel";
 import { userSetRoleValidator } from "./schema";
 import type { FieldDefinition } from "../src/lib/types";
 import { SRS_DEFAULTS } from "./srs";
+import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./domain/result";
+import { validateStudySessionSetup } from "./domain/studySessionSetup";
 
 // ---------------------------------------------------------------------------
 // Access control helpers — used by other Convex function files
@@ -21,8 +23,8 @@ export async function assertMember(
       q.eq("userId", userId).eq("setId", setId)
     )
     .first();
-  if (!link) throw new Error("Not found");
-  return link;
+  if (!link) return fail(notFound("Set not found"));
+  return ok(link);
 }
 
 export async function assertOwner(
@@ -31,8 +33,9 @@ export async function assertOwner(
   setId: Id<"flashcardSets">
 ) {
   const link = await assertMember(ctx, userId, setId);
-  if (link.role !== "owner") throw new Error("Not authorized");
-  return link;
+  if (!link.ok) return link;
+  if (link.value.role !== "owner") return fail(forbidden("Only the set owner can do that."));
+  return ok(link.value);
 }
 
 // ---------------------------------------------------------------------------
@@ -87,9 +90,9 @@ export const add = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const set = await ctx.db.get(args.setId);
-    if (!set) throw new Error("Set not found");
+    if (!set) return fail(notFound("Set not found"));
 
     const existing = await ctx.db
       .query("userSets")
@@ -97,7 +100,7 @@ export const add = mutation({
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
       )
       .first();
-    if (existing) throw new Error("Set already in library");
+    if (existing) return fail(conflict("Set already in library"));
 
     const srsEnabled = args.srsEnabled ?? true;
     const userSetId = await ctx.db.insert("userSets", {
@@ -128,7 +131,7 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
 
     const link = await ctx.db
       .query("userSets")
@@ -136,7 +139,23 @@ export const update = mutation({
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
       )
       .first();
-    if (!link) throw new Error("Not found");
+    if (!link) return fail(notFound("Set not found"));
+
+    const set = await ctx.db.get(args.setId);
+    if (!set) return fail(notFound("Set not found"));
+    if (
+      args.defaultFrontFields !== undefined ||
+      args.defaultBackFields !== undefined ||
+      args.defaultTtsOnlyFields !== undefined
+    ) {
+      const selection = validateStudySessionSetup({
+        fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
+        frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
+        backFields: args.defaultBackFields ?? link.defaultBackFields,
+        ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields ?? [],
+      });
+      if (!selection.ok) return selection;
+    }
 
     const wasSrsEnabled = link.srsEnabled;
     const patch: Record<string, unknown> = {};
@@ -153,6 +172,7 @@ export const update = mutation({
     if (args.srsEnabled && !wasSrsEnabled) {
       await enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId);
     }
+    return ok(null);
   },
 });
 
@@ -160,7 +180,7 @@ export const remove = mutation({
   args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
 
     const link = await ctx.db
       .query("userSets")
@@ -168,7 +188,7 @@ export const remove = mutation({
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
       )
       .first();
-    if (!link) throw new Error("Not found");
+    if (!link) return fail(notFound("Set not found"));
 
     // Delete srsCards for this user+set
     let batch = await ctx.db
@@ -198,6 +218,7 @@ export const remove = mutation({
     }
 
     await ctx.db.delete(link._id);
+    return ok(null);
   },
 });
 
