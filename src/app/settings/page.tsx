@@ -3,7 +3,7 @@
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { isFailureResult } from "@/lib/appResult";
 
@@ -17,12 +17,20 @@ export default function SettingsPage() {
   const createToken = useMutation(api.cliTokens.create);
   const revokeToken = useMutation(api.cliTokens.revoke);
   const [newToken, setNewToken] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (copyState === "idle") return;
+    const timeout = window.setTimeout(() => setCopyState("idle"), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [copyState]);
 
   async function handleCreate() {
     setIsBusy(true);
     setError(null);
+    setCopyState("idle");
     try {
       const result = await createToken({ label: "Local AI assistant CLI" });
       if (isFailureResult(result)) {
@@ -43,6 +51,7 @@ export default function SettingsPage() {
     if (!confirm("Revoke CLI assistant access? Existing local CLI tokens will stop working.")) return;
     setIsBusy(true);
     setError(null);
+    setCopyState("idle");
     try {
       const result = await revokeToken({});
       if (isFailureResult(result)) {
@@ -54,6 +63,16 @@ export default function SettingsPage() {
       setError(err instanceof Error ? err.message : "Failed to revoke token");
     } finally {
       setIsBusy(false);
+    }
+  }
+
+  async function handleCopyToken() {
+    if (!newToken) return;
+    try {
+      await navigator.clipboard.writeText(newToken);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
     }
   }
 
@@ -156,11 +175,18 @@ export default function SettingsPage() {
                 <p className="font-medium text-sm">Copy this token now. It will not be shown again.</p>
                 <code className="block p-3 bg-background rounded border border-edge text-xs break-all">{newToken}</code>
                 <button
-                  onClick={() => void navigator.clipboard.writeText(newToken)}
+                  onClick={() => void handleCopyToken()}
                   className="px-3 py-1.5 text-sm border border-edge rounded-lg hover:bg-surface-hover"
                 >
-                  Copy token
+                  {copyState === "copied" ? "Copied!" : copyState === "error" ? "Copy failed" : "Copy token"}
                 </button>
+                <p className="text-xs text-muted" role="status" aria-live="polite">
+                  {copyState === "copied"
+                    ? "Token copied to clipboard."
+                    : copyState === "error"
+                      ? "Could not copy token. Select and copy it manually."
+                      : ""}
+                </p>
               </div>
             )}
 
