@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState, useCallback, useRef } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -56,10 +57,14 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
       setIsSubmitting(true);
 
       try {
-        await recordReview({
+        const result = await recordReview({
           srsCardId: currentItem.srsCardId,
           rating,
         });
+        if (isFailureResult(result)) {
+          console.error(result.error.message);
+          return;
+        }
         setRevealed(false);
         setReviewedCount((c) => c + 1);
         setRatingCounts((prev) => ({
@@ -79,7 +84,11 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
     setNoMoreCards(false);
     try {
       const result = await forceRefresh();
-      if (result.added === 0) {
+      if (isFailureResult(result)) {
+        console.error(result.error.message);
+        return;
+      }
+      if ((result as { added: number }).added === 0) {
         setNoMoreCards(true);
       }
     } finally {

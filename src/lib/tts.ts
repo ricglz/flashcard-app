@@ -56,7 +56,7 @@ function getSpeechSynthesis(): SpeechSynthesis | null {
   return isTtsSupported() ? window.speechSynthesis : null;
 }
 
-function readVoices(): SpeechSynthesisVoice[] {
+export function readVoices(): SpeechSynthesisVoice[] {
   const synth = getSpeechSynthesis();
   if (!synth) return [];
   const voices = synth.getVoices();
@@ -109,7 +109,7 @@ export function preloadTtsVoices(): void {
   void ensureVoices();
 }
 
-function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
+export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
   const prefix = lang.split("-")[0];
   let score = 0;
 
@@ -129,7 +129,7 @@ function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
   return score;
 }
 
-function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined {
+export function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined {
   const voices = cachedVoices.length > 0 ? cachedVoices : readVoices();
   const prefix = lang.split("-")[0];
   const candidates = voices.filter(
@@ -139,7 +139,7 @@ function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined {
   return candidates.sort((a, b) => voiceScore(b, lang) - voiceScore(a, lang))[0];
 }
 
-function friendlySpeechError(error: string | undefined, lang: string): string {
+export function friendlySpeechError(error: string | undefined, lang: string): string {
   switch (error) {
     case "not-allowed":
       return "Your browser blocked audio. Tap the speaker button again.";
@@ -163,7 +163,7 @@ function friendlySpeechError(error: string | undefined, lang: string): string {
   }
 }
 
-function timeoutMessage(): string {
+export function timeoutMessage(): string {
   return "Audio was requested, but playback did not start. Check volume or tap again.";
 }
 

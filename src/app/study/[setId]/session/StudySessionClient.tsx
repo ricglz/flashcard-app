@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState, useCallback } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
@@ -70,7 +71,7 @@ export default function StudySessionClient({
       setIsSubmitting(true);
 
       if (isLastCard) {
-        recordResult({ sessionId, cardId: currentCardId, rating });
+        void recordResult({ sessionId, cardId: currentCardId, rating });
         if (isOnline) {
           router.push(`/study/${setId}/results?sessionId=${sessionId}`);
         }
@@ -78,7 +79,11 @@ export default function StudySessionClient({
       }
 
       try {
-        await recordResult({ sessionId, cardId: currentCardId, rating });
+        const result = await recordResult({ sessionId, cardId: currentCardId, rating });
+        if (isFailureResult(result)) {
+          console.error(result.error.message);
+          return;
+        }
         setRevealed(false);
         setLocalIndexOffset((o) => o + 1);
       } finally {
@@ -152,7 +157,7 @@ export default function StudySessionClient({
           <button
             onClick={() => {
               if (confirm("Abandon this session?")) {
-                abandonSession({ sessionId });
+                void abandonSession({ sessionId });
                 router.push(`/study/${setId}`);
               }
             }}

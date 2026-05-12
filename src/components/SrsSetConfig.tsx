@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -31,6 +32,7 @@ export default function SrsSetConfig({
   const [localFront, setLocalFront] = useState<string[]>(defaultFrontFields);
   const [localBack, setLocalBack] = useState<string[]>(defaultBackFields);
   const [localTtsOnly, setLocalTtsOnly] = useState<string[]>(defaultTtsOnlyFields);
+  const [error, setError] = useState<string | null>(null);
 
   const sortedFields = [...fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -59,13 +61,15 @@ export default function SrsSetConfig({
   async function handleSave() {
     setIsSaving(true);
     try {
-      await updateUserSet({
+      setError(null);
+      const result = await updateUserSet({
         setId,
         srsEnabled: localSrsEnabled,
         defaultFrontFields: localFront,
         defaultBackFields: localBack,
         defaultTtsOnlyFields: localTtsOnly,
       });
+      if (isFailureResult(result)) setError(result.error.message);
     } finally {
       setIsSaving(false);
     }
@@ -122,6 +126,8 @@ export default function SrsSetConfig({
           </div>
         </div>
       )}
+
+      {error && <p className="mt-3 text-xs text-danger">{error}</p>}
 
       {hasChanges && (
         <button

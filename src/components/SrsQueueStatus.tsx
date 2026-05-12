@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -66,12 +67,16 @@ export default function SrsQueueStatus() {
   async function handleSave() {
     setIsSaving(true);
     try {
-      await updateSettings({
+      const result = await updateSettings({
         maxNewCardsPerDay: parsedMaxValue,
         dayResetUtcHour: localHourToUtc(parsedResetHour),
         ttsPlaybackSpeed: editTtsSpeed,
         dailyGoal: Math.max(0, Math.min(500, Number(editDailyGoal) || 0)),
       });
+      if (isFailureResult(result)) {
+        console.error(result.error.message);
+        return;
+      }
       setShowSettings(false);
       setLocalMaxNew(null);
       setLocalResetHour(null);
@@ -87,7 +92,11 @@ export default function SrsQueueStatus() {
     setNoMoreCards(false);
     try {
       const result = await forceRefresh();
-      if (result.added === 0) {
+      if (isFailureResult(result)) {
+        console.error(result.error.message);
+        return;
+      }
+      if ((result as { added: number }).added === 0) {
         setNoMoreCards(true);
       }
     } finally {

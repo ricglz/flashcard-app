@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
@@ -28,6 +29,7 @@ export default function EditSetClient({
   const removeCard = useMutation(api.flashcards.remove);
 
   const [editingSet, setEditingSet] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -56,12 +58,19 @@ export default function EditSetClient({
             </button>
           </div>
 
+          {error && <p className="text-sm text-danger mb-3">{error}</p>}
+
           {editingSet && (
             <SetInfoEditor
               set={set}
               fieldDefinitions={set.fieldDefinitions}
               onSave={async (updates) => {
-                await updateSet({ id: set._id, ...updates });
+                setError(null);
+                const result = await updateSet({ id: set._id, ...updates });
+                if (isFailureResult(result)) {
+                  setError(result.error.message);
+                  return;
+                }
                 setEditingSet(false);
               }}
             />
@@ -92,7 +101,10 @@ export default function EditSetClient({
                   ))}
                 </div>
                 <button
-                  onClick={() => removeCard({ id: card._id })}
+                  onClick={async () => {
+                    const result = await removeCard({ id: card._id });
+                    if (isFailureResult(result)) setError(result.error.message);
+                  }}
                   className="text-danger hover:text-danger-hover text-sm transition-colors"
                 >
                   Remove
@@ -108,11 +120,12 @@ export default function EditSetClient({
           <CardForm
             fieldDefinitions={sortedFieldDefs}
             onSubmit={async (fields) => {
-              await createCard({
+              const result = await createCard({
                 setId: set._id,
                 fields,
                 order: cards.length,
               });
+              if (isFailureResult(result)) setError(result.error.message);
             }}
           />
         </div>
@@ -121,13 +134,15 @@ export default function EditSetClient({
 
         <CsvImporter
           onImport={async (result) => {
-            await batchCreateCards({
+            if (isFailureResult(result)) return;
+            const created = await batchCreateCards({
               setId: set._id,
               cards: result.cards.map((fields, i) => ({
                 fields,
                 order: cards.length + i,
               })),
             });
+            if (isFailureResult(created)) setError(created.error.message);
           }}
         />
       </main>

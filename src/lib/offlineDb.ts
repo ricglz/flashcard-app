@@ -1,11 +1,13 @@
 import { openDB, type IDBPDatabase, type DBSchema } from "idb";
 
+export type OutboxStatus = "pending" | "syncing" | "failed" | "auth_required";
+
 export interface OutboxEntry {
   id: number;
   mutationName: string;
   args: unknown;
   createdAt: number;
-  status: "pending" | "syncing" | "failed";
+  status: OutboxStatus;
   retries: number;
 }
 

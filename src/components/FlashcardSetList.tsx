@@ -79,7 +79,7 @@ export default function FlashcardSetList() {
                     <button
                       onClick={() => {
                         if (confirm("Delete this set and all its cards?")) {
-                          removeSet({ id: set._id });
+                          void removeSet({ id: set._id });
                         }
                       }}
                       className="text-sm px-3 py-1.5 text-muted rounded-lg hover:text-danger hover:bg-danger-surface transition-colors"

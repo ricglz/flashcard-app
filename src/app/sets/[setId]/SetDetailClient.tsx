@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -41,7 +42,11 @@ export default function SetDetailClient({
     setIsAdding(true);
     setAddError(null);
     try {
-      await addToLibrary({ setId: set._id });
+      const result = await addToLibrary({ setId: set._id });
+      if (isFailureResult(result)) {
+        setAddError(result.error.message);
+        return;
+      }
       router.refresh();
     } catch (err) {
       setAddError(

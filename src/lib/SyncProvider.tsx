@@ -16,6 +16,7 @@ import {
   getPendingEntries,
   markSyncing,
   markFailed,
+  normalizeSyncFailure,
   removeEntry,
   getPendingCount,
 } from "./offlineOutbox";
@@ -46,10 +47,23 @@ async function flushEntries(client: ConvexReactClient): Promise<boolean> {
       const ref = makeFunctionReference<"mutation">(
         entry.mutationName,
       ) as FunctionReference<"mutation">;
-      await client.mutation(ref, entry.args as Record<string, unknown>);
+      const result = await client.mutation(ref, entry.args as Record<string, unknown>);
+      if (
+        result &&
+        typeof result === "object" &&
+        "ok" in result &&
+        result.ok === false
+      ) {
+        const message = "error" in result && result.error && typeof result.error === "object" && "message" in result.error
+          ? String(result.error.message)
+          : "Offline action failed";
+        await markFailed(entry.id, (entry.retries || 0) + 1, normalizeSyncFailure(new Error(message)));
+        allSucceeded = false;
+        continue;
+      }
       await removeEntry(entry.id);
-    } catch {
-      await markFailed(entry.id, (entry.retries || 0) + 1);
+    } catch (error) {
+      await markFailed(entry.id, (entry.retries || 0) + 1, normalizeSyncFailure(error));
       allSucceeded = false;
     }
   }

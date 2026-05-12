@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -24,12 +25,17 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
     setError(null);
     try {
       const preset = LANGUAGE_PRESETS[selectedPreset];
-      const setId = await createSet({
+      const result = await createSet({
         name: name.trim(),
         description: description.trim() || undefined,
         fieldDefinitions: preset.fieldDefinitions,
       });
-      onCreated(setId);
+      if (isFailureResult(result)) {
+        setError(result.error.message);
+        setIsCreating(false);
+        return;
+      }
+      onCreated(result as string);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create set");
       setIsCreating(false);

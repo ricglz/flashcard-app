@@ -1,5 +1,6 @@
 "use client";
 
+import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -83,7 +84,7 @@ export default function StudyConfigClient({
     setError(null);
     setIsNavigating(true);
     try {
-      const sessionId = await startSession({
+      const result = await startSession({
         setId: flashcardSetId,
         frontFields,
         backFields,
@@ -91,7 +92,12 @@ export default function StudyConfigClient({
         shuffle,
         ...(cardLimit !== null && { cardLimit }),
       });
-      router.push(`/study/${setId}/session?sessionId=${sessionId}`);
+      if (isFailureResult(result)) {
+        setIsNavigating(false);
+        setError(result.error.message);
+        return;
+      }
+      router.push(`/study/${setId}/session?sessionId=${result}`);
     } catch (err) {
       setIsNavigating(false);
       setError(err instanceof Error ? err.message : "Failed to start session");
