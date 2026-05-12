@@ -1,4 +1,5 @@
 import { fail, ok, type DomainFailure, type DomainResult } from "./result";
+import { normalizeFieldName } from "./fieldDefinitions";
 
 export type UnknownCardFieldFailure = DomainFailure<
   "UnknownCardField",
@@ -10,19 +11,39 @@ export type UnknownCardFieldFailure = DomainFailure<
 
 export type EmptyCardFieldsFailure = DomainFailure<"EmptyCardFields">;
 
+export type DuplicateCardFieldFailure = DomainFailure<
+  "DuplicateCardField",
+  { fieldName: string; normalizedName: string }
+>;
+
 export type CardFieldsValidationFailure =
   | UnknownCardFieldFailure
-  | EmptyCardFieldsFailure;
+  | EmptyCardFieldsFailure
+  | DuplicateCardFieldFailure;
 
 export function validateCardFields(
   validFieldNames: readonly string[],
   fields: Record<string, string>
-): DomainResult<void, CardFieldsValidationFailure> {
+): DomainResult<Record<string, string>, CardFieldsValidationFailure> {
   const validNames = new Set(validFieldNames);
+  const validNormalizedNames = new Set(validFieldNames.map(normalizeFieldName));
+  const seen = new Set<string>();
   const fieldNames = Object.keys(fields);
 
   for (const fieldName of fieldNames) {
-    if (!validNames.has(fieldName)) {
+    const trimmedName = fieldName.trim();
+    const normalizedName = normalizeFieldName(trimmedName);
+    if (seen.has(normalizedName)) {
+      return fail({
+        _tag: "DuplicateCardField",
+        message: `Duplicate field in card: ${trimmedName}`,
+        fieldName: trimmedName,
+        normalizedName,
+      });
+    }
+    seen.add(normalizedName);
+
+    if (!validNames.has(fieldName) && !validNormalizedNames.has(normalizedName)) {
       return fail({
         _tag: "UnknownCardField",
         message: `Unknown field: ${fieldName}`,
@@ -32,8 +53,18 @@ export function validateCardFields(
     }
   }
 
-  const hasAnyValue = fieldNames.some(
-    (fieldName) => fields[fieldName].trim().length > 0
+  const normalizedFields: Record<string, string> = {};
+  for (const validName of validFieldNames) {
+    const matchingKey = fieldNames.find(
+      (fieldName) => normalizeFieldName(fieldName) === normalizeFieldName(validName)
+    );
+    if (matchingKey !== undefined) {
+      normalizedFields[validName] = fields[matchingKey];
+    }
+  }
+
+  const hasAnyValue = Object.values(normalizedFields).some(
+    (value) => value.trim().length > 0
   );
 
   if (!hasAnyValue) {
@@ -43,5 +74,5 @@ export function validateCardFields(
     });
   }
 
-  return ok(undefined);
+  return ok(normalizedFields);
 }

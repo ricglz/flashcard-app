@@ -8,13 +8,13 @@ describe("validateCardFields", () => {
   it("returns ok for known fields with at least one value", () => {
     expect(
       validateCardFields(validFieldNames, { Front: "Question", Back: "" })
-    ).toEqual({ ok: true, value: undefined });
+    ).toEqual({ ok: true, value: { Front: "Question", Back: "" } });
   });
 
   it("allows omitted field definitions", () => {
     expect(validateCardFields(validFieldNames, { Front: "Question" })).toEqual({
       ok: true,
-      value: undefined,
+      value: { Front: "Question" },
     });
   });
 
