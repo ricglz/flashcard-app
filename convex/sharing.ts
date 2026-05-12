@@ -2,15 +2,16 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import type { FieldDefinition } from "../src/lib/types";
 import { enrollCardsForSetHelper } from "./userSets";
+import { fail, unauthenticated, notFound, conflict } from "./domain/result";
 
 export const addToLibrary = mutation({
   args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
 
     const set = await ctx.db.get(args.setId);
-    if (!set) throw new Error("Set not found");
+    if (!set) return fail(notFound("Set not found"));
 
     const existing = await ctx.db
       .query("userSets")
@@ -18,7 +19,7 @@ export const addToLibrary = mutation({
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
       )
       .first();
-    if (existing) throw new Error("Set already in library");
+    if (existing) return fail(conflict("Set already in library"));
 
     const fieldDefs = set.fieldDefinitions as FieldDefinition[];
     const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);

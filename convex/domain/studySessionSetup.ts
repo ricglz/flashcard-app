@@ -31,12 +31,15 @@ export type NonTtsOnlyFieldFailure = DomainFailure<
   { fieldName: string }
 >;
 
+export type NoStudyableCardsFailure = DomainFailure<"NoStudyableCards">;
+
 export type StudySessionSetupFailure =
   | InvalidCardLimitFailure
   | EmptyStudyFieldSelectionFailure
   | InvalidStudyFieldFailure
   | OverlappingTtsOnlyFieldFailure
-  | NonTtsOnlyFieldFailure;
+  | NonTtsOnlyFieldFailure
+  | NoStudyableCardsFailure;
 
 export type StudySessionSetupInput = {
   fieldDefinitions: readonly FieldDefinition[];
@@ -44,6 +47,7 @@ export type StudySessionSetupInput = {
   backFields: readonly string[];
   ttsOnlyFields?: readonly string[];
   cardLimit?: number;
+  availableCardCount?: number;
 };
 
 export type ValidatedStudySessionSetup = {
@@ -163,6 +167,12 @@ export function validateStudySessionSetupEffect(
 
   return Effect.gen(function* () {
     const cardLimit = yield* validateCardLimit(input.cardLimit);
+    if (input.availableCardCount !== undefined && input.availableCardCount <= 0) {
+      return yield* Effect.fail({
+        _tag: "NoStudyableCards" as const,
+        message: "No cards in this set",
+      });
+    }
     const frontFields = yield* validateRequiredSelection(
       "frontFields",
       input.frontFields

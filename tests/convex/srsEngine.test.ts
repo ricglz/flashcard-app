@@ -6,6 +6,14 @@ import schema from "../../convex/schema";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+
+async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
+  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
+    throw new Error(result.error.message);
+  }
+  return result as T;
+}
+
 const TEST_USER = {
   tokenIdentifier: "test-user-1",
   subject: "user1",
@@ -19,16 +27,16 @@ const fieldDefs = [
 async function setupSrsSet(t: ReturnType<typeof convexTest>, cardCount = 3) {
   const as = t.withIdentity(TEST_USER);
 
-  const setId = await as.mutation(api.flashcardSets.create, {
+  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Test Set",
     fieldDefinitions: fieldDefs,
-  });
+  }));
 
   const cards = Array.from({ length: cardCount }, (_, i) => ({
     fields: { Front: `Q${i}`, Back: `A${i}` },
     order: i,
   }));
-  await as.mutation(api.flashcards.batchCreate, { setId, cards });
+  await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
 
   return { setId, as };
 }

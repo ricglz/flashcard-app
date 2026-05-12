@@ -7,6 +7,15 @@ import schema from "../../convex/schema";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+
+async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
+  if (result && typeof result === "object" && "ok" in result) {
+    if (result.ok === false) throw new Error(result.error.message);
+    return result.value;
+  }
+  return result as T;
+}
+
 const OWNER = {
   tokenIdentifier: "test-owner",
   subject: "owner",
@@ -24,17 +33,17 @@ const validFieldDefs = [
 
 async function createSetWithCards(t: ReturnType<typeof convexTest>) {
   const as = t.withIdentity(OWNER);
-  const setId = await as.mutation(api.flashcardSets.create, {
+  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Shared Set",
     fieldDefinitions: validFieldDefs,
-  });
-  await as.mutation(api.flashcards.batchCreate, {
+  }));
+  await unwrap(await as.mutation(api.flashcards.batchCreate, {
     setId,
     cards: [
       { fields: { Front: "Hello", Back: "World" }, order: 0 },
       { fields: { Front: "Foo", Back: "Bar" }, order: 1 },
     ],
-  });
+  }));
   return setId;
 }
 
@@ -126,18 +135,14 @@ describe("sharing.addToLibrary", () => {
     const as = t.withIdentity(VISITOR);
 
     await as.mutation(api.sharing.addToLibrary, { setId });
-    await expect(
-      as.mutation(api.sharing.addToLibrary, { setId })
-    ).rejects.toThrow("Set already in library");
+    expect(await as.mutation(api.sharing.addToLibrary, { setId })).toMatchObject({ ok: false, error: { message: "Set already in library" } });
   });
 
   it("rejects unauthenticated users", async () => {
     const t = convexTest(schema, modules);
     const setId = await createSetWithCards(t);
 
-    await expect(
-      t.mutation(api.sharing.addToLibrary, { setId })
-    ).rejects.toThrow("Not authenticated");
+    expect(await t.mutation(api.sharing.addToLibrary, { setId })).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
 
   it("rejects nonexistent set", async () => {

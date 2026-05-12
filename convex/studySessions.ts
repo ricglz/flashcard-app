@@ -3,8 +3,8 @@ import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
-import { validateStudySessionSetup } from "./domain/studySessionSetup";
-import { assertDomainResult } from "./domain/result";
+import { validateStudySessionSetup, type StudySessionSetupFailure } from "./domain/studySessionSetup";
+import { fail, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
 import type { CardRating, FieldDefinition } from "../src/lib/types";
 
 export const RATING_SCORES: Record<CardRating, number> = {
@@ -83,20 +83,11 @@ export const start = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const set = await ctx.db.get(args.setId);
-    if (!set) throw new Error("Not found");
-    await assertMember(ctx, identity.tokenIdentifier, args.setId);
-
-    const setupResult = validateStudySessionSetup({
-      fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
-      frontFields: args.frontFields,
-      backFields: args.backFields,
-      ttsOnlyFields: args.ttsOnlyFields,
-      cardLimit: args.cardLimit,
-    });
-    assertDomainResult(setupResult);
-    const setup = setupResult.value;
+    if (!set) return fail(notFound("Set not found"));
+    const member = await assertMember(ctx, identity.tokenIdentifier, args.setId);
+    if (!member.ok) return member;
 
     const existingActive = await ctx.db
       .query("studySessions")
@@ -109,37 +100,38 @@ export const start = mutation({
       .first();
     if (existingActive) return existingActive._id;
 
-    // Get all cards for this set
     const cards = await ctx.db
       .query("flashcards")
       .withIndex("by_setId", (q) => q.eq("setId", args.setId))
       .take(1000);
 
-    if (cards.length === 0) throw new Error("No cards in this set");
+    const setupResult = validateStudySessionSetup({
+      fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
+      frontFields: args.frontFields,
+      backFields: args.backFields,
+      ttsOnlyFields: args.ttsOnlyFields,
+      cardLimit: args.cardLimit,
+      availableCardCount: cards.length,
+    });
+    if (!setupResult.ok) return setupResult;
+    const setup = setupResult.value;
 
-    // Build card order
     let cardOrder = cards
       .sort((a, b) => a.order - b.order)
       .map((c) => c._id);
 
     if (args.shuffle) {
-      // Fisher-Yates shuffle
       for (let i = cardOrder.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [cardOrder[i], cardOrder[j]] = [cardOrder[j], cardOrder[i]];
       }
     }
 
-    // Limit number of cards if specified
-    if (
-      setup.cardLimit !== undefined &&
-      setup.cardLimit > 0 &&
-      setup.cardLimit < cardOrder.length
-    ) {
+    if (setup.cardLimit !== undefined && setup.cardLimit < cardOrder.length) {
       cardOrder = cardOrder.slice(0, setup.cardLimit);
     }
 
-    return await ctx.db.insert("studySessions", {
+    const id = await ctx.db.insert("studySessions", {
       setId: args.setId,
       userId: identity.tokenIdentifier,
       frontFields: setup.frontFields,
@@ -150,6 +142,7 @@ export const start = mutation({
       status: "in_progress",
       startedAt: Date.now(),
     });
+    return id;
   },
 });
 
@@ -161,16 +154,26 @@ export const recordResult = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const session = await ctx.db.get(args.sessionId);
-    if (!session || session.userId !== identity.tokenIdentifier)
-      throw new Error("Not found");
-    if (session.status !== "in_progress")
-      throw new Error("Session is not active");
+    if (!session || session.userId !== identity.tokenIdentifier) {
+      return fail(notFound("Session not found"));
+    }
+    if (session.status !== "in_progress") {
+      return { isComplete: true, outcome: "alreadyComplete" as const };
+    }
 
     const expectedCardId = session.cardOrder[session.currentIndex];
-    if (args.cardId !== expectedCardId)
-      throw new Error("cardId does not match the current card in the session");
+    if (args.cardId !== expectedCardId) {
+      const alreadyRecorded = await ctx.db
+        .query("cardResults")
+        .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+        .take(1000);
+      if (alreadyRecorded.some((result) => result.cardId === args.cardId)) {
+        return { isComplete: false, outcome: "duplicate" as const };
+      }
+      return fail(conflict("cardId does not match the current card in the session"));
+    }
 
     await ctx.db.insert("cardResults", {
       sessionId: args.sessionId,
@@ -180,24 +183,15 @@ export const recordResult = mutation({
     });
 
     const ratingScore = RATING_SCORES[args.rating];
-    await incrementDailyStats(
-      ctx,
-      identity.tokenIdentifier,
-      "session",
-      ratingScore
-    );
+    await incrementDailyStats(ctx, identity.tokenIdentifier, "session", ratingScore);
 
-    // Advance the session
     const nextIndex = session.currentIndex + 1;
     const isComplete = nextIndex >= session.cardOrder.length;
 
     if (isComplete) {
-      // Compute overall score
       const allResults = await ctx.db
         .query("cardResults")
-        .withIndex("by_sessionId", (q) =>
-          q.eq("sessionId", args.sessionId)
-        )
+        .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
         .take(1000);
       const overallScore = computeOverallScore(allResults);
 
@@ -208,12 +202,10 @@ export const recordResult = mutation({
         overallScore,
       });
     } else {
-      await ctx.db.patch(args.sessionId, {
-        currentIndex: nextIndex,
-      });
+      await ctx.db.patch(args.sessionId, { currentIndex: nextIndex });
     }
 
-    return { isComplete };
+    return { isComplete, outcome: "recorded" as const };
   },
 });
 
@@ -221,15 +213,20 @@ export const abandon = mutation({
   args: { sessionId: v.id("studySessions") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const session = await ctx.db.get(args.sessionId);
-    if (!session || session.userId !== identity.tokenIdentifier)
-      throw new Error("Not found");
-    if (session.status !== "in_progress")
-      throw new Error("Session is not active");
+    if (!session || session.userId !== identity.tokenIdentifier) {
+      return fail(notFound("Session not found"));
+    }
+    if (session.status !== "in_progress") {
+      return { outcome: "alreadyClosed" as const };
+    }
     await ctx.db.patch(args.sessionId, {
       status: "abandoned" as const,
       completedAt: Date.now(),
     });
+    return { outcome: "abandoned" as const };
   },
 });
+
+export type StudySessionFailure = CommonFailure | StudySessionSetupFailure;

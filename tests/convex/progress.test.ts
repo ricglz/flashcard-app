@@ -6,6 +6,14 @@ import schema from "../../convex/schema";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+
+async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
+  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
+    throw new Error(result.error.message);
+  }
+  return result as T;
+}
+
 const TEST_USER = {
   tokenIdentifier: "test-user-1",
   subject: "user1",
@@ -20,15 +28,15 @@ async function createSetWithCards(
   as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>,
   cardCount: number
 ) {
-  const setId = await as.mutation(api.flashcardSets.create, {
+  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Test",
     fieldDefinitions: fieldDefs,
-  });
+  }));
   const cards = Array.from({ length: cardCount }, (_, i) => ({
     fields: { Front: `Q${i}`, Back: `A${i}` },
     order: i,
   }));
-  await as.mutation(api.flashcards.batchCreate, { setId, cards });
+  await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
   return setId;
 }
 
@@ -40,12 +48,12 @@ describe("incrementDailyStats via recordResult", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
@@ -64,12 +72,12 @@ describe("incrementDailyStats via recordResult", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 3);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
@@ -111,12 +119,12 @@ describe("getDailyGoalProgress", () => {
     expect(settings?.dailyGoal).toBe(10);
 
     const setId = await createSetWithCards(as, 5);
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
@@ -147,12 +155,12 @@ describe("getStreakStats", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
@@ -180,12 +188,12 @@ describe("getDailyHistory", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,

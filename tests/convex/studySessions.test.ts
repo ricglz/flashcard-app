@@ -7,6 +7,14 @@ import { computeOverallScore, RATING_SCORES } from "../../convex/studySessions";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+
+async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
+  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
+    throw new Error(result.error.message);
+  }
+  return result as T;
+}
+
 const TEST_USER = {
   tokenIdentifier: "test-user-1",
   subject: "user1",
@@ -28,16 +36,16 @@ async function createSetWithCards(
   cardCount: number,
   defs = fieldDefs
 ) {
-  const setId = await as.mutation(api.flashcardSets.create, {
+  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Test",
     fieldDefinitions: defs,
-  });
+  }));
   const fieldNames = defs.map((d) => d.name);
   const cards = Array.from({ length: cardCount }, (_, i) => ({
     fields: Object.fromEntries(fieldNames.map((n) => [n, `${n}${i}`])),
     order: i,
   }));
-  await as.mutation(api.flashcards.batchCreate, { setId, cards });
+  await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
   return setId;
 }
 
@@ -84,12 +92,12 @@ describe("studySessions.start", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 3);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
@@ -105,13 +113,13 @@ describe("studySessions.start", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 5);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
       cardLimit: 2,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
@@ -124,35 +132,29 @@ describe("studySessions.start", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 5);
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Front"],
-        backFields: ["Back"],
-        shuffle: false,
-        cardLimit: 0,
-      })
-    ).rejects.toThrow("cardLimit must be an integer between 1 and 1000");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+      cardLimit: 0,
+    })).toMatchObject({ ok: false, error: { message: "cardLimit must be an integer between 1 and 1000" } });
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Front"],
-        backFields: ["Back"],
-        shuffle: false,
-        cardLimit: 1.5,
-      })
-    ).rejects.toThrow("cardLimit must be an integer between 1 and 1000");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+      cardLimit: 1.5,
+    })).toMatchObject({ ok: false, error: { message: "cardLimit must be an integer between 1 and 1000" } });
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Front"],
-        backFields: ["Back"],
-        shuffle: false,
-        cardLimit: 1001,
-      })
-    ).rejects.toThrow("cardLimit must be an integer between 1 and 1000");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+      cardLimit: 1001,
+    })).toMatchObject({ ok: false, error: { message: "cardLimit must be an integer between 1 and 1000" } });
   });
 
   it("returns existing active session instead of creating a duplicate", async () => {
@@ -160,20 +162,20 @@ describe("studySessions.start", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 3);
 
-    const firstSessionId = await as.mutation(api.studySessions.start, {
+    const firstSessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
-    const secondSessionId = await as.mutation(api.studySessions.start, {
+    const secondSessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Back"],
       backFields: ["Front"],
       shuffle: true,
       cardLimit: 1,
-    });
+    }));
 
     expect(secondSessionId).toBe(firstSessionId);
 
@@ -190,14 +192,12 @@ describe("studySessions.start", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: [],
-        backFields: ["Back"],
-        shuffle: false,
-      })
-    ).rejects.toThrow("frontFields must not be empty");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: [],
+      backFields: ["Back"],
+      shuffle: false,
+    })).toMatchObject({ ok: false, error: { message: "frontFields must not be empty" } });
   });
 
   it("rejects invalid field names", async () => {
@@ -205,32 +205,28 @@ describe("studySessions.start", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["NonExistent"],
-        backFields: ["Back"],
-        shuffle: false,
-      })
-    ).rejects.toThrow("Invalid front field: NonExistent");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["NonExistent"],
+      backFields: ["Back"],
+      shuffle: false,
+    })).toMatchObject({ ok: false, error: { message: "Invalid front field: NonExistent" } });
   });
 
   it("rejects empty set", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
-    const setId = await as.mutation(api.flashcardSets.create, {
+    const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Empty",
       fieldDefinitions: fieldDefs,
-    });
+    }));
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Front"],
-        backFields: ["Back"],
-        shuffle: false,
-      })
-    ).rejects.toThrow("No cards in this set");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    })).toMatchObject({ ok: false, error: { message: "No cards in this set" } });
   });
 });
 
@@ -240,12 +236,12 @@ describe("studySessions.recordResult", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
@@ -271,12 +267,12 @@ describe("studySessions.recordResult", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
@@ -303,24 +299,22 @@ describe("studySessions.recordResult", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
     // Try to submit result for card at index 1 when we're at index 0
-    await expect(
-      as.mutation(api.studySessions.recordResult, {
-        sessionId,
-        cardId: session!.cardOrder[1],
-        rating: "good",
-      })
-    ).rejects.toThrow("cardId does not match");
+    expect(await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session!.cardOrder[1],
+      rating: "good",
+    })).toMatchObject({ ok: false, error: { message: "cardId does not match the current card in the session" } });
   });
 
   it("rejects recording result on abandoned session", async () => {
@@ -328,25 +322,23 @@ describe("studySessions.recordResult", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
     await as.mutation(api.studySessions.abandon, { sessionId });
 
-    await expect(
-      as.mutation(api.studySessions.recordResult, {
-        sessionId,
-        cardId: session!.cardOrder[0],
-        rating: "good",
-      })
-    ).rejects.toThrow("Session is not active");
+    expect(await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session!.cardOrder[0],
+      rating: "good",
+    })).toMatchObject({ outcome: "alreadyComplete" });
   });
 });
 
@@ -356,12 +348,12 @@ describe("studySessions.abandon", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     await as.mutation(api.studySessions.abandon, { sessionId });
 
@@ -376,12 +368,12 @@ describe("studySessions.abandon", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
@@ -392,9 +384,7 @@ describe("studySessions.abandon", () => {
       rating: "good",
     });
 
-    await expect(
-      as.mutation(api.studySessions.abandon, { sessionId })
-    ).rejects.toThrow("Session is not active");
+    expect(await as.mutation(api.studySessions.abandon, { sessionId })).toMatchObject({ outcome: "alreadyClosed" });
   });
 });
 
@@ -405,23 +395,23 @@ describe("studySessions.getActiveSession", () => {
     const setId = await createSetWithCards(as, 1);
 
     // Create and abandon one session
-    const abandonedId = await as.mutation(api.studySessions.start, {
+    const abandonedId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
     await as.mutation(api.studySessions.abandon, {
       sessionId: abandonedId,
     });
 
     // Create an active session
-    const activeId = await as.mutation(api.studySessions.start, {
+    const activeId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const active = await as.query(api.studySessions.getActiveSession, {
       setId,
@@ -447,21 +437,21 @@ describe("studySessions.getActiveSession", () => {
     const setId = await createSetWithCards(as, 1);
 
     for (let i = 0; i < 60; i++) {
-      const sessionId = await as.mutation(api.studySessions.start, {
+      const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
         setId,
         frontFields: ["Front"],
         backFields: ["Back"],
         shuffle: false,
-      });
+      }));
       await as.mutation(api.studySessions.abandon, { sessionId });
     }
 
-    const activeId = await as.mutation(api.studySessions.start, {
+    const activeId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     const active = await as.query(api.studySessions.getActiveSession, {
       setId,
@@ -478,13 +468,13 @@ describe("studySessions.start — ttsOnlyFields", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Pinyin"],
       backFields: ["Meaning"],
       ttsOnlyFields: ["Character"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, { id: sessionId });
     expect(session!.ttsOnlyFields).toEqual(["Character"]);
@@ -495,12 +485,12 @@ describe("studySessions.start — ttsOnlyFields", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Character"],
       backFields: ["Meaning"],
       shuffle: false,
-    });
+    }));
 
     const session = await as.query(api.studySessions.get, { id: sessionId });
     expect(session!.ttsOnlyFields).toEqual([]);
@@ -511,15 +501,13 @@ describe("studySessions.start — ttsOnlyFields", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Character"],
-        backFields: ["Meaning"],
-        ttsOnlyFields: ["Pinyin"],
-        shuffle: false,
-      })
-    ).rejects.toThrow('Field "Pinyin" has no TTS config');
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Character"],
+      backFields: ["Meaning"],
+      ttsOnlyFields: ["Pinyin"],
+      shuffle: false,
+    })).toMatchObject({ ok: false, error: { message: 'Field "Pinyin" has no TTS config and cannot be TTS-only' } });
   });
 
   it("rejects fields appearing in both ttsOnlyFields and frontFields", async () => {
@@ -527,15 +515,13 @@ describe("studySessions.start — ttsOnlyFields", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Character"],
-        backFields: ["Meaning"],
-        ttsOnlyFields: ["Character"],
-        shuffle: false,
-      })
-    ).rejects.toThrow('Field "Character" cannot be in both');
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Character"],
+      backFields: ["Meaning"],
+      ttsOnlyFields: ["Character"],
+      shuffle: false,
+    })).toMatchObject({ ok: false, error: { message: 'Field "Character" cannot be in both ttsOnlyFields and front/back' } });
   });
 
   it("rejects invalid field names in ttsOnlyFields", async () => {
@@ -543,14 +529,12 @@ describe("studySessions.start — ttsOnlyFields", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
-    await expect(
-      as.mutation(api.studySessions.start, {
-        setId,
-        frontFields: ["Character"],
-        backFields: ["Meaning"],
-        ttsOnlyFields: ["NonExistent"],
-        shuffle: false,
-      })
-    ).rejects.toThrow("Invalid TTS-only field: NonExistent");
+    expect(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Character"],
+      backFields: ["Meaning"],
+      ttsOnlyFields: ["NonExistent"],
+      shuffle: false,
+    })).toMatchObject({ ok: false, error: { message: "Invalid TTS-only field: NonExistent" } });
   });
 });

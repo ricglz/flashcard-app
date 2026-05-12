@@ -6,6 +6,14 @@ import schema from "../../convex/schema";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+
+async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
+  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
+    throw new Error(result.error.message);
+  }
+  return result as T;
+}
+
 const TEST_USER = {
   tokenIdentifier: "test-user-1",
   subject: "user1",
@@ -22,16 +30,16 @@ async function setupSetWithSrsReviews(
 ) {
   const as = t.withIdentity(TEST_USER);
 
-  const setId = await as.mutation(api.flashcardSets.create, {
+  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Test",
     fieldDefinitions: fieldDefs,
-  });
+  }));
 
   const cards = Array.from({ length: reviewTimestamps.length }, (_, i) => ({
     fields: { Front: `Q${i}`, Back: `A${i}` },
     order: i,
   }));
-  await as.mutation(api.flashcards.batchCreate, { setId, cards });
+  await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
 
   const cardList = await as.query(api.flashcards.list, { setId });
 
@@ -68,10 +76,10 @@ describe("getHydratedQueue", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    const setId = await as.mutation(api.flashcardSets.create, {
+    const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test Set",
       fieldDefinitions: fieldDefs,
-    });
+    }));
 
     const cards = [
       { fields: { Front: "Q0", Back: "A0" }, order: 0 },
