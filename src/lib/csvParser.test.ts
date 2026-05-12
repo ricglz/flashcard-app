@@ -21,7 +21,7 @@ describe("parseCsv", () => {
     const result = parseCsv("");
     expect(result.fieldDefinitions).toHaveLength(0);
     expect(result.cards).toHaveLength(0);
-    expect(result.errors).toContain("No columns found");
+    expect(result.errors).toContainEqual({ _tag: "MissingHeaders", message: "No columns found" });
   });
 
   it("returns empty cards for headers-only CSV", () => {

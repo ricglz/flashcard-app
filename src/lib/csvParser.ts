@@ -1,11 +1,37 @@
 import Papa from "papaparse";
 import { FieldDefinition } from "./types";
+import { validateCardFields } from "../../convex/domain/cardFields";
+import { validateFieldDefinitions, normalizeFieldName } from "../../convex/domain/fieldDefinitions";
 
-export type ParsedCsvResult = {
+export type CsvBlockingError =
+  | { _tag: "MissingHeaders"; message: string }
+  | { _tag: "DuplicateHeaders"; message: string; header: string }
+  | { _tag: "MalformedRow"; message: string; row: number }
+  | { _tag: "NoUsefulRows"; message: string };
+
+export type CsvWarning =
+  | { _tag: "EmptyRow"; message: string; row: number }
+  | { _tag: "ParserWarning"; message: string; row: number | null }
+  | { _tag: "InvalidRow"; message: string; row: number };
+
+export type ParsedCsvSuccess = {
+  ok: true;
   fieldDefinitions: FieldDefinition[];
   cards: Array<Record<string, string>>;
+  warnings: CsvWarning[];
+  /** Compatibility alias while callers migrate to typed warnings. */
   errors: string[];
 };
+
+export type ParsedCsvFailure = {
+  ok: false;
+  fieldDefinitions: FieldDefinition[];
+  cards: [];
+  errors: CsvBlockingError[];
+  warnings: CsvWarning[];
+};
+
+export type ParsedCsvResult = ParsedCsvSuccess | ParsedCsvFailure;
 
 /**
  * Parse a CSV file/string into flashcard data.
@@ -16,77 +42,122 @@ export type ParsedCsvResult = {
 export function parseCsv(csvText: string): ParsedCsvResult {
   const result = Papa.parse<Record<string, string>>(csvText, {
     header: true,
-    skipEmptyLines: true,
+    skipEmptyLines: false,
     transformHeader: (h) => h.trim(),
   });
 
-  const errors: string[] = result.errors.map(
-    (e) => `Row ${e.row ?? "?"}: ${e.message}`
-  );
-
-  const headers = result.meta.fields ?? [];
-  if (headers.length === 0) {
-    return { fieldDefinitions: [], cards: [], errors: ["No columns found"] };
+  const meaningfulParserErrors = result.errors.filter((e) => e.code !== "UndetectableDelimiter");
+  const warnings: CsvWarning[] = meaningfulParserErrors.map((e) => ({
+    _tag: "ParserWarning" as const,
+    row: e.row ?? null,
+    message: `Row ${e.row ?? "?"}: ${e.message}`,
+  }));
+  const malformed = meaningfulParserErrors.find((e) => e.type === "Quotes" || e.type === "Delimiter");
+  if (malformed) {
+    return {
+      ok: false,
+      fieldDefinitions: [],
+      cards: [],
+      warnings,
+      errors: [{ _tag: "MalformedRow", row: malformed.row ?? 0, message: `Row ${malformed.row ?? "?"}: ${malformed.message}` }],
+    };
   }
 
-  const fieldDefinitions: FieldDefinition[] = headers.map(
-    (name, index) => ({
-      name,
-      role: inferRole(name),
-      metadata: inferMetadata(name),
-      order: index,
-    })
-  );
+  const headers = (result.meta.fields ?? []).filter((header) => header.trim().length > 0);
+  if (headers.length === 0) {
+    return {
+      ok: false,
+      fieldDefinitions: [],
+      cards: [],
+      warnings,
+      errors: [{ _tag: "MissingHeaders", message: "No columns found" }],
+    };
+  }
 
-  const cards = result.data.filter((row) =>
-    Object.values(row).some((v) => v.trim() !== "")
-  );
+  const seenHeaders = new Set<string>();
+  for (const header of headers) {
+    const normalized = normalizeFieldName(header);
+    if (seenHeaders.has(normalized)) {
+      return {
+        ok: false,
+        fieldDefinitions: [],
+        cards: [],
+        warnings,
+        errors: [{ _tag: "DuplicateHeaders", header, message: `Duplicate header: ${header}` }],
+      };
+    }
+    seenHeaders.add(normalized);
+  }
 
-  return { fieldDefinitions, cards, errors };
+  const fieldDefinitions: FieldDefinition[] = headers.map((name, index) => ({
+    name,
+    role: inferRole(name),
+    metadata: inferMetadata(name),
+    order: index,
+  }));
+  const fieldValidation = validateFieldDefinitions(fieldDefinitions);
+  if (!fieldValidation.ok) {
+    return {
+      ok: false,
+      fieldDefinitions: [],
+      cards: [],
+      warnings,
+      errors: [{ _tag: "MissingHeaders", message: fieldValidation.error.message }],
+    };
+  }
+
+  const cards: Array<Record<string, string>> = [];
+  for (let index = 0; index < result.data.length; index++) {
+    const row = result.data[index];
+    const rowNumber = index + 2;
+    const hasAnyValue = Object.values(row).some((v) => (v ?? "").trim() !== "");
+    if (!hasAnyValue) {
+      warnings.push({ _tag: "EmptyRow", row: rowNumber, message: `Row ${rowNumber}: empty row skipped` });
+      continue;
+    }
+    const validation = validateCardFields(headers, row);
+    if (!validation.ok) {
+      warnings.push({ _tag: "InvalidRow", row: rowNumber, message: `Row ${rowNumber}: ${validation.error.message}` });
+      continue;
+    }
+    cards.push(validation.value);
+  }
+
+  if (cards.length === 0) {
+    return {
+      ok: false,
+      fieldDefinitions: fieldValidation.value ?? fieldDefinitions,
+      cards: [],
+      warnings,
+      errors: [{ _tag: "NoUsefulRows", message: "No valid rows found in the CSV." }],
+    };
+  }
+
+  return {
+    ok: true,
+    fieldDefinitions: fieldValidation.value ?? fieldDefinitions,
+    cards,
+    warnings,
+    errors: warnings.map((warning) => warning.message),
+  };
 }
 
-/** Best-effort role inference from common column names. */
-function inferRole(
-  name: string
-): FieldDefinition["role"] {
+function inferRole(name: string): FieldDefinition["role"] {
   const lower = name.toLowerCase();
-  if (
-    ["pinyin", "reading", "pronunciation", "phonetic", "romaji", "ipa"].some(
-      (k) => lower.includes(k)
-    )
-  )
+  if (["pinyin", "reading", "pronunciation", "phonetic", "romaji", "ipa"].some((k) => lower.includes(k))) {
     return "pronunciation";
-  if (
-    [
-      "meaning",
-      "definition",
-      "translation",
-      "english",
-      "answer",
-      "back",
-    ].some((k) => lower.includes(k))
-  )
+  }
+  if (["meaning", "definition", "translation", "english", "answer", "back"].some((k) => lower.includes(k))) {
     return "definition";
-  if (
-    ["note", "hint", "example", "context"].some((k) => lower.includes(k))
-  )
-    return "note";
+  }
+  if (["note", "hint", "example", "context"].some((k) => lower.includes(k))) return "note";
   return "primary";
 }
 
-/** Infer metadata (e.g., TTS) from column name patterns. */
 function inferMetadata(name: string): FieldDefinition["metadata"] {
   const lower = name.toLowerCase();
-  // TTS goes on native script fields, not romanization (pinyin/romaji)
-  if (
-    lower.includes("character") ||
-    lower.includes("hanzi") ||
-    lower.includes("chinese")
-  )
-    return { tts: { lang: "zh-CN" } };
-  if (lower.includes("kanji") || lower.includes("japanese"))
-    return { tts: { lang: "ja" } };
-  if (lower.includes("spanish") || lower.includes("español"))
-    return { tts: { lang: "es" } };
+  if (lower.includes("character") || lower.includes("hanzi") || lower.includes("chinese")) return { tts: { lang: "zh-CN" } };
+  if (lower.includes("kanji") || lower.includes("japanese")) return { tts: { lang: "ja" } };
+  if (lower.includes("spanish") || lower.includes("español")) return { tts: { lang: "es" } };
   return {};
 }
