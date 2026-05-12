@@ -2,26 +2,19 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { fieldDefinitionValidator } from "./schema";
 import { assertOwner } from "./userSets";
+import { fail, ok, unauthenticated, notFound, type CommonFailure } from "./domain/result";
+import {
+  validateSetFields as validateSetFieldsResult,
+  type SetFieldsValidationFailure,
+} from "./domain/fieldDefinitions";
+import type { FieldDefinition } from "../src/lib/types";
 
 export function validateSetFields(
   name: string | undefined,
-  fieldDefinitions: Array<{ name: string }> | undefined
+  fieldDefinitions: FieldDefinition[] | undefined
 ) {
-  if (name !== undefined && name.trim().length === 0) {
-    throw new Error("Set name must not be empty");
-  }
-  if (fieldDefinitions !== undefined) {
-    if (fieldDefinitions.length === 0) {
-      throw new Error("At least one field definition is required");
-    }
-    const names = fieldDefinitions.map((fd) => fd.name.trim());
-    if (names.some((n) => n.length === 0)) {
-      throw new Error("Field names must not be empty");
-    }
-    if (new Set(names).size !== names.length) {
-      throw new Error("Field names must be unique");
-    }
-  }
+  const result = validateSetFieldsResult(name, fieldDefinitions);
+  if (!result.ok) throw new Error(result.error.message);
 }
 
 export const list = query({
@@ -72,17 +65,24 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    validateSetFields(args.name, args.fieldDefinitions);
+    if (!identity) return fail(unauthenticated());
+
+    const validation = validateSetFieldsResult(
+      args.name,
+      args.fieldDefinitions as FieldDefinition[]
+    );
+    if (!validation.ok) return validation;
+
+    const fieldDefinitions = validation.value.fieldDefinitions!;
     const setId = await ctx.db.insert("flashcardSets", {
-      name: args.name,
-      description: args.description,
-      fieldDefinitions: args.fieldDefinitions,
+      name: validation.value.name!,
+      description: args.description?.trim() || undefined,
+      fieldDefinitions,
       ownerId: identity.tokenIdentifier,
       createdAt: Date.now(),
     });
 
-    const sorted = [...args.fieldDefinitions].sort((a, b) => a.order - b.order);
+    const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
     const defaultFrontFields = sorted.length > 0 ? [sorted[0].name] : [];
     const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
 
@@ -109,14 +109,28 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    await assertOwner(ctx, identity.tokenIdentifier, args.id);
-    validateSetFields(args.name, args.fieldDefinitions);
-    const { id, ...updates } = args;
-    const filtered = Object.fromEntries(
-      Object.entries(updates).filter(([, v]) => v !== undefined)
+    if (!identity) return fail(unauthenticated());
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
+    if (!owner.ok) return owner;
+
+    const validation = validateSetFieldsResult(
+      args.name,
+      args.fieldDefinitions as FieldDefinition[] | undefined
     );
-    await ctx.db.patch(id, filtered);
+    if (!validation.ok) return validation;
+
+    const patch: {
+      name?: string;
+      description?: string;
+      fieldDefinitions?: FieldDefinition[];
+    } = {};
+    if (validation.value.name !== undefined) patch.name = validation.value.name;
+    if (args.description !== undefined) patch.description = args.description.trim() || undefined;
+    if (validation.value.fieldDefinitions !== undefined) {
+      patch.fieldDefinitions = validation.value.fieldDefinitions;
+    }
+    await ctx.db.patch(args.id, patch);
+    return ok(null);
   },
 });
 
@@ -124,25 +138,22 @@ export const remove = mutation({
   args: { id: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    await assertOwner(ctx, identity.tokenIdentifier, args.id);
+    if (!identity) return fail(unauthenticated());
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
+    if (!owner.ok) return owner;
 
-    // Delete cards in batches
     let cardBatch = await ctx.db
       .query("flashcards")
       .withIndex("by_setId", (q) => q.eq("setId", args.id))
       .take(500);
     while (cardBatch.length > 0) {
-      for (const card of cardBatch) {
-        await ctx.db.delete(card._id);
-      }
+      for (const card of cardBatch) await ctx.db.delete(card._id);
       cardBatch = await ctx.db
         .query("flashcards")
         .withIndex("by_setId", (q) => q.eq("setId", args.id))
         .take(500);
     }
 
-    // Delete sessions and their card results
     let sessionBatch = await ctx.db
       .query("studySessions")
       .withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id))
@@ -151,19 +162,13 @@ export const remove = mutation({
       for (const session of sessionBatch) {
         let resultBatch = await ctx.db
           .query("cardResults")
-          .withIndex("by_sessionId", (q) =>
-            q.eq("sessionId", session._id)
-          )
+          .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
           .take(500);
         while (resultBatch.length > 0) {
-          for (const result of resultBatch) {
-            await ctx.db.delete(result._id);
-          }
+          for (const result of resultBatch) await ctx.db.delete(result._id);
           resultBatch = await ctx.db
             .query("cardResults")
-            .withIndex("by_sessionId", (q) =>
-              q.eq("sessionId", session._id)
-            )
+            .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
             .take(500);
         }
         await ctx.db.delete(session._id);
@@ -174,7 +179,6 @@ export const remove = mutation({
         .take(500);
     }
 
-    // Delete SRS data for all users linked to this set
     let srsBatch = await ctx.db
       .query("srsCards")
       .withIndex("by_setId", (q) => q.eq("setId", args.id))
@@ -185,9 +189,7 @@ export const remove = mutation({
           .query("reviewQueue")
           .withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id))
           .take(100);
-        for (const qi of queueItems) {
-          await ctx.db.delete(qi._id);
-        }
+        for (const qi of queueItems) await ctx.db.delete(qi._id);
         await ctx.db.delete(srsCard._id);
       }
       srsBatch = await ctx.db
@@ -196,21 +198,23 @@ export const remove = mutation({
         .take(500);
     }
 
-    // Delete userSets links
     let linkBatch = await ctx.db
       .query("userSets")
       .withIndex("by_setId", (q) => q.eq("setId", args.id))
       .take(500);
     while (linkBatch.length > 0) {
-      for (const link of linkBatch) {
-        await ctx.db.delete(link._id);
-      }
+      for (const link of linkBatch) await ctx.db.delete(link._id);
       linkBatch = await ctx.db
         .query("userSets")
         .withIndex("by_setId", (q) => q.eq("setId", args.id))
         .take(500);
     }
 
+    const set = await ctx.db.get(args.id);
+    if (!set) return fail(notFound("Set not found"));
     await ctx.db.delete(args.id);
+    return ok(null);
   },
 });
+
+export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;

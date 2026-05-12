@@ -7,6 +7,14 @@ import { validateSetFields } from "../../convex/flashcardSets";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+
+async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
+  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
+    throw new Error(result.error.message);
+  }
+  return result as T;
+}
+
 const TEST_USER = {
   tokenIdentifier: "test-user-1",
   subject: "user1",
@@ -70,10 +78,10 @@ describe("flashcardSets.create", () => {
   it("creates a set with correct fields", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
-    const id = await as.mutation(api.flashcardSets.create, {
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test Set",
       fieldDefinitions: validFieldDefs,
-    });
+    }));
     expect(id).toBeDefined();
 
     const set = await as.query(api.flashcardSets.get, { id });
@@ -83,23 +91,21 @@ describe("flashcardSets.create", () => {
 
   it("rejects unauthenticated users", async () => {
     const t = convexTest(schema, modules);
-    await expect(
-      t.mutation(api.flashcardSets.create, {
-        name: "Test",
-        fieldDefinitions: validFieldDefs,
-      })
-    ).rejects.toThrow("Not authenticated");
+    const result = await t.mutation(api.flashcardSets.create, {
+      name: "Test",
+      fieldDefinitions: validFieldDefs,
+    });
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
 
   it("rejects empty name", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
-    await expect(
-      as.mutation(api.flashcardSets.create, {
-        name: "",
-        fieldDefinitions: validFieldDefs,
-      })
-    ).rejects.toThrow("Set name must not be empty");
+    const result = await as.mutation(api.flashcardSets.create, {
+      name: "",
+      fieldDefinitions: validFieldDefs,
+    });
+    expect(result).toMatchObject({ ok: false, error: { message: "Set name must not be empty" } });
   });
 });
 
@@ -107,10 +113,10 @@ describe("flashcardSets.update", () => {
   it("updates the set name", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
-    const id = await as.mutation(api.flashcardSets.create, {
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Original",
       fieldDefinitions: validFieldDefs,
-    });
+    }));
 
     await as.mutation(api.flashcardSets.update, { id, name: "Updated" });
 
@@ -123,14 +129,13 @@ describe("flashcardSets.update", () => {
     const as = t.withIdentity(TEST_USER);
     const other = t.withIdentity(OTHER_USER);
 
-    const id = await as.mutation(api.flashcardSets.create, {
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test",
       fieldDefinitions: validFieldDefs,
-    });
+    }));
 
-    await expect(
-      other.mutation(api.flashcardSets.update, { id, name: "Hacked" })
-    ).rejects.toThrow("Not found");
+    const result = await other.mutation(api.flashcardSets.update, { id, name: "Hacked" });
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
   });
 });
 
@@ -140,10 +145,10 @@ describe("flashcardSets.remove", () => {
     const as = t.withIdentity(TEST_USER);
 
     // Create set with cards
-    const setId = await as.mutation(api.flashcardSets.create, {
+    const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test",
       fieldDefinitions: validFieldDefs,
-    });
+    }));
     await as.mutation(api.flashcards.batchCreate, {
       setId,
       cards: [
@@ -153,12 +158,12 @@ describe("flashcardSets.remove", () => {
     });
 
     // Create a study session
-    const sessionId = await as.mutation(api.studySessions.start, {
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
       backFields: ["Back"],
       shuffle: false,
-    });
+    }));
 
     // Record a result
     const session = await as.query(api.studySessions.get, {
