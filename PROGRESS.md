@@ -5,56 +5,73 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 ### Card / Set Domain Validation
-- [ ] Validate field definition invariants before creating/updating sets:
+- [x] Validate field definition invariants before creating/updating sets:
   - unique field names after trimming,
   - non-empty names,
   - stable `order` values,
   - supported roles,
   - metadata shape such as TTS language.
-- [ ] Validate card field payloads against a set's runtime field definitions:
+  - **DONE**: Implemented in `convex/domain/fieldDefinitions.ts` with `validateFieldDefinitions()` and `validateSetFields()`. All mutations now use domain validation.
+- [x] Validate card field payloads against a set's runtime field definitions:
   - unknown fields,
   - missing expected fields when required,
   - all-empty cards,
   - duplicate/normalized field-name collisions.
-- [ ] Share validation rules between manual card creation, CSV import, batch create, and card update paths.
-- [ ] Convert domain failures into actionable UI copy instead of generic thrown errors.
+  - **DONE**: Implemented in `convex/domain/cardFields.ts` with `validateCardFields()`. Returns normalized field map and detects duplicates.
+- [x] Share validation rules between manual card creation, CSV import, batch create, and card update paths.
+  - **DONE**: All paths now use domain validators from `convex/domain/`. CSV parser, flashcards mutations, and wizard all share the same validation logic.
+- [x] Convert domain failures into actionable UI copy instead of generic thrown errors.
+  - **DONE**: All mutations return `DomainResult<T, Failure>` instead of throwing. Frontend checks `isFailureResult()` and displays `error.message` to users.
 
 ### CSV / Import Pipeline
-- [ ] Replace string-only CSV errors with typed recoverable failures:
+- [x] Replace string-only CSV errors with typed recoverable failures:
   - missing headers,
   - duplicate headers,
   - empty rows,
   - malformed rows,
   - rows with no useful field values,
   - unsupported inferred metadata.
-- [ ] Track row-level warnings separately from import-blocking errors.
-- [ ] Add preview-friendly result unions for "valid cards + warnings" vs "cannot continue".
-- [ ] Add tests for partial-success import behavior and error display ordering.
+  - **DONE**: Implemented in `src/lib/csvParser.ts` with `CsvBlockingError` and `CsvWarning` types. Uses domain validators for consistency.
+- [x] Track row-level warnings separately from import-blocking errors.
+  - **DONE**: `ParsedCsvResult` has separate `errors` (blocking) and `warnings` (non-blocking) arrays.
+- [x] Add preview-friendly result unions for "valid cards + warnings" vs "cannot continue".
+  - **DONE**: `ParsedCsvSuccess` (`ok: true`) vs `ParsedCsvFailure` (`ok: false`) discriminated union.
+- [x] Add tests for partial-success import behavior and error display ordering.
+  - **DONE**: Tests in `src/lib/csvParser.test.ts` cover warnings, errors, and partial success.
 
 ### Set Creation Wizard / Client State
-- [ ] Add typed validation for each wizard step rather than only boolean `canProceed`.
-- [ ] Return per-field/per-step reasons that the UI can render near the invalid input.
+- [x] Add typed validation for each wizard step rather than only boolean `canProceed`.
+  - **DONE**: Added `validateWizardStep()` in `src/components/wizard/wizardState.ts` that returns `ValidationResult` with issues array.
+- [x] Return per-field/per-step reasons that the UI can render near the invalid input.
+  - **DONE**: `ValidationResult` includes `issues` with `field` and `message` properties.
 - [ ] Validate transitions (`NEXT_STEP`, source-method switching, reset) so impossible wizard states are prevented or normalized.
-- [ ] Ensure CSV and manual paths use the same domain validation before final submit.
+  - **PARTIAL**: Basic validation exists, but transition validation could be enhanced.
+- [x] Ensure CSV and manual paths use the same domain validation before final submit.
+  - **DONE**: Both paths now use domain validators from `convex/domain/` via `validateWizardStep()`.
 
 ### Study Session Setup / Results
-- [ ] Validate session start inputs:
+- [x] Validate session start inputs:
   - set exists and is accessible,
   - selected front/back/TTS-only fields exist,
   - card limit is within allowed bounds,
   - there are studyable cards.
-- [ ] Return user-actionable setup failures such as "no cards", "field was removed", or "set access changed".
+  - **DONE**: Implemented in `convex/domain/studySessionSetup.ts` with Effect-based validation. Added `NoStudyableCards` failure type.
+- [x] Return user-actionable setup failures such as "no cards", "field was removed", or "set access changed".
+  - **DONE**: All mutations return `DomainResult` with typed failures. Frontend displays `error.message` to users.
 - [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
+  - **PARTIAL**: Mutations return DomainResult, but offline replay could be enhanced with more specific result types.
 
 ### SRS Queue / Scheduling
-- [ ] Add typed guardrails around SRS settings:
+- [x] Add typed guardrails around SRS settings:
   - daily new-card limit range,
   - reset UTC hour range,
   - enabled set membership.
+  - **DONE**: Implemented in `convex/domain/srsSettings.ts` with `validateUserSettingsPatch()`. Validates ranges (0-200 cards, 0-23 hour, 0.25-2.0 speed, 0-500 daily goal).
 - [ ] Validate review actions before scheduling:
   - SRS card belongs to user,
   - queue item exists or action is an idempotent replay,
   - rating is supported.
+  - **PARTIAL**: Basic validation exists, but could be enhanced with more specific failure types.
 - [ ] Keep pure scheduling math in plain/testable TypeScript unless a richer result type adds meaningful typed failure handling.
 - [ ] Add tests for queue population edge cases: empty sets, duplicate queue entries, carry-over cards, and new-card limit exhaustion.
 
@@ -70,19 +87,36 @@
 - [ ] Add tests for `friendlySpeechError`, voice selection, timeout behavior, and empty text handling.
 
 ### Offline Sync / Outbox
-- [ ] Type offline mutation outcomes:
+- [x] Type offline mutation outcomes:
   - queued,
   - replayed,
   - duplicate/idempotent no-op,
   - permanent failure,
   - auth-required retry.
-- [ ] Normalize server errors into stable categories for reconnect/retry UI.
+  - **DONE**: Mutations now return `DomainResult`. Offline layer handles `DomainResult` types. `useOfflineMutation` and `SyncProvider` updated to work with typed results.
+- [x] Normalize server errors into stable categories for reconnect/retry UI.
+  - **DONE**: All failures use `CommonFailure` union with `_tag` discriminator. Frontend can switch on `_tag` for specific handling.
 - [ ] Add tests for outbox drain ordering, duplicate review replay, and failure recovery.
 
 ### Shared Types / Metadata
-- [ ] Runtime-validate `FieldMetadata` and narrow Convex `any` metadata at query/mutation boundaries.
-- [ ] Add typed helpers for TTS-enabled fields, displayable fields, and studyable field selections.
-- [ ] Keep `src/lib/types.ts` as the canonical static type source, with runtime validation colocated or clearly linked.
+- [x] Runtime-validate `FieldMetadata` and narrow Convex `any` metadata at query/mutation boundaries.
+  - **DONE**: Added `isFieldMetadata()` and `normalizeFieldMetadata()` in `src/lib/types.ts`. Created `convex/lib/typed.ts` with `getFieldDefinitions()` helper that normalizes metadata at the boundary.
+- [x] Add typed helpers for TTS-enabled fields, displayable fields, and studyable field selections.
+  - **DONE**: Added `getTtsConfig()`, `getTtsEnabledFields()`, `getDisplayableFields()`, `getStudyableFieldNames()` in `src/lib/types.ts`.
+- [x] Keep `src/lib/types.ts` as the canonical static type source, with runtime validation colocated or clearly linked.
+  - **DONE**: Types are canonical in `src/lib/types.ts`. Runtime validation in `convex/domain/` and `convex/lib/typed.ts`.
+
+### Zod Integration Consideration
+- [ ] Evaluate adding Zod for schema validation
+  - **Context**: Current validation is hand-rolled in `convex/domain/` modules. Works well but requires manual type definitions + runtime validators.
+  - **Pros**: Zod would provide single source of truth (schema → TypeScript types), better error messages, composable schemas, and ecosystem integrations.
+  - **Cons**: Adds dependency, learning curve, and migration effort. Current solution is working well with 201 tests passing.
+  - **Recommendation**: Consider Zod if:
+    - Validation logic becomes more complex
+    - Need to share schemas between frontend/backend more extensively
+    - Want automatic OpenAPI/docs generation
+    - Team grows and needs more standardized validation patterns
+  - **If adopted**: Start with `FieldDefinition` and `FieldMetadata` schemas, then gradually migrate domain validators. Keep DomainResult pattern - Zod complements it rather than replaces it.
 
 ## Marketplace & Multi-User
 
