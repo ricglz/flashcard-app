@@ -5,7 +5,9 @@ import { cliScopeValidator } from "./schema";
 import { fail, unauthenticated, forbidden, notFound } from "./domain/result";
 
 const TOKEN_PREFIX = "fcai";
-const SECRET_BYTE_LENGTH = 32;
+const PUBLIC_ID_LENGTH = 12;
+const SECRET_LENGTH = 43;
+const TOKEN_PART_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-";
 const INACTIVITY_TTL_MS = 24 * 60 * 60 * 1000;
 const ABSOLUTE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -24,13 +26,21 @@ async function sha256Hex(input: string): Promise<string> {
     .join("");
 }
 
-function randomTokenPart(byteLength: number): string {
-  const bytes = new Uint8Array(byteLength);
-  crypto.getRandomValues(bytes);
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
+function randomTokenPart(length: number): string {
+  let result = "";
+  // Rejection sampling keeps the generated characters unbiased while avoiding
+  // "_" so token parts can be delimited unambiguously with underscores.
+  const maxByte = Math.floor(256 / TOKEN_PART_ALPHABET.length) * TOKEN_PART_ALPHABET.length;
+  while (result.length < length) {
+    const bytes = new Uint8Array(Math.ceil((length - result.length) * 1.1) + 4);
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      if (byte >= maxByte) continue;
+      result += TOKEN_PART_ALPHABET[byte % TOKEN_PART_ALPHABET.length];
+      if (result.length === length) break;
+    }
+  }
+  return result;
 }
 
 export function parseCliToken(token: string) {
@@ -96,8 +106,8 @@ export const create = mutation({
     const now = Date.now();
     await revokeActiveTokens(ctx, identity.tokenIdentifier, now);
 
-    const publicId = randomTokenPart(9);
-    const secret = randomTokenPart(SECRET_BYTE_LENGTH);
+    const publicId = randomTokenPart(PUBLIC_ID_LENGTH);
+    const secret = randomTokenPart(SECRET_LENGTH);
     const token = `${TOKEN_PREFIX}_${publicId}_${secret}`;
     const tokenHash = await sha256Hex(secret);
     const scopes = args.scopes ?? [...DEFAULT_SCOPES];
