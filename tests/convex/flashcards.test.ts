@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
+import type { Id } from "../../convex/_generated/dataModel";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -16,26 +17,34 @@ const fieldDefs = [
   { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
 ];
 
+type TestDomainResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: { message: string } };
+
+function isDomainResult<T>(result: unknown): result is TestDomainResult<T> {
+  return result !== null && typeof result === "object" && "ok" in result;
+}
+
 async function createSet(
   as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>
-) {
+): Promise<Id<"flashcardSets">> {
   const result = await as.mutation(api.flashcardSets.create, {
     name: "Test Set",
     fieldDefinitions: fieldDefs,
   });
-  if (result && typeof result === "object" && "ok" in result) {
+  if (isDomainResult<Id<"flashcardSets">>(result)) {
     if (result.ok === false) throw new Error(result.error.message);
     return result.value;
   }
-  return result as never;
+  return result;
 }
 
-async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } }) {
-  if (result && typeof result === "object" && "ok" in result) {
+async function unwrap<T>(result: T | TestDomainResult<T>): Promise<T> {
+  if (isDomainResult<T>(result)) {
     if (result.ok === false) throw new Error(result.error.message);
     return result.value;
   }
-  return result as never;
+  return result;
 }
 
 describe("flashcards.create", () => {
