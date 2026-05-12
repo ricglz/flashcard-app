@@ -10,7 +10,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "flashcard-ai": "tsx scripts/flashcard-ai.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.8",
@@ -20,7 +21,8 @@
     "next": "16.2.2",
     "papaparse": "^5.5.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "commander": "^14.0.2"
   },
   "devDependencies": {
     "@clerk/testing": "^2.0.8",
@@ -37,7 +39,8 @@
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "tsx": "^4.20.6"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
