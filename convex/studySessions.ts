@@ -5,7 +5,8 @@ import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { validateStudySessionSetup, type StudySessionSetupFailure } from "./domain/studySessionSetup";
 import { fail, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
-import type { CardRating, FieldDefinition } from "../src/lib/types";
+import type { CardRating } from "../src/lib/types";
+import { getFieldDefinitions } from "./lib/typed";
 
 export const RATING_SCORES: Record<CardRating, number> = {
   wrong: 0,
@@ -106,7 +107,7 @@ export const start = mutation({
       .take(1000);
 
     const setupResult = validateStudySessionSetup({
-      fieldDefinitions: set.fieldDefinitions as FieldDefinition[],
+      fieldDefinitions: getFieldDefinitions(set),
       frontFields: args.frontFields,
       backFields: args.backFields,
       ttsOnlyFields: args.ttsOnlyFields,

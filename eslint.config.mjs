@@ -38,6 +38,14 @@ const eslintConfig = defineConfig([
         skipBlankLines: true,
         skipComments: true,
       }],
+      // Ban dangerous type assertions
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSAsExpression[typeAnnotation.type='TSNeverKeyword']",
+          message: "'as never' is forbidden. This indicates a type system escape hatch. Use proper typing or @ts-expect-error with explanation instead.",
+        },
+      ],
     },
   },
 ]);

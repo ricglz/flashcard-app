@@ -1,8 +1,8 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import type { FieldDefinition } from "../src/lib/types";
 import { enrollCardsForSetHelper } from "./userSets";
 import { fail, unauthenticated, notFound, conflict } from "./domain/result";
+import { getFieldDefinitions } from "./lib/typed";
 
 export const addToLibrary = mutation({
   args: { setId: v.id("flashcardSets") },
@@ -21,7 +21,7 @@ export const addToLibrary = mutation({
       .first();
     if (existing) return fail(conflict("Set already in library"));
 
-    const fieldDefs = set.fieldDefinitions as FieldDefinition[];
+    const fieldDefs = getFieldDefinitions(set);
     const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
     const defaultFrontFields = sorted.length > 0 ? [sorted[0].name] : [];
     const defaultBackFields = sorted.slice(1).map((fd) => fd.name);

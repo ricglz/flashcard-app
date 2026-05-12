@@ -8,6 +8,7 @@ import {
   type SetFieldsValidationFailure,
 } from "./domain/fieldDefinitions";
 import type { FieldDefinition } from "../src/lib/types";
+import { getFieldDefinitions } from "./lib/typed";
 
 export function validateSetFields(
   name: string | undefined,

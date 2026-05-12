@@ -7,6 +7,7 @@ import { RATING_SCORES } from "./studySessions";
 import { incrementDailyStats } from "./progress";
 import { fail, unauthenticated, notFound, conflict } from "./domain/result";
 import type { FieldDefinition } from "../src/lib/types";
+import { getFieldDefinitions } from "./lib/typed";
 
 export const getQueueStats = query({
   args: {},
@@ -73,7 +74,7 @@ export const getHydratedQueue = query({
     for (const { setId, set, userSet, cards } of perSetData) {
       if (!set || !userSet) continue;
       for (const card of cards) cardMap.set(card._id, { _id: card._id, fields: card.fields });
-      setMap.set(setId, { fieldDefinitions: set.fieldDefinitions as FieldDefinition[] });
+      setMap.set(setId, { fieldDefinitions: getFieldDefinitions(set) });
       userSetMap.set(setId, {
         defaultFrontFields: userSet.defaultFrontFields,
         defaultBackFields: userSet.defaultBackFields,
