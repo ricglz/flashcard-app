@@ -36,6 +36,38 @@ export const userSetRoleValidator = v.union(
   v.literal("member")
 );
 
+export const weakContextMethodologyValidator = v.union(
+  v.literal("balanced"),
+  v.literal("recent_lapses"),
+  v.literal("low_ease"),
+  v.literal("learning_stuck")
+);
+
+export const sourceScopeValidator = v.union(
+  v.literal("single_set"),
+  v.literal("srs_enabled_sets"),
+  v.literal("custom")
+);
+
+export const setOriginValidator = v.union(
+  v.object({ kind: v.literal("manual") }),
+  v.object({ kind: v.literal("csv_import"), importedAt: v.number() }),
+  v.object({
+    kind: v.literal("ai_generated"),
+    generatedAt: v.number(),
+    sourceSetIds: v.array(v.id("flashcardSets")),
+    sourceScope: sourceScopeValidator,
+    weakContextMethodology: v.optional(weakContextMethodologyValidator),
+  })
+);
+
+export const cliScopeValidator = v.union(
+  v.literal("sets:read"),
+  v.literal("weak_context:read"),
+  v.literal("ai_sets:create"),
+  v.literal("srs:enroll")
+);
+
 export default defineSchema({
   flashcardSets: defineTable({
     name: v.string(),
@@ -43,6 +75,8 @@ export default defineSchema({
     ownerId: v.string(),
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
+    // Optional for widen-migrate-narrow. New writes should populate this.
+    origin: v.optional(setOriginValidator),
     createdAt: v.number(),
   }).index("by_ownerId", ["ownerId"]),
 
@@ -157,4 +191,19 @@ export default defineSchema({
     ttsPlaybackSpeed: v.optional(v.number()),
     dailyGoal: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
+
+  cliAccessTokens: defineTable({
+    userId: v.string(),
+    publicId: v.string(),
+    tokenHash: v.string(),
+    label: v.optional(v.string()),
+    scopes: v.array(cliScopeValidator),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    expiresAt: v.number(),
+    absoluteExpiresAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_publicId", ["publicId"])
+    .index("by_userId", ["userId"]),
 });
