@@ -43,7 +43,14 @@ export default function FlashcardSetList() {
               className="border rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col"
             >
               <Link href={`/sets/${set._id}`} className="block flex-1">
-                <h3 className="font-semibold text-lg mb-1">{set.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg">{set.name}</h3>
+                  {set.origin?.kind === "ai_generated" && (
+                    <span className="px-1.5 py-0.5 bg-info-surface border border-info-edge rounded text-xs text-muted">
+                      AI generated
+                    </span>
+                  )}
+                </div>
                 {set.description && (
                   <p className="text-muted text-sm mb-2">
                     {set.description}
