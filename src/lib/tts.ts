@@ -131,9 +131,13 @@ export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
 
 export function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined {
   const voices = cachedVoices.length > 0 ? cachedVoices : readVoices();
-  const prefix = lang.split("-")[0];
+  const normalizedLang = lang.toLowerCase();
+  const prefix = normalizedLang.split("-")[0];
   const candidates = voices.filter(
-    (voice) => voice.lang === lang || voice.lang.startsWith(prefix),
+    (voice) => {
+      const voiceLang = voice.lang.toLowerCase();
+      return voiceLang === normalizedLang || voiceLang.startsWith(prefix);
+    },
   );
 
   return candidates.sort((a, b) => voiceScore(b, lang) - voiceScore(a, lang))[0];
