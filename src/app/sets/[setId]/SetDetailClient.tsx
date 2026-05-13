@@ -28,6 +28,7 @@ export default function SetDetailClient({
   const router = useRouter();
   const settings = useOfflineQuery(api.userSettings.get);
   const addToLibrary = useMutation(api.sharing.addToLibrary);
+  const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -91,9 +92,37 @@ export default function SetDetailClient({
         {set.description && (
           <p className="text-muted mb-4">{set.description}</p>
         )}
-        <p className="text-sm text-muted mb-6">
+        <p className="text-sm text-muted mb-2">
           {cards.length} card{cards.length !== 1 ? "s" : ""}
         </p>
+
+        <div className="flex items-center gap-2 mb-6">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+            (set.visibility ?? "private") === "public"
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+              : (set.visibility ?? "private") === "unlisted"
+                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+          }`}>
+            {(set.visibility ?? "private").charAt(0).toUpperCase() + (set.visibility ?? "private").slice(1)}
+          </span>
+          {isOwner && (
+            <select
+              value={set.visibility ?? "private"}
+              onChange={(e) => {
+                void updateVisibility({
+                  id: set._id,
+                  visibility: e.target.value as "private" | "unlisted" | "public",
+                });
+              }}
+              className="text-xs border border-edge rounded px-2 py-0.5 bg-transparent"
+            >
+              <option value="private">Private</option>
+              <option value="unlisted">Unlisted</option>
+              <option value="public">Public</option>
+            </select>
+          )}
+        </div>
 
         {viewer.role === "visitor" && (
           <div className="mb-6 p-4 border border-edge rounded-lg">

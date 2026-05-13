@@ -219,3 +219,23 @@ export const remove = mutation({
 });
 
 export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;
+
+export const updateVisibility = mutation({
+  args: {
+    id: v.id("flashcardSets"),
+    visibility: v.union(
+      v.literal("private"),
+      v.literal("unlisted"),
+      v.literal("public")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return fail(unauthenticated());
+    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
+    if (!owner.ok) return owner;
+
+    await ctx.db.patch(args.id, { visibility: args.visibility });
+    return ok(null);
+  },
+});
