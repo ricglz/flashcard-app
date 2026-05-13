@@ -75,8 +75,12 @@ export default defineSchema({
     ownerId: v.string(),
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
-    // Optional for widen-migrate-narrow. New writes should populate this.
     origin: v.optional(setOriginValidator),
+    visibility: v.optional(v.union(
+      v.literal("private"),
+      v.literal("unlisted"),
+      v.literal("public")
+    )),
     createdAt: v.number(),
   }).index("by_ownerId", ["ownerId"]),
 
@@ -215,5 +219,6 @@ export default defineSchema({
     note: v.optional(v.string()),
   })
     .index("by_userId_and_cardId", ["userId", "cardId"])
-    .index("by_userId_and_setId", ["userId", "setId"]),
+    .index("by_userId_and_setId", ["userId", "setId"])
+    .index("by_userId", ["userId"]),
 });

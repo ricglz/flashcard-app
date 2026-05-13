@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as cardAnnotations from "../cardAnnotations.js";
 import type * as cliTokens from "../cliTokens.js";
 import type * as crons from "../crons.js";
 import type * as domain_cardFields from "../domain/cardFields.js";
@@ -36,6 +37,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  cardAnnotations: typeof cardAnnotations;
   cliTokens: typeof cliTokens;
   crons: typeof crons;
   "domain/cardFields": typeof domain_cardFields;

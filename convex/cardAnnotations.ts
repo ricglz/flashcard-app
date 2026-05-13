@@ -19,6 +19,59 @@ export const getForSet = query({
   },
 });
 
+export const getAll = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const userId = identity.tokenIdentifier;
+
+    return ctx.db
+      .query("cardAnnotations")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+  },
+});
+
+export const getFlagged = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const userId = identity.tokenIdentifier;
+
+    const annotations = await ctx.db
+      .query("cardAnnotations")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+
+    const flagged = annotations.filter((a) => a.flagged);
+
+    const setIds = [...new Set(flagged.map((a) => a.setId))];
+    const sets = await Promise.all(setIds.map((id) => ctx.db.get(id)));
+    const setMap = new Map(sets.filter(Boolean).map((s) => [s!._id, s!]));
+
+    const cardIds = flagged.map((a) => a.cardId);
+    const cards = await Promise.all(cardIds.map((id) => ctx.db.get(id)));
+    const cardMap = new Map(cards.filter(Boolean).map((c) => [c!._id, c!]));
+
+    return flagged
+      .map((a) => {
+        const card = cardMap.get(a.cardId);
+        const set = setMap.get(a.setId);
+        if (!card || !set) return null;
+        return {
+          annotationId: a._id,
+          cardId: a.cardId,
+          setId: a.setId,
+          setName: set.name,
+          fieldDefinitions: set.fieldDefinitions,
+          fields: card.fields,
+          note: a.note,
+        };
+      })
+      .filter(Boolean);
+  },
+});
+
 export const toggleFlag = mutation({
   args: {
     cardId: v.id("flashcards"),

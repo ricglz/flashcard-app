@@ -91,6 +91,7 @@ export const getHydratedQueue = query({
       hydrated.push({
         _id: item._id,
         srsCardId: item.srsCardId,
+        setId: item.setId,
         card,
         fieldDefinitions: setData.fieldDefinitions,
         frontFields: userSetData.defaultFrontFields,
