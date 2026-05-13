@@ -1,6 +1,9 @@
 # Flashcard App — Backlog & Ideas
 
 > This is a historical planning document and backlog of ideas.
+> **DO NOT** mark items as done, check them off, update status notes, or remove entries.
+> Git history and the code itself are the authoritative record of what's been completed.
+> This file is only for adding new ideas or refining descriptions of unstarted work.
 > For current status, see git history and README.md.
 > 
 > Product decisions: `docs/product-decisions.md`
