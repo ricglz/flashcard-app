@@ -11,6 +11,11 @@ Chinese-first flashcard PWA with generic field-based data model.
 - **Testing hierarchy**: types > unit tests > e2e. Prioritize enforcing correctness through the type system first — consider architecture changes or more thoughtful type representations before reaching for runtime checks.
 - **Unit tests** (`pnpm test`): only for complex logic with clear expectations (parsers, reducers, score computation, validation). Not for UI unless it's state/reduction logic. Tests live in `src/` alongside source files and in `tests/convex/` for backend.
 - **E2E tests** (`pnpm test:e2e`): only to guarantee real user journeys/operations. No mocking — test what users actually do. Tests live in `e2e/`.
+- **E2E locator pitfalls**:
+  - Always use `exact: true` for button name matching — the Next.js Dev Tools button's aria-label contains "Next" and will cause strict mode violations.
+  - Prefer `getByRole('textbox', { name: '...' })` over `getByLabel(...)` in Clerk modals — labels like "Password" also match the "Show password" button.
+  - Auth is modal-based (Clerk `<SignInButton mode="modal">`), not route-based — there is no `/sign-in` or `/sign-up` page.
+  - The CSV file input has `class="hidden"` — assert on the visible drop zone text, not `input[type="file"]`.
 
 ## Code Style
 - Prefer event handlers or server-side logic over `useEffect` — follow React's "you might not need an effect"

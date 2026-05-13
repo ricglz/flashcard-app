@@ -14,7 +14,7 @@ test.describe("Wizard — CSV path", () => {
     await page.getByText("Import CSV").click();
 
     // Next → Step 2
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Step 2: Upload CSV
     const fileInput = page.locator('input[type="file"]');
@@ -31,14 +31,14 @@ test.describe("Wizard — CSV path", () => {
     await expect(page.getByText("5 cards ready with 3 fields")).toBeVisible();
 
     // Next → Step 3
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Step 3: Configure fields
     await expect(page.getByText("Configure the role and TTS")).toBeVisible();
     await page.screenshot({ path: "test-results/wizard-csv-step3-fields.png" });
 
     // Next → Step 4
-    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
 
     // Step 4: Review
     await expect(page.getByText("Test Chinese Set")).toBeVisible();

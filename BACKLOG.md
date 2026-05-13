@@ -174,6 +174,8 @@
 - [ ] Convex test environment isolation (each test run gets clean state)
 
 ### Core User Flows
+- [ ] `/sets/new` wizard is accessible without auth — unauthenticated users can reach the review step but `Create Set` fails silently. Guard the route or redirect to sign-in.
+- [ ] E2E CSV wizard test (`wizard-csv.spec.ts`) fails because Clerk session isn't active on the page — fix auth setup so the test user is authenticated during the test run.
 - [ ] Set creation wizard — CSV import path (upload → infer fields → configure metadata → create)
 - [ ] Set creation wizard — manual entry path (name → add cards → configure fields → create)
 - [ ] Set creation wizard — navigation (step validation, back/forward state preservation)

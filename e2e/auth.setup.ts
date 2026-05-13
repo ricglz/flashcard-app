@@ -6,15 +6,17 @@ const authFile = "e2e/.auth/user.json";
 setup("authenticate", async ({ page }) => {
   await setupClerkTestingToken({ page });
 
-  await page.goto("/sign-up");
+  await page.goto("/");
 
-  // Fill in the sign-up form with a test user
+  // Open the Clerk sign-in modal (no dedicated sign-up route exists)
+  await page.getByRole("button", { name: /sign in/i }).click();
+
   const testEmail = `test+${Date.now()}@example.com`;
   const testPassword = "TestPassword123!";
 
   await page.getByLabel(/email/i).fill(testEmail);
-  await page.getByLabel(/password/i).fill(testPassword);
-  await page.getByRole("button", { name: /sign up|continue/i }).click();
+  await page.getByRole("textbox", { name: "Password" }).fill(testPassword);
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
 
   // Wait for auth to complete and redirect to home
   await page.waitForURL("/", { timeout: 15000 });
