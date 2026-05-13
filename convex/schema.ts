@@ -206,4 +206,14 @@ export default defineSchema({
   })
     .index("by_publicId", ["publicId"])
     .index("by_userId", ["userId"]),
+
+  cardAnnotations: defineTable({
+    userId: v.string(),
+    cardId: v.id("flashcards"),
+    setId: v.id("flashcardSets"),
+    flagged: v.boolean(),
+    note: v.optional(v.string()),
+  })
+    .index("by_userId_and_cardId", ["userId", "cardId"])
+    .index("by_userId_and_setId", ["userId", "setId"]),
 });
