@@ -1,9 +1,12 @@
-"use client";
-
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import WizardShell from "@/components/wizard/WizardShell";
+import { getAuthToken } from "@/lib/server";
 
-export default function NewSetPage() {
+export default async function NewSetPage() {
+  const token = await getAuthToken();
+  if (!token) redirect("/");
+
   return (
     <div className="min-h-screen">
       <header className="border-b px-4 sm:px-6 py-4">
