@@ -1,49 +1,96 @@
 # AI CLI Remedial Sets
 
-This feature lets an external assistant generate remedial flashcard sets without the app calling an LLM API. The app exposes a narrow, token-protected tooling API; a local CLI exports weak SRS context and creates AI-generated sets after the assistant prepares JSON.
+> Status: Current
+> Last reviewed: 2026-05-12
+> Source of truth: Yes, for the current AI-assisted remedial set workflow.
+
+## Purpose
+
+Let a user generate remedial flashcard sets with an external assistant without the app calling an LLM API or storing LLM provider keys. The app exposes a narrow token-protected tooling API; the local CLI exports weak SRS context and imports reviewed generated JSON.
+
+## Why This Exists
+
+This provides AI-assisted value while keeping the app backend simple:
+
+- No OpenAI/Anthropic/etc. keys are stored by the app.
+- No platform LLM costs.
+- User can use any assistant.
+- Generated cards are validated before import.
+- Remedial sets remain normal flashcard sets and can be enrolled in SRS.
+
+See `docs/decisions/005-ai-cli-remedial-sets.md`.
 
 ## Workflow
 
-1. Enable CLI access from the app settings and copy the one-time token.
-2. Run `flashcard-ai login` and paste the token.
-3. Run `flashcard-ai sets list --include-srs-summary` to discover SRS-enabled sets.
-4. Run `flashcard-ai srs remedial-prompt --scope srs-enabled --out remedial-prompt.md` to export an assistant-ready prompt with bounded weak-card context.
-5. Ask an assistant to generate one or more remedial set JSON files from that prompt.
-6. Run `flashcard-ai generated-set validate --file generated-set.json`.
-7. Run `flashcard-ai generated-set create --file generated-set.json --add-to-srs` after review.
+1. Enable CLI access from Settings and copy the one-time token.
+2. Log in locally:
 
-You can print a detailed local workflow at any time:
+   ```bash
+   pnpm flashcard-ai login --site-url https://<deployment>.convex.site --token fcai_<publicId>_<secret>
+   ```
+
+3. Discover sets:
+
+   ```bash
+   pnpm flashcard-ai sets list --include-srs-summary --include-schema --out sets.json
+   ```
+
+4. Export an assistant-ready prompt:
+
+   ```bash
+   pnpm flashcard-ai srs remedial-prompt \
+     --scope srs-enabled \
+     --methodology balanced \
+     --target-card-count 20 \
+     --out remedial-prompt.md
+   ```
+
+5. Ask an assistant to create `generated-set.json` from `remedial-prompt.md`.
+6. Validate the generated set:
+
+   ```bash
+   pnpm flashcard-ai generated-set validate --file generated-set.json
+   ```
+
+7. Create the generated set:
+
+   ```bash
+   pnpm flashcard-ai generated-set create --file generated-set.json --add-to-srs
+   ```
+
+Print the detailed local workflow at any time:
 
 ```bash
-flashcard-ai workflow
+pnpm flashcard-ai workflow
 ```
 
-For SRS-history-based card generation, export an assistant-ready prompt first:
+## Weak Context Export
+
+For raw weak-card JSON instead of an assistant prompt:
 
 ```bash
-flashcard-ai sets list --include-srs-summary --include-schema --out sets.json
-flashcard-ai srs remedial-prompt --scope srs-enabled --methodology balanced --target-card-count 20 --out remedial-prompt.md
+pnpm flashcard-ai srs weak-cards --scope srs-enabled --out weak-cards.json
 ```
 
-Then ask an assistant to create a `generated-set.json` payload from `remedial-prompt.md`. The generated set should preserve one schema group's `fieldDefinitions`, include relevant `sourceSetIds` and `sourceCardIds`, and create new remedial cards that target recent misses, hard cards, low ease factors, or learning cards.
+Supported methodologies:
 
-The `remedial-prompt` command does not call an LLM and does not require an OpenAI, Anthropic, or other provider API key. It only uses the local Flashcard CLI token to fetch SRS context, and it does not include CLI tokens or auth headers in the generated prompt.
+- `balanced`
+- `recent-lapses`
+- `low-ease`
+- `learning-stuck`
 
-## Security model
+The export can scope to all SRS-enabled sets or a specific set. It includes bounded SRS context such as recent misses, hard cards, low ease factors, learning cards, source set IDs, source card IDs, field definitions, and schema fingerprints.
 
-CLI tokens are created by an authenticated user in the UI. The full token is returned and shown only once immediately after creation or rotation, so copy it before leaving the settings page. After that, status views only show masked public metadata.
+## Security Model
 
-Tokens are hashed in Convex, scoped, revocable, and expire after 24 hours of inactivity. Convex stores the token public id and secret hash, not the full secret token. The CLI never sends a user id; the backend derives the owner from the token.
+- CLI tokens are created by an authenticated user in Settings.
+- The full token is shown only once on creation/rotation.
+- Tokens are hashed in Convex; the backend stores public ID and secret hash, not the full token.
+- Tokens are scoped, revocable, and expire after inactivity.
+- The CLI never sends a user ID. The backend derives the owner from the token.
+- The generated assistant prompt does not include CLI tokens or auth headers.
 
-If an older copied token fails to authenticate, rotate CLI access in settings and run `flashcard-ai login` with the new token.
-
-For non-interactive login, pass the copied token directly:
-
-```bash
-flashcard-ai login --site-url https://<deployment>.convex.site --token fcai_<publicId>_<secret>
-```
-
-Initial scopes are:
+Initial scopes:
 
 - `sets:read`
 - `weak_context:read`
@@ -66,8 +113,29 @@ Endpoints:
 - `POST /tooling/v1/generated-sets/validate`
 - `POST /tooling/v1/generated-sets/create`
 
-The default weak-card scope is all SRS-enabled sets. `sets/list` is lightweight discovery; full card contents and study-performance context are only returned by `srs/weak-cards`.
+## Generated Set Expectations
 
-## Generated set metadata
+Generated sets are normal flashcard sets with:
 
-Generated sets are normal flashcard sets with `origin.kind = "ai_generated"`. They are kept separate from source sets and can be enrolled in SRS like any other set.
+```ts
+origin.kind = "ai_generated"
+```
+
+Generated payloads should:
+
+- preserve one schema group's `fieldDefinitions`;
+- include relevant `sourceSetIds`;
+- include relevant `sourceCardIds` where possible;
+- create cards targeting weak SRS signals;
+- set `addToSrs` according to user intent.
+
+Payload schemas live in `src/lib/aiToolingSchemas.ts`.
+
+## Related Files
+
+- `scripts/flashcard-ai.ts`
+- `convex/http.ts`
+- `convex/tooling.ts`
+- `convex/cliTokens.ts`
+- `src/lib/aiToolingSchemas.ts`
+- `src/app/settings/page.tsx`

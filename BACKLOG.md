@@ -3,7 +3,6 @@
 > This is a historical planning document and backlog of ideas.
 > For current status, see git history and README.md.
 > 
-> Initial plan: `docs/initial-plan.md`
 > Product decisions: `docs/product-decisions.md`
 
 ## Code Quality — Typed Domain Validation Candidates
@@ -159,7 +158,6 @@
 - [ ] Add assistant prompt/eval examples for producing high-quality remedial sets from exported weak context.
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
 - [ ] Future in-app LLM flow: LLM summarizes weak areas and suggests/generated targeted card sets without external assistant dependency.
-- [ ] Legacy BYOK/in-app design doc: `docs/ai-card-suggestions.md`
 
 ### In-App LLM Assistant
 - [ ] Chat-style interface for asking questions about study content
@@ -199,7 +197,7 @@
 - [ ] SRS offline review + sync on reconnect
 - [ ] Outbox drain and idempotency
 - [ ] TTS voice recovery after reconnect
-- [ ] See `docs/testing-plan.md` for detailed offline test cases
+- [ ] See `docs/testing-strategy.md` for current offline testing gaps
 
 ## Polish & Remaining Features
 

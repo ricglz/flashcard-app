@@ -1,9 +1,14 @@
-# TTS API Research (April 2026)
+# TTS API Research
+
+> Status: Research / Historical
+> Last reviewed: 2026-05-12
+> Source of truth: No. Provider pricing and free tiers may be outdated.
+> Current decision: Web Speech API remains the default; external TTS is optional/future.
 
 ## Current: Web Speech API
 - Free, built-in, no setup
 - Quality varies by browser/OS — robotic on Firefox, better on Chrome (uses Google voices)
-- Rate set to 0.75x for learner-friendly pace
+- Current app default is 0.75x, with persisted user-configurable playback speed
 - Chinese voices expect hanzi (characters), not pinyin
 
 ## Alternatives Investigated

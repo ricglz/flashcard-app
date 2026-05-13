@@ -5,7 +5,7 @@ Chinese-first flashcard PWA with generic field-based data model.
 
 ## Progress Tracking
 - **PROGRESS.md** is forward-looking only — it tracks what's next, not what's done. Never list completed items; git history is the authoritative record.
-- Test plans live in `docs/testing-plan.md` until replaced by actual test code
+- Testing strategy and current coverage gaps live in `docs/testing-strategy.md`
 
 ## Testing
 - **Testing hierarchy**: types > unit tests > e2e. Prioritize enforcing correctness through the type system first — consider architecture changes or more thoughtful type representations before reaching for runtime checks.
