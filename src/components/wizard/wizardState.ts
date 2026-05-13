@@ -44,29 +44,61 @@ export type WizardStepValidation =
   | { ok: true; issues: [] }
   | { ok: false; issues: WizardValidationIssue[] };
 
+function firstInvalidStep(state: WizardState): WizardState["step"] | null {
+  for (const step of [1, 2, 3, 4] as const) {
+    if (!validateWizardStep(state, step).ok) return step;
+  }
+  return null;
+}
+
+function firstInvalidStepThroughCurrent(state: WizardState): WizardState["step"] | null {
+  for (const step of [1, 2, 3, 4] as const) {
+    if (step > state.step) break;
+    if (!validateWizardStep(state, step).ok) return step;
+  }
+  return null;
+}
+
+function normalizeStep(state: WizardState): WizardState {
+  const invalidStep = firstInvalidStep(state);
+  if (invalidStep !== null && state.step > invalidStep) {
+    return { ...state, step: invalidStep };
+  }
+  return state;
+}
+
 function resetForSourceMethod(state: WizardState, sourceMethod: SourceMethod): WizardState {
   if (state.sourceMethod === null || state.sourceMethod === sourceMethod) {
     return { ...state, sourceMethod };
   }
-  return { ...state, sourceMethod, fieldDefinitions: [], cards: [] };
+  return {
+    ...state,
+    step: 1,
+    sourceMethod,
+    fieldDefinitions: [],
+    cards: [],
+  };
 }
 
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case "SET_NAME":
-      return { ...state, name: action.payload };
+      return normalizeStep({ ...state, name: action.payload });
     case "SET_DESCRIPTION":
       return { ...state, description: action.payload };
     case "SET_SOURCE_METHOD":
       return resetForSourceMethod(state, action.payload);
     case "SET_FIELD_DEFINITIONS":
-      return { ...state, fieldDefinitions: action.payload };
+      return normalizeStep({ ...state, fieldDefinitions: action.payload });
     case "SET_CARDS":
-      return { ...state, cards: action.payload };
+      return normalizeStep({ ...state, cards: action.payload });
     case "ADD_CARD":
-      return { ...state, cards: [...state.cards, action.payload] };
+      return normalizeStep({ ...state, cards: [...state.cards, action.payload] });
     case "REMOVE_CARD":
-      return { ...state, cards: state.cards.filter((_, i) => i !== action.payload) };
+      return normalizeStep({
+        ...state,
+        cards: state.cards.filter((_, i) => i !== action.payload),
+      });
     case "NEXT_STEP": {
       if (state.step >= 4 || !canProceed(state)) return state;
       return { ...state, step: (state.step + 1) as WizardState["step"] };
@@ -109,5 +141,5 @@ export function validateWizardStep(state: WizardState, step: WizardState["step"]
 }
 
 export function canProceed(state: WizardState): boolean {
-  return validateWizardStep(state).ok;
+  return firstInvalidStepThroughCurrent(state) === null;
 }

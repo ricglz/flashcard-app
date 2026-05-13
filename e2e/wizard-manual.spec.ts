@@ -59,6 +59,44 @@ test.describe("Wizard — Manual path", () => {
     await page.screenshot({ path: "test-results/wizard-manual-done.png" });
   });
 
+
+  test("source method switching clears incompatible manual draft data", async ({ page }) => {
+    await page.goto("/sets/new");
+
+    const nextButton = page.getByRole("button", { name: "Next" });
+
+    await page.getByPlaceholder("e.g., 100 Common Chinese Characters").fill("Switch Source Test");
+    await page.getByText("Add Manually").click();
+    await page.getByRole("combobox").selectOption("chinese");
+    await nextButton.click();
+
+    await page.getByPlaceholder("Enter character...").fill("好");
+    await page.getByPlaceholder("Enter pinyin...").fill("hǎo");
+    await page.getByPlaceholder("Enter meaning...").fill("good");
+    await page.getByRole("button", { name: "Add Card" }).click();
+    await expect(page.getByText("1 card added")).toBeVisible();
+
+    await page.getByRole("button", { name: "Back" }).click();
+    await page.getByText("Import CSV").click();
+
+    await expect(page.getByText("Import CSV")).toBeVisible();
+    await expect(page.getByText("Add Manually")).toBeVisible();
+    await expect(nextButton).toBeEnabled();
+
+    await nextButton.click();
+    await expect(page.locator('input[type="file"]')).toBeVisible();
+    await expect(page.getByText("1 card added")).toBeHidden();
+    await expect(page.getByPlaceholder("Enter character...")).toBeHidden();
+
+    await page.getByRole("button", { name: "Back" }).click();
+    await page.getByText("Add Manually").click();
+    await nextButton.click();
+
+    await expect(page.getByPlaceholder(/Field name/)).toBeVisible();
+    await expect(page.getByText("1 card added")).toBeHidden();
+    await expect(page.getByPlaceholder("Enter character...")).toBeHidden();
+  });
+
   test("wizard navigation validation", async ({ page }) => {
     await page.goto("/sets/new");
 
