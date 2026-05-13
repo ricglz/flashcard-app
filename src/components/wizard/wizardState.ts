@@ -143,3 +143,9 @@ export function validateWizardStep(state: WizardState, step: WizardState["step"]
 export function canProceed(state: WizardState): boolean {
   return firstInvalidStepThroughCurrent(state) === null;
 }
+
+export function hasSourceMethod(
+  state: WizardState
+): state is WizardState & { sourceMethod: SourceMethod } {
+  return state.sourceMethod !== null;
+}
