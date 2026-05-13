@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   wizardReducer,
   canProceed,
+  validateWizardStep,
+  hasSourceMethod,
   initialState,
   WizardState,
 } from "./wizardState";
@@ -279,5 +281,126 @@ describe("canProceed", () => {
   it("step 4: requires all previous data to remain valid", () => {
     expect(canProceed(stateWith({ ...validStep2State, step: 4 }))).toBe(true);
     expect(canProceed(stateWith({ step: 4 }))).toBe(false);
+  });
+});
+
+describe("wizardReducer — source method from null", () => {
+  it("sets source method from null without resetting data", () => {
+    const state = stateWith({
+      name: "Test",
+      fieldDefinitions: [sampleField],
+      cards: [sampleCard],
+    });
+    const result = wizardReducer(state, {
+      type: "SET_SOURCE_METHOD",
+      payload: "csv",
+    });
+    expect(result.sourceMethod).toBe("csv");
+    expect(result.fieldDefinitions).toEqual([sampleField]);
+    expect(result.cards).toEqual([sampleCard]);
+  });
+});
+
+describe("wizardReducer — mismatched card fields", () => {
+  it("normalizes step when cards have fields not matching field definitions", () => {
+    const state = stateWith({
+      ...validStep2State,
+      step: 4,
+    });
+    const result = wizardReducer(state, {
+      type: "SET_CARDS",
+      payload: [{ UnknownField: "value" }],
+    });
+    expect(result.step).toBe(2);
+    expect(result.cards).toEqual([{ UnknownField: "value" }]);
+  });
+});
+
+describe("wizardReducer — sequential transitions", () => {
+  it("handles advancing to step 3 then invalidating step 1 data", () => {
+    let state = stateWith({ ...validStep2State, step: 2 });
+    state = wizardReducer(state, { type: "NEXT_STEP" });
+    expect(state.step).toBe(3);
+
+    state = wizardReducer(state, { type: "SET_NAME", payload: "" });
+    expect(state.step).toBe(1);
+
+    state = wizardReducer(state, { type: "NEXT_STEP" });
+    expect(state.step).toBe(1);
+  });
+
+  it("handles double NEXT_STEP in sequence", () => {
+    const state = stateWith({
+      ...validStep2State,
+      step: 1,
+      name: "Test",
+      sourceMethod: "manual",
+    });
+    const afterFirst = wizardReducer(state, { type: "NEXT_STEP" });
+    expect(afterFirst.step).toBe(2);
+
+    const afterSecond = wizardReducer(afterFirst, { type: "NEXT_STEP" });
+    expect(afterSecond.step).toBe(3);
+  });
+});
+
+describe("validateWizardStep", () => {
+  it("returns ok for valid step 1 data", () => {
+    const state = stateWith({ name: "Test", sourceMethod: "manual" });
+    const result = validateWizardStep(state, 1);
+    expect(result.ok).toBe(true);
+    expect(result.issues).toEqual([]);
+  });
+
+  it("returns issues for empty name at step 1", () => {
+    const result = validateWizardStep(initialState, 1);
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ field: "name", step: 1 })
+    );
+  });
+
+  it("returns issues for null sourceMethod at step 1", () => {
+    const state = stateWith({ name: "Test" });
+    const result = validateWizardStep(state, 1);
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ field: "sourceMethod", step: 1 })
+    );
+  });
+
+  it("returns issues when validating step 2 with no cards or fields", () => {
+    const state = stateWith({ step: 2, name: "Test", sourceMethod: "manual" });
+    const result = validateWizardStep(state, 2);
+    expect(result.ok).toBe(false);
+    expect(result.issues.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("validates a specific step regardless of current step", () => {
+    const state = stateWith({ name: "Test", sourceMethod: "manual" });
+    const result = validateWizardStep(state, 2);
+    expect(result.ok).toBe(false);
+    expect(result.issues).toContainEqual(
+      expect.objectContaining({ field: "cards" })
+    );
+  });
+});
+
+describe("hasSourceMethod", () => {
+  it("returns false for initial state", () => {
+    expect(hasSourceMethod(initialState)).toBe(false);
+  });
+
+  it("returns true when sourceMethod is set", () => {
+    const state = stateWith({ sourceMethod: "csv" });
+    expect(hasSourceMethod(state)).toBe(true);
+  });
+
+  it("narrows the type so sourceMethod is non-null", () => {
+    const state = stateWith({ sourceMethod: "manual" });
+    if (hasSourceMethod(state)) {
+      const method: "csv" | "manual" = state.sourceMethod;
+      expect(method).toBe("manual");
+    }
   });
 });
