@@ -46,6 +46,9 @@ export default function BrowseClient({
   const cards = usePreloadedQuery(preloadedCards);
   const settings = useOfflineQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
+  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: setId as Id<"flashcardSets"> });
+  const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
+  const setNoteMutation = useMutation(api.cardAnnotations.setNote);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
@@ -54,6 +57,10 @@ export default function BrowseClient({
   const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
 
   const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+
+  const annotationMap = new Map(
+    (annotations ?? []).map((a) => [a.cardId, { flagged: a.flagged, note: a.note }])
+  );
 
   const handleTtsSpeedChange = (speed: number) => {
     setLocalTtsSpeed(speed);
@@ -198,6 +205,13 @@ export default function BrowseClient({
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
           ttsRate={effectiveTtsSpeed}
+          annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
+          onToggleFlag={() => {
+            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets"> });
+          }}
+          onSetNote={(note: string) => {
+            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets">, note });
+          }}
         />
 
         {revealed && (

@@ -10,6 +10,7 @@ import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
+import { Id } from "../../../convex/_generated/dataModel";
 
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
@@ -23,6 +24,9 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
   const settings = useOfflineQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
+  const annotations = useOfflineQuery(api.cardAnnotations.getAll);
+  const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
+  const setCardNote = useMutation(api.cardAnnotations.setNote);
 
   // Snapshot the queue so auth drops don't wipe it
   const stableQueue = useRef(queue);
@@ -46,6 +50,10 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const initialQueueSize = useRef(effectiveQueue.length);
 
   const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+
+  const annotationMap = new Map(
+    (annotations ?? []).map((a) => [a.cardId, { flagged: a.flagged, note: a.note, setId: a.setId }])
+  );
 
   const handleTtsSpeedChange = useCallback(
     (speed: number) => {
@@ -129,6 +137,10 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
     );
   }
 
+  const currentAnnotation = currentItem
+    ? annotationMap.get(currentItem.card._id as Id<"flashcards">)
+    : undefined;
+
   return (
     <SrsReviewActive
       currentItem={currentItem}
@@ -143,6 +155,13 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
       onReveal={() => setRevealed(true)}
       onRate={handleRate}
       onToggleTts={() => setTtsEnabled((v) => !v)}
+      annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
+      onToggleFlag={() => {
+        void toggleFlag({ cardId: currentItem.card._id as Id<"flashcards">, setId: currentItem.setId });
+      }}
+      onSetNote={(note: string) => {
+        void setCardNote({ cardId: currentItem.card._id as Id<"flashcards">, setId: currentItem.setId, note });
+      }}
       onEndSession={() => {
         if (confirm("End review session? Your progress is saved.")) {
           router.push("/");

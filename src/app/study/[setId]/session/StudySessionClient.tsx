@@ -46,6 +46,9 @@ export default function StudySessionClient({
   const abandonSession = useMutation(api.studySessions.abandon);
   const settings = useOfflineQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
+  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: setId as Id<"flashcardSets"> });
+  const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
+  const setNoteMutation = useMutation(api.cardAnnotations.setNote);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,6 +57,10 @@ export default function StudySessionClient({
   const [localIndexOffset, setLocalIndexOffset] = useState(0);
 
   const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+
+  const annotationMap = new Map(
+    (annotations ?? []).map((a) => [a.cardId, { flagged: a.flagged, note: a.note }])
+  );
 
   const handleTtsSpeedChange = useCallback(
     (speed: number) => {
@@ -201,6 +208,13 @@ export default function StudySessionClient({
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
           ttsRate={effectiveTtsSpeed}
+          annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
+          onToggleFlag={() => {
+            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets"> });
+          }}
+          onSetNote={(note: string) => {
+            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets">, note });
+          }}
         />
 
         {revealed && (

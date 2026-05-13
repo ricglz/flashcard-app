@@ -23,10 +23,14 @@ export default function SrsReviewActive({
   onToggleTts,
   onTtsSpeedChange,
   onEndSession,
+  annotation,
+  onToggleFlag,
+  onSetNote,
 }: {
   currentItem: {
     _id: string;
     srsCardId: string;
+    setId: string;
     card: { _id: string; fields: Record<string, string> };
     fieldDefinitions: FieldDefinition[];
     frontFields: string[];
@@ -45,6 +49,9 @@ export default function SrsReviewActive({
   onToggleTts: () => void;
   onTtsSpeedChange: (speed: number) => void;
   onEndSession: () => void;
+  annotation?: { flagged: boolean; note?: string };
+  onToggleFlag?: () => void;
+  onSetNote?: (note: string) => void;
 }) {
   return (
     <div className="min-h-screen flex flex-col">
@@ -99,6 +106,9 @@ export default function SrsReviewActive({
           onRevealed={onReveal}
           autoPlayTts={ttsEnabled}
           ttsRate={ttsRate}
+          annotation={annotation}
+          onToggleFlag={onToggleFlag}
+          onSetNote={onSetNote}
         />
 
         {revealed && (
