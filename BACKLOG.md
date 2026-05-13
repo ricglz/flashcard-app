@@ -1,18 +1,13 @@
 # Flashcard App — Backlog & Ideas
 
-> This is a historical planning document and backlog of ideas.
-> **DO NOT** mark items as done, check them off, update status notes, or remove entries.
-> Git history and the code itself are the authoritative record of what's been completed.
-> This file is only for adding new ideas or refining descriptions of unstarted work.
+> This is a planning document and backlog of ideas.
+> Remove items once they're completed — git history is the authoritative record.
+> This file is only for unstarted or in-progress work.
 > For current status, see git history and README.md.
 > 
 > Product decisions: `docs/product-decisions.md`
 
 ## Code Quality — Typed Domain Validation Candidates
-
-### Set Creation Wizard / Client State
-- [ ] Validate transitions (`NEXT_STEP`, source-method switching, reset) so impossible wizard states are prevented or normalized.
-  - **PARTIAL**: Basic validation exists, but transition validation could be enhanced.
 
 ### Study Session Setup / Results
 - [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
@@ -25,7 +20,6 @@
   - rating is supported.
   - **PARTIAL**: Basic validation exists, but could be enhanced with more specific failure types.
 - [ ] Keep pure scheduling math in plain/testable TypeScript unless a richer result type adds meaningful typed failure handling.
-- [ ] Add tests for queue population edge cases: empty sets, duplicate queue entries, carry-over cards, and new-card limit exhaustion.
 
 ### TTS / External Integration Boundary
 - [ ] Model TTS outcomes as typed failures where useful:
@@ -36,7 +30,6 @@
   - network/local voice fallback.
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
 - [ ] Keep UI-facing TTS results serializable and independent of server/domain internals.
-- [ ] Add tests for `friendlySpeechError`, voice selection, timeout behavior, and empty text handling.
 
 ### Offline Sync / Outbox
 - [ ] Add tests for outbox drain ordering, duplicate review replay, and failure recovery.
@@ -138,10 +131,8 @@
 ## Polish & Remaining Features
 
 ### Study Experience
-- [ ] TTS speed control in study views (slider exists on dashboard/SrsQueueStatus but not during SRS review, focus study, or browse sessions)
-- [ ] Per-character TTS playback (tap individual characters to hear them)
 - [ ] Card flags & annotations (flag as difficult, personal notes/mnemonics)
-- [ ] Difficult cards cross-set view (`/difficult` page, layered data sources)
+- [ ] Flagged cards cross-set view (`/flagged` page, layered data sources)
 
 ### Content Enhancements
 - [ ] Multi-modal cards (images, audio clips as field values via Convex file storage)
