@@ -87,6 +87,15 @@ export default function Home() {
               </p>
             </Link>
             <Link
+              href="/flagged"
+              className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
+            >
+              <h2 className="font-semibold text-lg mb-1">Flagged Cards</h2>
+              <p className="text-sm text-muted">
+                Review cards you flagged during study
+              </p>
+            </Link>
+            <Link
               href="/settings"
               className="p-6 border border-edge rounded-lg hover:shadow-md transition-shadow"
             >
