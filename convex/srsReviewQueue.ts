@@ -116,12 +116,34 @@ export const recordReview = mutation({
       return fail(notFound("SRS card not found"));
     }
 
-    const queueItem = await ctx.db
+    const queueItems = await ctx.db
       .query("reviewQueue")
       .withIndex("by_srsCardId", (q) => q.eq("srsCardId", args.srsCardId))
-      .first();
+      .take(10);
+    const queueItem = queueItems.find(
+      (item) => item.userId === identity.tokenIdentifier
+    );
 
-    if (!queueItem) return { remaining: 0, outcome: "duplicate" as const };
+    if (!queueItem) {
+      if (queueItems.length > 0) {
+        return fail(notFound("Review queue item not found"));
+      }
+      const remaining = await ctx.db
+        .query("reviewQueue")
+        .withIndex("by_userId_and_order", (q) =>
+          q.eq("userId", identity.tokenIdentifier)
+        )
+        .take(500);
+      return { remaining: remaining.length, outcome: "duplicate" as const };
+    }
+
+    if (
+      queueItem.cardId !== srsCard.cardId ||
+      queueItem.setId !== srsCard.setId ||
+      queueItem.srsCardId !== srsCard._id
+    ) {
+      return fail(notFound("Review queue item not found"));
+    }
 
     const now = Date.now();
     const result = computeSM2({
