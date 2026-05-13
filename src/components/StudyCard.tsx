@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
+import { hasCjkChars } from "@/lib/cjk";
 import { speakSequence, TtsEvent, TtsStatus } from "@/lib/tts";
 import TtsButton from "./TtsButton";
+import TappableCjkText from "./TappableCjkText";
 
 type Props = {
   card: { fields: Record<string, string> };
@@ -95,15 +97,29 @@ export default function StudyCard({
                   {fieldName}
                 </p>
                 <div className="flex items-center justify-center gap-2">
-                  <p
-                    className={
-                      fd?.role === "primary"
-                        ? "text-2xl sm:text-4xl font-bold"
-                        : "text-xl sm:text-2xl"
-                    }
-                  >
-                    {value}
-                  </p>
+                  {ttsConfig && hasCjkChars(value) ? (
+                    <TappableCjkText
+                      text={value}
+                      lang={ttsConfig.lang}
+                      rate={ttsRate}
+                      className={
+                        fd?.role === "primary"
+                          ? "text-2xl sm:text-4xl font-bold"
+                          : "text-xl sm:text-2xl"
+                      }
+                      onTtsEvent={updateTtsStatus}
+                    />
+                  ) : (
+                    <p
+                      className={
+                        fd?.role === "primary"
+                          ? "text-2xl sm:text-4xl font-bold"
+                          : "text-xl sm:text-2xl"
+                      }
+                    >
+                      {value}
+                    </p>
+                  )}
                   {ttsConfig && (
                     <TtsButton
                       text={value}
@@ -134,15 +150,29 @@ export default function StudyCard({
                       {fieldName}
                     </p>
                     <div className="flex items-center justify-center gap-2">
-                      <p
-                        className={
-                          fd?.role === "primary"
-                            ? "text-xl sm:text-3xl font-bold"
-                            : "text-lg sm:text-xl"
-                        }
-                      >
-                        {value}
-                      </p>
+                      {ttsConfig && hasCjkChars(value) ? (
+                        <TappableCjkText
+                          text={value}
+                          lang={ttsConfig.lang}
+                          rate={ttsRate}
+                          className={
+                            fd?.role === "primary"
+                              ? "text-xl sm:text-3xl font-bold"
+                              : "text-lg sm:text-xl"
+                          }
+                          onTtsEvent={updateTtsStatus}
+                        />
+                      ) : (
+                        <p
+                          className={
+                            fd?.role === "primary"
+                              ? "text-xl sm:text-3xl font-bold"
+                              : "text-lg sm:text-xl"
+                          }
+                        >
+                          {value}
+                        </p>
+                      )}
                       {ttsConfig && (
                         <TtsButton
                           text={value}
