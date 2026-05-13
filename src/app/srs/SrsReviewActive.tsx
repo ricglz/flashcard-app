@@ -2,6 +2,7 @@ import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import SpeakerIcon from "@/components/SpeakerIcon";
+import TtsSpeedControl from "@/components/TtsSpeedControl";
 import {
   CardRating,
   SRS_RATING_LABELS,
@@ -16,9 +17,11 @@ export default function SrsReviewActive({
   isSubmitting,
   ttsEnabled,
   ttsRate,
+  ttsSpeed,
   onReveal,
   onRate,
   onToggleTts,
+  onTtsSpeedChange,
   onEndSession,
 }: {
   currentItem: {
@@ -36,9 +39,11 @@ export default function SrsReviewActive({
   isSubmitting: boolean;
   ttsEnabled: boolean;
   ttsRate: number | undefined;
+  ttsSpeed: number;
   onReveal: () => void;
   onRate: (rating: CardRating) => void;
   onToggleTts: () => void;
+  onTtsSpeedChange: (speed: number) => void;
   onEndSession: () => void;
 }) {
   return (
@@ -56,6 +61,7 @@ export default function SrsReviewActive({
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <TtsSpeedControl speed={ttsSpeed} onSpeedChange={onTtsSpeedChange} />
           <button
             onClick={onToggleTts}
             className="text-sm text-muted hover:text-foreground transition-colors"

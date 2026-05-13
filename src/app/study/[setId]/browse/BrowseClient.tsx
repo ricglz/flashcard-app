@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { usePreloadedQuery, Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { Id } from "../../../../../convex/_generated/dataModel";
@@ -9,6 +9,7 @@ import Link from "next/link";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import SpeakerIcon from "@/components/SpeakerIcon";
+import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -44,11 +45,20 @@ export default function BrowseClient({
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const settings = useOfflineQuery(api.userSettings.get);
+  const updateSettings = useMutation(api.userSettings.update);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
   const [revealed, setRevealed] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
+
+  const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+
+  const handleTtsSpeedChange = (speed: number) => {
+    setLocalTtsSpeed(speed);
+    void updateSettings({ ttsPlaybackSpeed: speed });
+  };
 
   // Compute card order once when cards first load, then filter dismissed
   const [cardOrder, setCardOrder] = useState<Id<"flashcards">[] | null>(null);
@@ -155,6 +165,7 @@ export default function BrowseClient({
               <span className="ml-2">({dismissed.size} dismissed)</span>
             )}
           </span>
+          <TtsSpeedControl speed={effectiveTtsSpeed} onSpeedChange={handleTtsSpeedChange} />
           <button
             onClick={() => setTtsEnabled((v) => !v)}
             className="text-sm text-muted hover:text-foreground transition-colors"
@@ -186,7 +197,7 @@ export default function BrowseClient({
           ttsOnlyFields={validTtsOnlyFields}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
-          ttsRate={settings?.ttsPlaybackSpeed}
+          ttsRate={effectiveTtsSpeed}
         />
 
         {revealed && (

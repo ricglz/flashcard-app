@@ -22,6 +22,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
   const settings = useOfflineQuery(api.userSettings.get);
+  const updateSettings = useMutation(api.userSettings.update);
 
   // Snapshot the queue so auth drops don't wipe it
   const stableQueue = useRef(queue);
@@ -41,7 +42,18 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
+  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
   const initialQueueSize = useRef(effectiveQueue.length);
+
+  const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+
+  const handleTtsSpeedChange = useCallback(
+    (speed: number) => {
+      setLocalTtsSpeed(speed);
+      void updateSettings({ ttsPlaybackSpeed: speed });
+    },
+    [updateSettings]
+  );
 
   const visibleQueue = effectiveQueue.filter((item) => !reviewedIds.has(item._id));
   const totalCards = visibleQueue.length + reviewedCount;
@@ -125,7 +137,9 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
       revealed={revealed}
       isSubmitting={isSubmitting}
       ttsEnabled={ttsEnabled}
-      ttsRate={settings?.ttsPlaybackSpeed}
+      ttsRate={effectiveTtsSpeed}
+      ttsSpeed={effectiveTtsSpeed}
+      onTtsSpeedChange={handleTtsSpeedChange}
       onReveal={() => setRevealed(true)}
       onRate={handleRate}
       onToggleTts={() => setTtsEnabled((v) => !v)}

@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import SpeakerIcon from "@/components/SpeakerIcon";
+import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { CardRating } from "@/lib/types";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import Link from "next/link";
@@ -44,11 +45,23 @@ export default function StudySessionClient({
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
   const settings = useOfflineQuery(api.userSettings.get);
+  const updateSettings = useMutation(api.userSettings.update);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
   const [localIndexOffset, setLocalIndexOffset] = useState(0);
+
+  const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+
+  const handleTtsSpeedChange = useCallback(
+    (speed: number) => {
+      setLocalTtsSpeed(speed);
+      void updateSettings({ ttsPlaybackSpeed: speed });
+    },
+    [updateSettings]
+  );
 
   const effectiveIndex = session.currentIndex + localIndexOffset;
 
@@ -146,8 +159,8 @@ export default function StudySessionClient({
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <TtsSpeedControl speed={effectiveTtsSpeed} onSpeedChange={handleTtsSpeedChange} />
           <button
-            onClick={() => setTtsEnabled((v) => !v)}
             className="text-sm text-muted hover:text-foreground transition-colors"
             title={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
             aria-label={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
@@ -187,7 +200,7 @@ export default function StudySessionClient({
           ttsOnlyFields={session.ttsOnlyFields ?? []}
           onRevealed={() => setRevealed(true)}
           autoPlayTts={ttsEnabled}
-          ttsRate={settings?.ttsPlaybackSpeed}
+          ttsRate={effectiveTtsSpeed}
         />
 
         {revealed && (
