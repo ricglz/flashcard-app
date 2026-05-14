@@ -8,6 +8,7 @@ import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
 import { Id, Doc } from "../../../../../convex/_generated/dataModel";
+import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
@@ -45,7 +46,7 @@ export default function StudySessionClient({
   const abandonSession = useMutation(api.studySessions.abandon);
   const settings = useOfflineQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
-  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: setId as Id<"flashcardSets"> });
+  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: asId<"flashcardSets">(setId) });
   const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useMutation(api.cardAnnotations.setNote);
 
@@ -181,10 +182,10 @@ export default function StudySessionClient({
           ttsRate={effectiveTtsSpeed}
           annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
           onToggleFlag={() => {
-            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets"> });
+            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
           }}
           onSetNote={(note: string) => {
-            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets">, note });
+            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
           }}
         />
 

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { asId } from "@/lib/convexHelpers";
 import { getTtsConfig } from "@/lib/types";
 import TtsButton from "@/components/TtsButton";
 import Link from "next/link";
@@ -84,7 +84,7 @@ export default function FlaggedCardsClient() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => void toggleFlag({ cardId: card.cardId as Id<"flashcards">, setId: card.setId as Id<"flashcardSets"> })}
+                    onClick={() => void toggleFlag({ cardId: asId<"flashcards">(card.cardId), setId: asId<"flashcardSets">(card.setId) })}
                     className="text-amber-500 hover:text-amber-600 transition-colors text-sm shrink-0"
                     aria-label="Unflag card"
                   >

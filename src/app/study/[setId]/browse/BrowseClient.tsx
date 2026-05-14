@@ -4,8 +4,9 @@ import { useState, useMemo } from "react";
 import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import { Id } from "../../../../../convex/_generated/dataModel";
 import Link from "next/link";
+import { Id } from "../../../../../convex/_generated/dataModel";
+import { asId } from "@/lib/convexHelpers";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import SpeakerIcon from "@/components/SpeakerIcon";
@@ -46,7 +47,7 @@ export default function BrowseClient({
   const cards = usePreloadedQuery(preloadedCards);
   const settings = useOfflineQuery(api.userSettings.get);
   const updateSettings = useMutation(api.userSettings.update);
-  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: setId as Id<"flashcardSets"> });
+  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: asId<"flashcardSets">(setId) });
   const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useMutation(api.cardAnnotations.setNote);
 
@@ -207,10 +208,10 @@ export default function BrowseClient({
           ttsRate={effectiveTtsSpeed}
           annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
           onToggleFlag={() => {
-            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets"> });
+            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
           }}
           onSetNote={(note: string) => {
-            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: setId as Id<"flashcardSets">, note });
+            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
           }}
         />
 
