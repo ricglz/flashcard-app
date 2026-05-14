@@ -7,10 +7,10 @@ import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useRouter } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
+import type { Methodology } from "@/lib/types";
 import GenerateConfigForm from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
 
-type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
 type Step = "config" | "loading" | "preview" | "done";
 type GeneratedCard = {
   fields: Record<string, string>;

@@ -142,6 +142,18 @@ export const CARD_RATING_SCORES: Record<CardRating, number> = {
 };
 
 // ---------------------------------------------------------------------------
+// Weak Context Methodology
+// ---------------------------------------------------------------------------
+
+export const METHODOLOGIES = [
+  "balanced",
+  "recent_lapses",
+  "low_ease",
+  "learning_stuck",
+] as const;
+export type Methodology = (typeof METHODOLOGIES)[number];
+
+// ---------------------------------------------------------------------------
 // Session Status
 // ---------------------------------------------------------------------------
 

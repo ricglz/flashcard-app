@@ -7,8 +7,7 @@ import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
-
-type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
+import type { Methodology } from "@/lib/types";
 
 const METHODOLOGY_LABELS: Record<Methodology, string> = {
   balanced: "Balanced",

@@ -1,6 +1,6 @@
 "use client";
 
-type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
+import type { Methodology } from "@/lib/types";
 
 type SrsSet = {
   _id: string;
