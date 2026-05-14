@@ -2,7 +2,7 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation, useQuery, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
@@ -34,6 +34,12 @@ export default function SetDetailClient({
   const [addError, setAddError] = useState<string | null>(null);
   const [isForking, setIsForking] = useState(false);
   const [forkError, setForkError] = useState<string | null>(null);
+
+  const isForked = set.origin?.kind === "forked";
+  const forkSyncStatus = useQuery(
+    api.flashcardSets.getForkSyncStatus,
+    isForked ? { setId: set._id } : "skip"
+  );
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -156,6 +162,18 @@ export default function SetDetailClient({
               original set
             </Link>
           </p>
+        )}
+
+        {forkSyncStatus?.sourceDeleted && (
+          <div className="mb-4 p-3 border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
+            The original set has been deleted.
+          </div>
+        )}
+
+        {forkSyncStatus?.sourceUpdated && !forkSyncStatus.sourceDeleted && (
+          <div className="mb-4 p-3 border border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+            The original set has been updated since you forked it.
+          </div>
         )}
 
         {viewer.role === "visitor" && (

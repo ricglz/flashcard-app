@@ -1,17 +1,80 @@
 "use client";
 
-import { usePaginatedQuery } from "convex/react";
+import { useState, useMemo } from "react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useDebounce } from "@/hooks/useDebounce";
+
+type SortOption = "newest" | "name" | "cards";
+
+function SetCard({ set }: { set: { _id: string; name: string; description?: string; fieldDefinitions: { name: string }[]; cardCount?: number } }) {
+  return (
+    <Link
+      href={`/sets/${set._id}`}
+      className="border border-edge rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col"
+    >
+      <h3 className="font-semibold text-lg mb-1">{set.name}</h3>
+      {set.description && (
+        <p className="text-muted text-sm mb-2 line-clamp-2">
+          {set.description}
+        </p>
+      )}
+      <div className="mt-auto flex items-center gap-3 text-xs text-muted pt-2">
+        <span>
+          {set.fieldDefinitions.length} field
+          {set.fieldDefinitions.length !== 1 ? "s" : ""}
+        </span>
+        <span>
+          {set.cardCount ?? "?"} card
+          {(set.cardCount ?? 0) !== 1 ? "s" : ""}
+        </span>
+      </div>
+    </Link>
+  );
+}
 
 export default function ExploreClient() {
-  const { results, status, loadMore } = usePaginatedQuery(
+  const [searchInput, setSearchInput] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const isSearching = debouncedSearch.length > 0;
+
+  const { results: browseResults, status, loadMore } = usePaginatedQuery(
     api.flashcardSets.listPublic,
-    {},
+    isSearching ? "skip" : {},
     { initialNumItems: 12 }
   );
+
+  const searchResults = useQuery(
+    api.flashcardSets.searchPublic,
+    isSearching ? { searchTerm: debouncedSearch } : "skip"
+  );
+
   const router = useRouter();
+
+  const displayResults = useMemo(() => {
+    if (isSearching) return searchResults ?? [];
+    const sorted = [...browseResults];
+    switch (sortBy) {
+      case "name":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "cards":
+        sorted.sort((a, b) => (b.cardCount ?? 0) - (a.cardCount ?? 0));
+        break;
+    }
+    return sorted;
+  }, [isSearching, searchResults, browseResults, sortBy]);
+
+  const isLoading = isSearching
+    ? searchResults === undefined
+    : status === "LoadingFirstPage";
+
+  const isEmpty = isSearching
+    ? searchResults !== undefined && searchResults.length === 0
+    : browseResults.length === 0 && status === "Exhausted";
 
   return (
     <div className="min-h-screen">
@@ -27,56 +90,60 @@ export default function ExploreClient() {
       </header>
 
       <main className="max-w-5xl mx-auto p-4 sm:p-6">
-        {status === "LoadingFirstPage" && (
+        <div className="flex gap-3 mb-6">
+          <input
+            type="text"
+            placeholder="Search public sets..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+          {!isSearching && (
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+            >
+              <option value="newest">Newest</option>
+              <option value="name">Name A-Z</option>
+              <option value="cards">Most Cards</option>
+            </select>
+          )}
+        </div>
+
+        {isLoading && (
           <div className="flex justify-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
           </div>
         )}
 
-        {results.length === 0 && status === "Exhausted" && (
+        {isEmpty && (
           <div className="text-center py-12">
             <p className="text-muted mb-4">
-              No public sets available yet. Be the first to share one!
+              {isSearching
+                ? "No sets match your search."
+                : "No public sets available yet. Be the first to share one!"}
             </p>
-            <Link
-              href="/sets"
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
-            >
-              Go to My Sets
-            </Link>
+            {!isSearching && (
+              <Link
+                href="/sets"
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
+              >
+                Go to My Sets
+              </Link>
+            )}
           </div>
         )}
 
-        {results.length > 0 && (
+        {displayResults.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((set) => (
-              <Link
-                key={set._id}
-                href={`/sets/${set._id}`}
-                className="border border-edge rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col"
-              >
-                <h3 className="font-semibold text-lg mb-1">{set.name}</h3>
-                {set.description && (
-                  <p className="text-muted text-sm mb-2 line-clamp-2">
-                    {set.description}
-                  </p>
-                )}
-                <div className="mt-auto flex items-center gap-3 text-xs text-muted pt-2">
-                  <span>
-                    {set.fieldDefinitions.length} field
-                    {set.fieldDefinitions.length !== 1 ? "s" : ""}
-                  </span>
-                  <span>
-                    {set.cardCount ?? "?"} card
-                    {(set.cardCount ?? 0) !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              </Link>
+            {displayResults.map((set) => (
+              <SetCard key={set._id} set={set} />
             ))}
           </div>
         )}
 
-        {status === "CanLoadMore" && (
+        {!isSearching && status === "CanLoadMore" && (
           <div className="flex justify-center mt-6">
             <button
               onClick={() => loadMore(12)}
@@ -87,7 +154,7 @@ export default function ExploreClient() {
           </div>
         )}
 
-        {status === "LoadingMore" && (
+        {!isSearching && status === "LoadingMore" && (
           <div className="flex justify-center mt-6">
             <div className="animate-spin h-6 w-6 border-4 border-accent border-t-transparent rounded-full" />
           </div>
