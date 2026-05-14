@@ -12,13 +12,6 @@
 ### TypeScript Strictness
 - [ ] Enable `noUncheckedIndexedAccess` in tsconfig — makes array/record index access return `T | undefined`, catching real bugs at compile time (e.g., out-of-bounds array access). Will surface many new type errors across the codebase.
 
-### Consistency & Deduplication
-- [ ] Extract shared `Methodology` type — defined identically in `GenerateClient.tsx` and `WeakSpotsClient.tsx`
-- [ ] Replace remaining inline `as Id<"flashcardSets">` casts with `asId()` helper for consistency (e.g., `StudySessionClient.tsx`)
-
-### useEffect Audit
-- [ ] Review `useEffect` usages against "prefer event handlers" principle — `AssistantPanel` (scroll), `CliTokenSection` (cleanup), `TtsButton` (lifecycle), `StudyCard` (TTS timeout), `TtsSpeedControl` (click-outside). Some are legitimate (cleanup, external API sync), others may be replaceable.
-
 ### Study Session Setup / Results
 - [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
   - **PARTIAL**: Mutations return DomainResult, but offline replay could be enhanced with more specific result types.

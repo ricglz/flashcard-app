@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import {
   isTtsSupported,
-  preloadTtsVoices,
   speak,
   TtsEvent,
   TtsStatus,
@@ -56,16 +55,7 @@ export default function TtsButton({
 }: Props) {
   const [status, setStatus] = useState<TtsStatus>("idle");
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    preloadTtsVoices();
-  }, []);
-
-  useEffect(() => {
-    if (status !== "ended" && status !== "cancelled") return;
-    const timeout = window.setTimeout(() => setStatus("idle"), 700);
-    return () => window.clearTimeout(timeout);
-  }, [status]);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleClick = async () => {
     if (!isTtsSupported()) {
@@ -89,6 +79,10 @@ export default function TtsButton({
         setStatus(event.status);
         if (event.message) setMessage(event.message);
         onTtsEvent?.(event);
+        if (event.status === "ended" || event.status === "cancelled") {
+          clearTimeout(resetTimeoutRef.current);
+          resetTimeoutRef.current = setTimeout(() => setStatus("idle"), 700);
+        }
       },
     });
 

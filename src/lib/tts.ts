@@ -483,3 +483,5 @@ export async function getAvailableVoices(
     (voice) => voice.lang === lang || voice.lang.startsWith(prefix),
   );
 }
+
+preloadTtsVoices();

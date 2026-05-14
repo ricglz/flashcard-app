@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { speak, TtsEvent, TtsStatus } from "@/lib/tts";
 
 export default function TappableCjkChar({
@@ -15,19 +15,18 @@ export default function TappableCjkChar({
   onTtsEvent?: (event: TtsEvent) => void;
 }) {
   const [status, setStatus] = useState<TtsStatus>("idle");
-
-  useEffect(() => {
-    if (status !== "ended" && status !== "cancelled") return;
-    const timeout = window.setTimeout(() => setStatus("idle"), 300);
-    return () => window.clearTimeout(timeout);
-  }, [status]);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleClick = () => {
+    clearTimeout(resetTimeoutRef.current);
     void speak(char, lang, {
       rate,
       onEvent: (event) => {
         setStatus(event.status);
         onTtsEvent?.(event);
+        if (event.status === "ended" || event.status === "cancelled") {
+          resetTimeoutRef.current = setTimeout(() => setStatus("idle"), 300);
+        }
       },
     });
   };

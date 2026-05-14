@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
-import { speakSequence, TtsEvent, TtsStatus } from "@/lib/tts";
+import { speakSequence, TtsEvent } from "@/lib/tts";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
 
@@ -35,14 +35,11 @@ export default function StudyCard({
   onSetNote,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
-  const [ttsStatus, setTtsStatus] = useState<TtsStatus>("idle");
   const [ttsMessage, setTtsMessage] = useState<string | null>(null);
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
   const updateTtsStatus = (event: TtsEvent) => {
-    setTtsStatus(event.status);
-
     if (
       event.status === "error" ||
       event.status === "timeout" ||
@@ -56,12 +53,6 @@ export default function StudyCard({
 
     setTtsMessage(null);
   };
-
-  useEffect(() => {
-    if (ttsStatus !== "ended" && ttsStatus !== "cancelled") return;
-    const timeout = window.setTimeout(() => setTtsStatus("idle"), 700);
-    return () => window.clearTimeout(timeout);
-  }, [ttsStatus]);
 
   const handleReveal = () => {
     setRevealed(true);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { isFailureResult } from "@/lib/appResult";
 
@@ -18,12 +18,7 @@ export default function CliTokenSection() {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (copyState === "idle") return;
-    const timeout = window.setTimeout(() => setCopyState("idle"), 2000);
-    return () => window.clearTimeout(timeout);
-  }, [copyState]);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   async function handleCreate() {
     setIsBusy(true);
@@ -66,12 +61,14 @@ export default function CliTokenSection() {
 
   async function handleCopyToken() {
     if (!newToken) return;
+    clearTimeout(copyTimeoutRef.current);
     try {
       await navigator.clipboard.writeText(newToken);
       setCopyState("copied");
     } catch {
       setCopyState("error");
     }
+    copyTimeoutRef.current = setTimeout(() => setCopyState("idle"), 2000);
   }
 
   return (
