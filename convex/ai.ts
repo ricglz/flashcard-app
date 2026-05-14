@@ -1,11 +1,13 @@
 "use node";
 
 import { v } from "convex/values";
+import type { FunctionArgs } from "convex/server";
 import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { igniteModel, Message } from "multi-llm-ts";
+import type { CommonFailure } from "./domain/result";
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: "gpt-4o",
@@ -87,7 +89,7 @@ export const generateRemedialCards = action({
 
     const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
       internal.tooling.validateGeneratedSetForTool,
-      { ...(payload as any), userId }
+      { ...payload, userId } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>
     );
 
     return { ok: true, validation, payload };
@@ -124,13 +126,24 @@ export const confirmGeneratedSet = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { ok: false, error: "Please sign in to continue." };
 
-    const result = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
-      ...(args as any),
+    type CreateResult =
+      | { readonly ok: true; readonly value: never }
+      | { readonly ok: false; readonly error: CommonFailure }
+      | { setId: string; cardCount: number; srsEnabled: boolean };
+    const result: CreateResult = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
+      name: args.name,
+      description: args.description,
+      sourceSetIds: args.sourceSetIds,
+      sourceScope: args.sourceScope,
+      weakContextMethodology: args.weakContextMethodology,
+      fieldDefinitions: args.fieldDefinitions,
+      cards: args.cards,
+      addToSrs: args.addToSrs,
       userId: identity.tokenIdentifier,
     });
 
     if ("ok" in result && result.ok === false) {
-      return { ok: false, error: (result as any).error?.message ?? "Failed to create set" };
+      return { ok: false, error: result.error.message ?? "Failed to create set" };
     }
     return result as ConfirmResult;
   },
@@ -167,9 +180,9 @@ export const sendChatMessage = action({
         userId: identity.tokenIdentifier,
         include: { fieldDefinitions: true },
       });
-      const matchedSet = (setList.sets as any[]).find((s: { setId: string }) => s.setId === args.context!.setId);
+      const matchedSet = setList.sets.find((s) => s.setId === args.context!.setId);
       if (matchedSet) {
-        const fieldNames = (matchedSet.fieldDefinitions as Array<{ name: string }> | undefined)?.map((f) => f.name).join(", ");
+        const fieldNames = matchedSet.fieldDefinitions?.map((f) => f.name).join(", ");
         systemPrompt += `\n\nThe user is studying the set "${matchedSet.name}" with fields: ${fieldNames}.`;
       }
     }

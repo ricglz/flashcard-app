@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { asId } from "@/lib/convexHelpers";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -37,7 +38,7 @@ export default function AssistantPanel() {
         message: text,
         history: messages,
         ...(model ? { model } : {}),
-        ...(selectedSetId ? { context: { setId: selectedSetId as any } } : {}),
+        ...(selectedSetId ? { context: { setId: asId<"flashcardSets">(selectedSetId) } } : {}),
       });
       if (result.ok) {
         setMessages((prev) => [...prev, { role: "assistant", content: result.content }]);

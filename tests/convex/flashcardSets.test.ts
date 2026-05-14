@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { validateSetFields } from "../../convex/flashcardSets";
+import { asId } from "../../src/lib/convexHelpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -281,14 +282,14 @@ describe("flashcardSets.fork", () => {
     expect(result).toMatchObject({ ok: true });
     const newSetId = (result as { ok: true; value: string }).value;
 
-    const forkedSet = await other.query(api.flashcardSets.get, { id: newSetId as any });
+    const forkedSet = await other.query(api.flashcardSets.get, { id: asId<"flashcardSets">(newSetId) });
     expect(forkedSet).not.toBeNull();
     expect(forkedSet!.name).toBe("Copy of Original Set");
     expect(forkedSet!.fieldDefinitions).toHaveLength(2);
     expect(forkedSet!.cardCount).toBe(2);
     expect(forkedSet!.origin).toMatchObject({ kind: "forked", sourceSetId });
 
-    const cards = await other.query(api.flashcards.list, { setId: newSetId as any });
+    const cards = await other.query(api.flashcards.list, { setId: asId<"flashcardSets">(newSetId) });
     expect(cards).toHaveLength(2);
   });
 
@@ -366,7 +367,7 @@ describe("flashcardSets.fork", () => {
     const result = await other.mutation(api.flashcardSets.fork, { sourceSetId });
     const newSetId = (result as { ok: true; value: string }).value;
 
-    const userSet = await other.query(api.userSets.get, { setId: newSetId as any });
+    const userSet = await other.query(api.userSets.get, { setId: asId<"flashcardSets">(newSetId) });
     expect(userSet).not.toBeNull();
     expect(userSet!.role).toBe("owner");
 
@@ -374,7 +375,7 @@ describe("flashcardSets.fork", () => {
       return await ctx.db
         .query("srsCards")
         .withIndex("by_userId_and_setId", (q) =>
-          q.eq("userId", OTHER_USER.tokenIdentifier).eq("setId", newSetId as any)
+          q.eq("userId", OTHER_USER.tokenIdentifier).eq("setId", asId<"flashcardSets">(newSetId))
         )
         .take(100);
     });

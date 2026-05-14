@@ -6,6 +6,7 @@ import { api } from "../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { asId } from "@/lib/convexHelpers";
 
 type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
 
@@ -38,7 +39,7 @@ export default function WeakSpotsClient() {
 
   const weakCards = useQuery(
     api.weakAnalysis.getMyWeakCards,
-    { methodology, ...(selectedSetId ? { setId: selectedSetId as any } : {}) }
+    { methodology, ...(selectedSetId ? { setId: asId<"flashcardSets">(selectedSetId) } : {}) }
   );
 
   const totalWeakCards = useMemo(
