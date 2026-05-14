@@ -13,3 +13,15 @@ export const backfillCardCount = internalMutation({
     }
   },
 });
+
+export const backfillUpdatedAt = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const sets = await ctx.db.query("flashcardSets").take(500);
+    for (const set of sets) {
+      if (set.updatedAt === undefined) {
+        await ctx.db.patch(set._id, { updatedAt: set._creationTime });
+      }
+    }
+  },
+});

@@ -54,34 +54,29 @@
 ### Marketplace / Browse
 - [ ] Search and filter (by name, language/field metadata, card count, popularity)
 - [ ] Sort options (newest, most forked, most users)
-- [ ] User public profile page — list of their public sets
+- [ ] User public profile page — deferred until proper username management exists (no PII in DB)
 
 ## AI Capabilities
 
 ### BYOK Key Management
-- [ ] User settings page for API key storage (OpenAI, Anthropic, etc.)
+- [ ] User settings page for API key storage (provider-agnostic via multi-llm-ts)
 - [ ] Secure key storage in Convex (encrypted at rest, never sent to client)
-- [ ] Key validation on save (test call to verify the key works)
-- [ ] Support multiple providers (OpenAI, Anthropic, Google) with a provider selector
+- [ ] Support any provider via multi-llm-ts (OpenAI, Anthropic, Google, Ollama, etc.)
 
 ### AI Card Generation
-- [ ] Prompt-based card generation UI — text input describing what to learn
-- [ ] LLM generates cards matching the set's field definitions
+- [ ] Remedial card generation from weak SRS context — reuses existing tooling.ts infrastructure
 - [ ] Review/edit screen before saving generated cards (preview, edit, remove individual cards)
 - [ ] Template prompts for common use cases (e.g., "HSK level N vocab", "top N food words")
 - [ ] Generate into existing set (append) or create new set from prompt
-- [ ] Generation history — see past prompts and re-generate with tweaks
 
 ### AI Weak Spot Analysis
-- [ ] Add assistant prompt/eval examples for producing high-quality remedial sets from exported weak context.
+- [ ] In-app weak spot analysis UI — visualize getWeakCardsForTool data (backend already built)
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
-- [ ] Future in-app LLM flow: LLM summarizes weak areas and suggests/generated targeted card sets without external assistant dependency.
 
 ### In-App LLM Assistant
-- [ ] Chat-style interface for asking questions about study content
+- [ ] Collapsible side panel for asking questions about study content
 - [ ] Context-aware — knows which set/card the user is looking at
-- [ ] Example uses: "Explain the tone rules for this word", "Give me a mnemonic for 你好"
-- [ ] Feature suggestions — "What should I study next?" based on progress data
+- [ ] Client-side conversation history (no DB storage — data minimization)
 
 ## E2E Testing
 

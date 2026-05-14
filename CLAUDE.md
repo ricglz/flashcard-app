@@ -20,4 +20,7 @@ Chinese-first flashcard PWA with generic field-based data model.
 ## Code Style
 - Prefer event handlers or server-side logic over `useEffect` — follow React's "you might not need an effect"
 
+## Data Privacy
+- Minimize user-sensitive data in the database. No PII storage (names, emails, avatars). User identity stays in Clerk; the DB stores only `tokenIdentifier` as an opaque reference.
+
 @AGENTS.md

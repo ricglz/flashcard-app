@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { fieldDefinitionValidator } from "./schema";
 import { assertOwner, enrollCardsForSetHelper } from "./userSets";
@@ -135,7 +136,7 @@ export const update = mutation({
     if (validation.value.fieldDefinitions !== undefined) {
       patch.fieldDefinitions = validation.value.fieldDefinitions;
     }
-    await ctx.db.patch(args.id, patch);
+    await ctx.db.patch(args.id, { ...patch, updatedAt: Date.now() });
     return ok(null);
   },
 });
@@ -225,6 +226,27 @@ export const remove = mutation({
 
 export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;
 
+export const getForkSyncStatus = query({
+  args: { setId: v.id("flashcardSets") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const set = await ctx.db.get(args.setId);
+    if (!set || set.origin?.kind !== "forked") return null;
+    const sourceSetId = (set.origin as { sourceSetId: Id<"flashcardSets">; forkedAt: number }).sourceSetId;
+    const forkedAt = (set.origin as { forkedAt: number }).forkedAt;
+    const source = await ctx.db.get(sourceSetId);
+    if (!source) return { sourceDeleted: true, sourceUpdated: false };
+    const sourceUpdatedAt = source.updatedAt ?? source._creationTime;
+    return {
+      sourceDeleted: false,
+      sourceUpdated: sourceUpdatedAt > forkedAt,
+      sourceCardCount: source.cardCount ?? 0,
+      forkedAt,
+    };
+  },
+});
+
 export const listPublic = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
@@ -237,6 +259,24 @@ export const listPublic = query({
       )
       .order("desc")
       .paginate(args.paginationOpts);
+  },
+});
+
+export const searchPublic = query({
+  args: {
+    searchTerm: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
+    return await ctx.db
+      .query("flashcardSets")
+      .withSearchIndex("search_name", (q) =>
+        q.search("name", args.searchTerm).eq("visibility", "public")
+      )
+      .take(limit);
   },
 });
 

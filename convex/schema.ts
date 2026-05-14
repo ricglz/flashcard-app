@@ -81,6 +81,7 @@ export default defineSchema({
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
     cardCount: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
     origin: v.optional(setOriginValidator),
     visibility: v.optional(v.union(
       v.literal("private"),
@@ -90,7 +91,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_ownerId", ["ownerId"])
-    .index("by_visibility_and_createdAt", ["visibility", "createdAt"]),
+    .index("by_visibility_and_createdAt", ["visibility", "createdAt"])
+    .searchIndex("search_name", { searchField: "name", filterFields: ["visibility"] }),
 
   flashcards: defineTable({
     setId: v.id("flashcardSets"),
