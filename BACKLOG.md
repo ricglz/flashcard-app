@@ -9,6 +9,16 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
+### TypeScript Strictness
+- [ ] Enable `noUncheckedIndexedAccess` in tsconfig — makes array/record index access return `T | undefined`, catching real bugs at compile time (e.g., out-of-bounds array access). Will surface many new type errors across the codebase.
+
+### Consistency & Deduplication
+- [ ] Extract shared `Methodology` type — defined identically in `GenerateClient.tsx` and `WeakSpotsClient.tsx`
+- [ ] Replace remaining inline `as Id<"flashcardSets">` casts with `asId()` helper for consistency (e.g., `StudySessionClient.tsx`)
+
+### useEffect Audit
+- [ ] Review `useEffect` usages against "prefer event handlers" principle — `AssistantPanel` (scroll), `CliTokenSection` (cleanup), `TtsButton` (lifecycle), `StudyCard` (TTS timeout), `TtsSpeedControl` (click-outside). Some are legitimate (cleanup, external API sync), others may be replaceable.
+
 ### Study Session Setup / Results
 - [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
   - **PARTIAL**: Mutations return DomainResult, but offline replay could be enhanced with more specific result types.
@@ -48,35 +58,19 @@
 
 ## Marketplace & Multi-User
 
-### Forking
-- [ ] Sync indicator — show if the original set has changed since fork (no auto-merge, just awareness)
-
 ### Marketplace / Browse
-- [ ] Search and filter (by name, language/field metadata, card count, popularity)
-- [ ] Sort options (newest, most forked, most users)
+- [ ] Search and filter (by language/field metadata, card count, popularity)
+- [ ] Sort options (most forked, most users)
 - [ ] User public profile page — deferred until proper username management exists (no PII in DB)
 
 ## AI Capabilities
 
-### BYOK Key Management
-- [ ] User settings page for API key storage (provider-agnostic via multi-llm-ts)
-- [ ] Secure key storage in Convex (encrypted at rest, never sent to client)
-- [ ] Support any provider via multi-llm-ts (OpenAI, Anthropic, Google, Ollama, etc.)
-
 ### AI Card Generation
-- [ ] Remedial card generation from weak SRS context — reuses existing tooling.ts infrastructure
-- [ ] Review/edit screen before saving generated cards (preview, edit, remove individual cards)
 - [ ] Template prompts for common use cases (e.g., "HSK level N vocab", "top N food words")
 - [ ] Generate into existing set (append) or create new set from prompt
 
 ### AI Weak Spot Analysis
-- [ ] In-app weak spot analysis UI — visualize getWeakCardsForTool data (backend already built)
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
-
-### In-App LLM Assistant
-- [ ] Collapsible side panel for asking questions about study content
-- [ ] Context-aware — knows which set/card the user is looking at
-- [ ] Client-side conversation history (no DB storage — data minimization)
 
 ## E2E Testing
 
