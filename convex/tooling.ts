@@ -217,6 +217,28 @@ export const getWeakCardsForTool = internalQuery({
     })),
   },
   handler: async (ctx, args): Promise<WeakCardsResponse> => {
+    return getWeakCardsHelper(ctx, args);
+  },
+});
+
+export async function getWeakCardsHelper(
+  ctx: QueryCtx,
+  args: {
+    userId: string;
+    scope?: { kind: "srs_enabled_sets" } | { kind: "set"; setId: Id<"flashcardSets"> } | { kind: "sets"; setIds: Id<"flashcardSets">[] };
+    methodology?: Methodology;
+    filters?: {
+      days?: number;
+      minReviews?: number;
+      ratings?: CardRating[];
+      statuses?: Array<"new" | "learning" | "review">;
+      maxEaseFactor?: number;
+      excludeAiGeneratedSets?: boolean;
+    };
+    limits?: { limitPerSet?: number; totalLimit?: number };
+    include?: { recentRatings?: boolean; siblingContext?: boolean; strongCardSamples?: boolean };
+  }
+): Promise<WeakCardsResponse> {
     const now = Date.now();
     const methodology = args.methodology ?? "balanced";
     const scope = args.scope ?? { kind: "srs_enabled_sets" as const };
@@ -325,8 +347,7 @@ export const getWeakCardsForTool = internalQuery({
     }
 
     return { scope, methodology, generatedAt: now, schemaGroups: [...groups.values()] };
-  },
-});
+}
 
 function normalizeGeneratedPayload(args: GeneratedSetPayload): GeneratedSetPayload {
   return {
