@@ -204,6 +204,8 @@ export default defineSchema({
     dayResetUtcHour: v.optional(v.number()),
     ttsPlaybackSpeed: v.optional(v.number()),
     dailyGoal: v.optional(v.number()),
+    llmProvider: v.optional(v.string()),
+    llmApiKey: v.optional(v.string()),
   }).index("by_userId", ["userId"]),
 
   cliAccessTokens: defineTable({

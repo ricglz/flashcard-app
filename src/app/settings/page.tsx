@@ -14,12 +14,20 @@ function formatDate(ms: number | undefined) {
 
 export default function SettingsPage() {
   const status = useQuery(api.cliTokens.getStatus);
+  const settings = useQuery(api.userSettings.get);
   const createToken = useMutation(api.cliTokens.create);
   const revokeToken = useMutation(api.cliTokens.revoke);
+  const updateSettings = useMutation(api.userSettings.update);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [llmProvider, setLlmProvider] = useState("");
+  const [llmApiKey, setLlmApiKey] = useState("");
+  const [llmSaving, setLlmSaving] = useState(false);
+  const [llmSaved, setLlmSaved] = useState(false);
+  const [llmError, setLlmError] = useState<string | null>(null);
 
   useEffect(() => {
     if (copyState === "idle") return;
@@ -191,6 +199,90 @@ export default function SettingsPage() {
             )}
 
             {error && <p className="text-sm text-danger">{error}</p>}
+          </section>
+
+          <section className="border border-edge rounded-xl p-5 space-y-4 mt-6">
+            <div>
+              <h2 className="text-lg font-semibold">AI Settings</h2>
+              <p className="text-sm text-muted mt-1">
+                Configure your LLM provider for AI card generation and the study assistant.
+                Your API key is stored securely and never sent to the browser.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label htmlFor="llm-provider" className="block text-sm font-medium mb-1">Provider</label>
+                <select
+                  id="llm-provider"
+                  value={llmProvider || settings?.llmProvider || ""}
+                  onChange={(e) => { setLlmProvider(e.target.value); setLlmSaved(false); }}
+                  className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+                >
+                  <option value="">Select a provider...</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="google">Google</option>
+                  <option value="mistral">Mistral AI</option>
+                  <option value="ollama">Ollama (local)</option>
+                  <option value="groq">Groq</option>
+                  <option value="xai">xAI</option>
+                  <option value="deepseek">DeepSeek</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="llm-key" className="block text-sm font-medium mb-1">API Key</label>
+                <input
+                  id="llm-key"
+                  type="password"
+                  placeholder={settings?.hasLlmKey ? "Key saved (enter new key to replace)" : "Enter your API key"}
+                  value={llmApiKey}
+                  onChange={(e) => { setLlmApiKey(e.target.value); setLlmSaved(false); }}
+                  className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    setLlmSaving(true);
+                    setLlmError(null);
+                    setLlmSaved(false);
+                    try {
+                      const provider = llmProvider || settings?.llmProvider;
+                      const patch: { llmProvider?: string; llmApiKey?: string } = {};
+                      if (llmProvider) patch.llmProvider = llmProvider;
+                      if (llmApiKey) patch.llmApiKey = llmApiKey;
+                      if (!provider && !patch.llmProvider) {
+                        setLlmError("Please select a provider.");
+                        return;
+                      }
+                      const result = await updateSettings(patch);
+                      if (isFailureResult(result)) {
+                        setLlmError(result.error.message);
+                        return;
+                      }
+                      setLlmApiKey("");
+                      setLlmSaved(true);
+                    } catch (err) {
+                      setLlmError(err instanceof Error ? err.message : "Failed to save");
+                    } finally {
+                      setLlmSaving(false);
+                    }
+                  }}
+                  disabled={llmSaving || (!llmProvider && !llmApiKey)}
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm disabled:opacity-50"
+                >
+                  {llmSaving ? "Saving..." : "Save"}
+                </button>
+                {llmSaved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
+                {settings?.hasLlmKey && (
+                  <span className="text-xs text-muted">
+                    Provider: {settings.llmProvider ?? "not set"}
+                  </span>
+                )}
+              </div>
+              {llmError && <p className="text-sm text-danger">{llmError}</p>}
+            </div>
           </section>
         </Show>
       </main>

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, type CommonFailure } from "./domain/result";
 import { validateUserSettingsPatch, type SrsSettingsFailure } from "./domain/srsSettings";
@@ -19,9 +19,11 @@ export const get = query({
       .query("userSettings")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .first();
+    const { llmApiKey: _stripped, ...safe } = settings ?? {};
     return {
       ...DEFAULTS,
-      ...settings,
+      ...safe,
+      hasLlmKey: !!settings?.llmApiKey,
     };
   },
 });
@@ -32,15 +34,22 @@ export const update = mutation({
     dayResetUtcHour: v.optional(v.number()),
     ttsPlaybackSpeed: v.optional(v.number()),
     dailyGoal: v.optional(v.number()),
+    llmProvider: v.optional(v.string()),
+    llmApiKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return fail(unauthenticated());
     const userId = identity.tokenIdentifier;
 
-    const patchResult = validateUserSettingsPatch(args);
+    const { llmProvider, llmApiKey, ...srsArgs } = args;
+
+    const patchResult = validateUserSettingsPatch(srsArgs);
     if (!patchResult.ok) return patchResult;
-    const patch = patchResult.value;
+    const patch: Record<string, unknown> = { ...patchResult.value };
+
+    if (llmProvider !== undefined) patch.llmProvider = llmProvider;
+    if (llmApiKey !== undefined) patch.llmApiKey = llmApiKey;
 
     const existing = await ctx.db
       .query("userSettings")
@@ -51,13 +60,27 @@ export const update = mutation({
     } else {
       await ctx.db.insert("userSettings", {
         userId,
-        maxNewCardsPerDay: patch.maxNewCardsPerDay ?? DEFAULTS.maxNewCardsPerDay,
-        dayResetUtcHour: patch.dayResetUtcHour ?? DEFAULTS.dayResetUtcHour,
-        ttsPlaybackSpeed: patch.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed,
-        ...(patch.dailyGoal !== undefined && { dailyGoal: patch.dailyGoal }),
+        maxNewCardsPerDay: (patch.maxNewCardsPerDay as number) ?? DEFAULTS.maxNewCardsPerDay,
+        dayResetUtcHour: (patch.dayResetUtcHour as number) ?? DEFAULTS.dayResetUtcHour,
+        ttsPlaybackSpeed: (patch.ttsPlaybackSpeed as number) ?? DEFAULTS.ttsPlaybackSpeed,
+        ...(patch.dailyGoal !== undefined && { dailyGoal: patch.dailyGoal as number }),
+        ...(llmProvider !== undefined && { llmProvider }),
+        ...(llmApiKey !== undefined && { llmApiKey }),
       });
     }
     return ok(null);
+  },
+});
+
+export const getApiKey = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    if (!settings?.llmApiKey || !settings?.llmProvider) return null;
+    return { provider: settings.llmProvider, apiKey: settings.llmApiKey };
   },
 });
 
