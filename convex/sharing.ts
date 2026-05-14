@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { enrollCardsForSetHelper } from "./userSets";
-import { fail, unauthenticated, notFound, conflict } from "./domain/result";
+import { fail, unauthenticated, notFound, conflict, forbidden } from "./domain/result";
 import { getFieldDefinitions } from "./lib/typed";
 
 export const addToLibrary = mutation({
@@ -12,6 +12,9 @@ export const addToLibrary = mutation({
 
     const set = await ctx.db.get(args.setId);
     if (!set) return fail(notFound("Set not found"));
+
+    const visibility = set.visibility ?? "private";
+    if (visibility === "private") return fail(forbidden("Cannot add a private set to your library."));
 
     const existing = await ctx.db
       .query("userSets")

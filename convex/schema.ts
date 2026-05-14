@@ -58,6 +58,11 @@ export const setOriginValidator = v.union(
     sourceSetIds: v.array(v.id("flashcardSets")),
     sourceScope: sourceScopeValidator,
     weakContextMethodology: v.optional(weakContextMethodologyValidator),
+  }),
+  v.object({
+    kind: v.literal("forked"),
+    sourceSetId: v.id("flashcardSets"),
+    forkedAt: v.number(),
   })
 );
 
@@ -75,6 +80,7 @@ export default defineSchema({
     ownerId: v.string(),
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
+    cardCount: v.optional(v.number()),
     origin: v.optional(setOriginValidator),
     visibility: v.optional(v.union(
       v.literal("private"),
@@ -82,7 +88,9 @@ export default defineSchema({
       v.literal("public")
     )),
     createdAt: v.number(),
-  }).index("by_ownerId", ["ownerId"]),
+  })
+    .index("by_ownerId", ["ownerId"])
+    .index("by_visibility_and_createdAt", ["visibility", "createdAt"]),
 
   flashcards: defineTable({
     setId: v.id("flashcardSets"),

@@ -46,6 +46,7 @@ export const create = mutation({
       fields: fields.value,
       order: args.order,
     });
+    await ctx.db.patch(args.setId, { cardCount: (set.cardCount ?? 0) + 1 });
     return id;
   },
 });
@@ -83,6 +84,9 @@ export const batchCreate = mutation({
       });
       ids.push(id);
     }
+    await ctx.db.patch(args.setId, {
+      cardCount: (set.cardCount ?? 0) + normalizedCards.length,
+    });
     return ids;
   },
 });
@@ -124,7 +128,13 @@ export const remove = mutation({
     if (!card) return fail(notFound("Card not found"));
     const owner = await assertOwner(ctx, identity.tokenIdentifier, card.setId);
     if (!owner.ok) return owner;
+    const set = await ctx.db.get(card.setId);
     await ctx.db.delete(args.id);
+    if (set) {
+      await ctx.db.patch(set._id, {
+        cardCount: Math.max(0, (set.cardCount ?? 1) - 1),
+      });
+    }
     return ok(null);
   },
 });

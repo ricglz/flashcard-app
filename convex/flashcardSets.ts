@@ -1,13 +1,15 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { fieldDefinitionValidator } from "./schema";
-import { assertOwner } from "./userSets";
-import { fail, ok, unauthenticated, notFound, type CommonFailure } from "./domain/result";
+import { assertOwner, enrollCardsForSetHelper } from "./userSets";
+import { fail, ok, unauthenticated, notFound, forbidden, conflict, type CommonFailure } from "./domain/result";
 import {
   validateSetFields as validateSetFieldsResult,
   type SetFieldsValidationFailure,
 } from "./domain/fieldDefinitions";
 import type { FieldDefinition } from "../src/lib/types";
+import { getFieldDefinitions } from "./lib/typed";
 
 export function validateSetFields(
   name: string | undefined,
@@ -53,6 +55,8 @@ export const get = query({
     if (link) {
       return { ...set, viewer: { role: link.role, userSet: link } };
     }
+    const visibility = set.visibility ?? "private";
+    if (visibility === "private") return null;
     return { ...set, viewer: { role: "visitor" as const, userSet: null } };
   },
 });
@@ -80,6 +84,7 @@ export const create = mutation({
       fieldDefinitions,
       ownerId: identity.tokenIdentifier,
       origin: { kind: "manual" as const },
+      cardCount: 0,
       createdAt: Date.now(),
     });
 
@@ -220,6 +225,21 @@ export const remove = mutation({
 
 export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;
 
+export const listPublic = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { page: [], isDone: true, continueCursor: "" };
+    return await ctx.db
+      .query("flashcardSets")
+      .withIndex("by_visibility_and_createdAt", (q) =>
+        q.eq("visibility", "public")
+      )
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
 export const updateVisibility = mutation({
   args: {
     id: v.id("flashcardSets"),
@@ -237,5 +257,76 @@ export const updateVisibility = mutation({
 
     await ctx.db.patch(args.id, { visibility: args.visibility });
     return ok(null);
+  },
+});
+
+export const fork = mutation({
+  args: { sourceSetId: v.id("flashcardSets") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return fail(unauthenticated());
+
+    const sourceSet = await ctx.db.get(args.sourceSetId);
+    if (!sourceSet) return fail(notFound("Source set not found."));
+
+    if (sourceSet.ownerId === identity.tokenIdentifier) {
+      return fail(conflict("You cannot fork your own set."));
+    }
+
+    const link = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId_and_setId", (q) =>
+        q.eq("userId", identity.tokenIdentifier).eq("setId", args.sourceSetId)
+      )
+      .first();
+    const visibility = sourceSet.visibility ?? "private";
+    if (!link && visibility === "private") {
+      return fail(forbidden("Cannot fork a private set."));
+    }
+
+    const now = Date.now();
+    const sourceCards = await ctx.db
+      .query("flashcards")
+      .withIndex("by_setId", (q) => q.eq("setId", args.sourceSetId))
+      .take(1000);
+
+    const newSetId = await ctx.db.insert("flashcardSets", {
+      name: `Copy of ${sourceSet.name}`,
+      description: sourceSet.description,
+      ownerId: identity.tokenIdentifier,
+      fieldDefinitions: sourceSet.fieldDefinitions,
+      origin: {
+        kind: "forked" as const,
+        sourceSetId: args.sourceSetId,
+        forkedAt: now,
+      },
+      visibility: "private",
+      cardCount: sourceCards.length,
+      createdAt: now,
+    });
+
+    for (const card of sourceCards) {
+      await ctx.db.insert("flashcards", {
+        setId: newSetId,
+        fields: card.fields,
+        order: card.order,
+      });
+    }
+
+    const fieldDefs = getFieldDefinitions(sourceSet);
+    const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
+    await ctx.db.insert("userSets", {
+      userId: identity.tokenIdentifier,
+      setId: newSetId,
+      role: "owner",
+      srsEnabled: true,
+      defaultFrontFields: sorted.length > 0 ? [sorted[0].name] : [],
+      defaultBackFields: sorted.slice(1).map((fd) => fd.name),
+      createdAt: now,
+    });
+
+    await enrollCardsForSetHelper(ctx, identity.tokenIdentifier, newSetId);
+
+    return ok(newSetId);
   },
 });

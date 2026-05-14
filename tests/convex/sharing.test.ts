@@ -37,6 +37,10 @@ async function createSetWithCards(t: ReturnType<typeof convexTest>) {
     name: "Shared Set",
     fieldDefinitions: validFieldDefs,
   }));
+  await unwrap(await as.mutation(api.flashcardSets.updateVisibility, {
+    id: setId,
+    visibility: "public",
+  }));
   await unwrap(await as.mutation(api.flashcards.batchCreate, {
     setId,
     cards: [
