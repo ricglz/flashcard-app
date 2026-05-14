@@ -48,20 +48,12 @@
 
 ## Marketplace & Multi-User
 
-### Sharing
-- [ ] Visibility settings on sets (private / unlisted-link-only / public)
-
 ### Forking
-- [ ] Fork/clone a shared set into own library (deep copy — independent cards the user can edit)
-- [ ] "Forked from" attribution link on cloned sets
 - [ ] Sync indicator — show if the original set has changed since fork (no auto-merge, just awareness)
 
 ### Marketplace / Browse
-- [ ] Public sets listing page (`/explore` or `/marketplace`) — browse all public sets
 - [ ] Search and filter (by name, language/field metadata, card count, popularity)
 - [ ] Sort options (newest, most forked, most users)
-- [ ] Set preview cards (name, description, card count, field definitions, sample cards)
-- [ ] Pagination / infinite scroll for large catalogs
 - [ ] User public profile page — list of their public sets
 
 ## AI Capabilities
@@ -129,10 +121,6 @@
 - [ ] See `docs/testing-strategy.md` for current offline testing gaps
 
 ## Polish & Remaining Features
-
-### Study Experience
-- [ ] Card flags & annotations (flag as difficult, personal notes/mnemonics)
-- [ ] Flagged cards cross-set view (`/flagged` page, layered data sources)
 
 ### Content Enhancements
 - [ ] Multi-modal cards (images, audio clips as field values via Convex file storage)

@@ -29,8 +29,11 @@ export default function SetDetailClient({
   const settings = useOfflineQuery(api.userSettings.get);
   const addToLibrary = useMutation(api.sharing.addToLibrary);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
+  const forkSet = useMutation(api.flashcardSets.fork);
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [isForking, setIsForking] = useState(false);
+  const [forkError, setForkError] = useState<string | null>(null);
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -55,6 +58,25 @@ export default function SetDetailClient({
       );
     } finally {
       setIsAdding(false);
+    }
+  };
+
+  const handleFork = async () => {
+    setIsForking(true);
+    setForkError(null);
+    try {
+      const result = await forkSet({ sourceSetId: set._id });
+      if (isFailureResult(result)) {
+        setForkError(result.error.message);
+        return;
+      }
+      router.push(`/sets/${result.value}`);
+    } catch (err) {
+      setForkError(
+        err instanceof Error ? err.message : "Failed to fork set"
+      );
+    } finally {
+      setIsForking(false);
     }
   };
 
@@ -124,20 +146,44 @@ export default function SetDetailClient({
           )}
         </div>
 
+        {set.origin?.kind === "forked" && (
+          <p className="text-sm text-muted mb-4">
+            Forked from{" "}
+            <Link
+              href={`/sets/${(set.origin as { sourceSetId: string }).sourceSetId}`}
+              className="text-accent hover:underline"
+            >
+              original set
+            </Link>
+          </p>
+        )}
+
         {viewer.role === "visitor" && (
           <div className="mb-6 p-4 border border-edge rounded-lg">
             <p className="text-sm text-muted mb-3">
               This set is not in your library yet.
             </p>
-            <button
-              onClick={handleAddToLibrary}
-              disabled={isAdding}
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors disabled:opacity-50"
-            >
-              {isAdding ? "Adding..." : "Add to My Library"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddToLibrary}
+                disabled={isAdding}
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors disabled:opacity-50"
+              >
+                {isAdding ? "Adding..." : "Add to My Library"}
+              </button>
+              <button
+                onClick={handleFork}
+                disabled={isForking}
+                className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors disabled:opacity-50"
+              >
+                {isForking ? "Forking..." : "Fork (Copy to My Sets)"}
+              </button>
+            </div>
             {addError && (
               <p className="text-sm text-danger mt-2">{addError}</p>
+            )}
+            {forkError && (
+              <p className="text-sm text-danger mt-2">{forkError}</p>
             )}
           </div>
         )}
@@ -152,6 +198,21 @@ export default function SetDetailClient({
               defaultTtsOnlyFields={viewer.userSet.defaultTtsOnlyFields ?? []}
               fieldDefinitions={set.fieldDefinitions}
             />
+          </div>
+        )}
+
+        {viewer.role === "member" && (
+          <div className="mb-6">
+            <button
+              onClick={handleFork}
+              disabled={isForking}
+              className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors disabled:opacity-50"
+            >
+              {isForking ? "Forking..." : "Fork (Copy to My Sets)"}
+            </button>
+            {forkError && (
+              <p className="text-sm text-danger mt-2">{forkError}</p>
+            )}
           </div>
         )}
 

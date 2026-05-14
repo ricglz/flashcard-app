@@ -50,6 +50,11 @@ export default function FlashcardSetList() {
                       AI generated
                     </span>
                   )}
+                  {set.origin?.kind === "forked" && (
+                    <span className="px-1.5 py-0.5 bg-info-surface border border-info-edge rounded text-xs text-muted">
+                      Forked
+                    </span>
+                  )}
                 </div>
                 {set.description && (
                   <p className="text-muted text-sm mb-2">
