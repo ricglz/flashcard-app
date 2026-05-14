@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as ai from "../ai.js";
 import type * as cardAnnotations from "../cardAnnotations.js";
 import type * as cliTokens from "../cliTokens.js";
 import type * as crons from "../crons.js";
@@ -19,7 +20,9 @@ import type * as domain_studySessionSetup from "../domain/studySessionSetup.js";
 import type * as flashcardSets from "../flashcardSets.js";
 import type * as flashcards from "../flashcards.js";
 import type * as http from "../http.js";
+import type * as lib_remedialPrompt from "../lib/remedialPrompt.js";
 import type * as lib_typed from "../lib/typed.js";
+import type * as migrations from "../migrations.js";
 import type * as progress from "../progress.js";
 import type * as sharing from "../sharing.js";
 import type * as srs from "../srs.js";
@@ -29,6 +32,7 @@ import type * as studySessions from "../studySessions.js";
 import type * as tooling from "../tooling.js";
 import type * as userSets from "../userSets.js";
 import type * as userSettings from "../userSettings.js";
+import type * as weakAnalysis from "../weakAnalysis.js";
 
 import type {
   ApiFromModules,
@@ -37,6 +41,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  ai: typeof ai;
   cardAnnotations: typeof cardAnnotations;
   cliTokens: typeof cliTokens;
   crons: typeof crons;
@@ -48,7 +53,9 @@ declare const fullApi: ApiFromModules<{
   flashcardSets: typeof flashcardSets;
   flashcards: typeof flashcards;
   http: typeof http;
+  "lib/remedialPrompt": typeof lib_remedialPrompt;
   "lib/typed": typeof lib_typed;
+  migrations: typeof migrations;
   progress: typeof progress;
   sharing: typeof sharing;
   srs: typeof srs;
@@ -58,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   tooling: typeof tooling;
   userSets: typeof userSets;
   userSettings: typeof userSettings;
+  weakAnalysis: typeof weakAnalysis;
 }>;
 
 /**
