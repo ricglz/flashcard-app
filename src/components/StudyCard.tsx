@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
-import { hasCjkChars } from "@/lib/cjk";
 import { speakSequence, TtsEvent, TtsStatus } from "@/lib/tts";
-import TtsButton from "./TtsButton";
-import TappableCjkText from "./TappableCjkText";
+import AnnotationControls from "./AnnotationControls";
+import FieldContent from "./FieldContent";
 
 type Props = {
   card: { fields: Record<string, string> };
@@ -38,8 +37,6 @@ export default function StudyCard({
   const [revealed, setRevealed] = useState(false);
   const [ttsStatus, setTtsStatus] = useState<TtsStatus>("idle");
   const [ttsMessage, setTtsMessage] = useState<string | null>(null);
-  const [showNoteInput, setShowNoteInput] = useState(false);
-  const [noteText, setNoteText] = useState(annotation?.note ?? "");
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
@@ -52,7 +49,7 @@ export default function StudyCard({
       event.status === "unsupported"
     ) {
       setTtsMessage(
-        event.message ?? "Couldn’t play audio. Check volume or tap again.",
+        event.message ?? "Couldn't play audio. Check volume or tap again.",
       );
       return;
     }
@@ -93,107 +90,29 @@ export default function StudyCard({
     <div className="w-full max-w-lg mx-auto">
       {/* Front */}
       <div className="bg-card-bg border-2 border-card-border rounded-xl p-4 sm:p-8 shadow-sm">
-        <div className="space-y-4">
-          {frontFields.map((fieldName) => {
-            const fd = fieldDefsMap.get(fieldName);
-            const value = card.fields[fieldName] ?? "";
-            const ttsConfig = fd ? getTtsConfig(fd) : null;
-
-            return (
-              <div key={fieldName} className="text-center">
-                <p className="text-xs text-muted uppercase tracking-wider mb-1">
-                  {fieldName}
-                </p>
-                <div className="flex items-center justify-center gap-2">
-                  {ttsConfig && hasCjkChars(value) ? (
-                    <TappableCjkText
-                      text={value}
-                      lang={ttsConfig.lang}
-                      rate={ttsRate}
-                      className={
-                        fd?.role === "primary"
-                          ? "text-2xl sm:text-4xl font-bold"
-                          : "text-xl sm:text-2xl"
-                      }
-                      onTtsEvent={updateTtsStatus}
-                    />
-                  ) : (
-                    <p
-                      className={
-                        fd?.role === "primary"
-                          ? "text-2xl sm:text-4xl font-bold"
-                          : "text-xl sm:text-2xl"
-                      }
-                    >
-                      {value}
-                    </p>
-                  )}
-                  {ttsConfig && (
-                    <TtsButton
-                      text={value}
-                      lang={ttsConfig.lang}
-                      rate={ttsRate}
-                      onTtsEvent={updateTtsStatus}
-                    />
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <FieldContent
+          fieldNames={frontFields}
+          fields={card.fields}
+          fieldDefsMap={fieldDefsMap}
+          primaryClassName="text-2xl sm:text-4xl font-bold"
+          secondaryClassName="text-xl sm:text-2xl"
+          ttsRate={ttsRate}
+          onTtsEvent={updateTtsStatus}
+        />
 
         {/* Divider + Back */}
         {revealed ? (
           <>
             <hr className="my-6 border-dashed" />
-            <div className="space-y-4">
-              {backFields.map((fieldName) => {
-                const fd = fieldDefsMap.get(fieldName);
-                const value = card.fields[fieldName] ?? "";
-                const ttsConfig = fd ? getTtsConfig(fd) : null;
-
-                return (
-                  <div key={fieldName} className="text-center">
-                    <p className="text-xs text-muted uppercase tracking-wider mb-1">
-                      {fieldName}
-                    </p>
-                    <div className="flex items-center justify-center gap-2">
-                      {ttsConfig && hasCjkChars(value) ? (
-                        <TappableCjkText
-                          text={value}
-                          lang={ttsConfig.lang}
-                          rate={ttsRate}
-                          className={
-                            fd?.role === "primary"
-                              ? "text-xl sm:text-3xl font-bold"
-                              : "text-lg sm:text-xl"
-                          }
-                          onTtsEvent={updateTtsStatus}
-                        />
-                      ) : (
-                        <p
-                          className={
-                            fd?.role === "primary"
-                              ? "text-xl sm:text-3xl font-bold"
-                              : "text-lg sm:text-xl"
-                          }
-                        >
-                          {value}
-                        </p>
-                      )}
-                      {ttsConfig && (
-                        <TtsButton
-                          text={value}
-                          lang={ttsConfig.lang}
-                          rate={ttsRate}
-                          onTtsEvent={updateTtsStatus}
-                        />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <FieldContent
+              fieldNames={backFields}
+              fields={card.fields}
+              fieldDefsMap={fieldDefsMap}
+              primaryClassName="text-xl sm:text-3xl font-bold"
+              secondaryClassName="text-lg sm:text-xl"
+              ttsRate={ttsRate}
+              onTtsEvent={updateTtsStatus}
+            />
           </>
         ) : (
           <div className="mt-6 text-center">
@@ -207,48 +126,11 @@ export default function StudyCard({
         )}
 
         {revealed && (onToggleFlag || onSetNote) && (
-          <div className="mt-4 flex flex-col items-center gap-2">
-            <div className="flex items-center gap-3">
-              {onToggleFlag && (
-                <button
-                  type="button"
-                  onClick={onToggleFlag}
-                  className={`text-sm transition-colors ${annotation?.flagged ? "text-amber-500" : "text-muted hover:text-foreground"}`}
-                  aria-label={annotation?.flagged ? "Unflag card" : "Flag card"}
-                >
-                  {annotation?.flagged ? "★ Flagged" : "☆ Flag"}
-                </button>
-              )}
-              {onSetNote && (
-                <button
-                  type="button"
-                  onClick={() => setShowNoteInput((v) => !v)}
-                  className={`text-sm transition-colors ${annotation?.note ? "text-accent" : "text-muted hover:text-foreground"}`}
-                  aria-label={annotation?.note ? "Edit note" : "Add note"}
-                >
-                  {annotation?.note ? "✎ Note" : "+ Note"}
-                </button>
-              )}
-            </div>
-            {showNoteInput && onSetNote && (
-              <div className="w-full max-w-sm">
-                <textarea
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  onBlur={() => onSetNote(noteText)}
-                  placeholder="Add a personal note or mnemonic..."
-                  maxLength={500}
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm border rounded-lg bg-transparent border-edge resize-none"
-                />
-              </div>
-            )}
-            {!showNoteInput && annotation?.note && (
-              <p className="text-xs text-muted italic max-w-sm text-center">
-                {annotation.note}
-              </p>
-            )}
-          </div>
+          <AnnotationControls
+            annotation={annotation}
+            onToggleFlag={onToggleFlag}
+            onSetNote={onSetNote}
+          />
         )}
 
         {ttsMessage && (

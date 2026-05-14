@@ -4,12 +4,14 @@ import { useState, useMemo } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { asId } from "@/lib/convexHelpers";
+import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
+import GenerateConfigForm from "./GenerateConfigForm";
+import GeneratePreview from "./GeneratePreview";
 
 type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
 type Step = "config" | "loading" | "preview" | "done";
-
 type GeneratedCard = {
   fields: Record<string, string>;
   sourceCardIds?: string[];
@@ -25,9 +27,8 @@ export default function GenerateClient() {
 
   const srsEnabledSets = useMemo(
     () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],
-    [userSets]
+    [userSets],
   );
-
   const [step, setStep] = useState<Step>("config");
   const [methodology, setMethodology] = useState<Methodology>("balanced");
   const [selectedSetId, setSelectedSetId] = useState<string>("");
@@ -37,15 +38,14 @@ export default function GenerateClient() {
   const [addToSrs, setAddToSrs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
-  const [payload, setPayload] = useState<any>(null);
-
+  const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
   const handleGenerate = async () => {
     setStep("loading");
     setError(null);
     try {
       const result = await generateCards({
         methodology,
-        ...(selectedSetId ? { setId: selectedSetId as any } : {}),
+        ...(selectedSetId ? { setId: asId<"flashcardSets">(selectedSetId) } : {}),
         targetCardCount: targetCount,
         name: setName,
         ...(model ? { model } : {}),
@@ -61,9 +61,15 @@ export default function GenerateClient() {
         setStep("config");
         return;
       }
-      setPayload(result.payload);
+      setPayload(result.payload as GeneratedSetPayload);
+      const payloadCards = (result.payload as GeneratedSetPayload).cards;
       setCards(
-        (result.payload.cards as any[]).map((c: any) => ({ ...c, selected: true }))
+        payloadCards.map((c) => ({
+          fields: { ...c.fields },
+          sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
+          rationale: c.rationale,
+          selected: true,
+        }))
       );
       setStep("preview");
     } catch (err) {
@@ -71,7 +77,6 @@ export default function GenerateClient() {
       setStep("config");
     }
   };
-
   const handleConfirm = async () => {
     if (!payload) return;
     setStep("loading");
@@ -79,19 +84,27 @@ export default function GenerateClient() {
     try {
       const selectedCards = cards
         .filter((c) => c.selected)
-        .map(({ selected: _, ...c }) => c);
+        .map(({ selected: _, ...c }) => ({
+          ...c,
+          sourceCardIds: c.sourceCardIds?.map((id) => asId<"flashcards">(id)),
+        }));
       const result = await confirmSet({
-        ...payload,
+        name: payload.name,
+        description: payload.description,
+        sourceSetIds: [...payload.sourceSetIds].map((id) => asId<"flashcardSets">(id)),
+        sourceScope: payload.sourceScope,
+        weakContextMethodology: payload.weakContextMethodology,
+        fieldDefinitions: [...payload.fieldDefinitions].map((fd) => ({ ...fd, metadata: { ...fd.metadata } })),
+        addToSrs: payload.addToSrs,
         cards: selectedCards,
       });
       if ("ok" in result && result.ok === false) {
-        setError((result as any).error?.message ?? "Failed to create set");
+        setError(result.error ?? "Failed to create set");
         setStep("preview");
         return;
       }
       setStep("done");
-      const setId = (result as any).setId;
-      if (setId) router.push(`/sets/${setId}`);
+      if ("setId" in result) router.push(`/sets/${result.setId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create set");
       setStep("preview");
@@ -121,82 +134,22 @@ export default function GenerateClient() {
         )}
 
         {step === "config" && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Set Name</label>
-              <input
-                type="text"
-                value={setName}
-                onChange={(e) => setSetName(e.target.value)}
-                className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Methodology</label>
-                <select
-                  value={methodology}
-                  onChange={(e) => setMethodology(e.target.value as Methodology)}
-                  className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-                >
-                  <option value="balanced">Balanced</option>
-                  <option value="recent_lapses">Recent Lapses</option>
-                  <option value="low_ease">Low Ease</option>
-                  <option value="learning_stuck">Learning Stuck</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Source Set</label>
-                <select
-                  value={selectedSetId}
-                  onChange={(e) => setSelectedSetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-                >
-                  <option value="">All SRS-enabled sets</option>
-                  {srsEnabledSets.map((s) => (
-                    <option key={s._id} value={s._id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Target Card Count</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={targetCount}
-                  onChange={(e) => setTargetCount(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Model (optional)</label>
-                <input
-                  type="text"
-                  placeholder="Use default for provider"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-                />
-              </div>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={addToSrs}
-                onChange={(e) => setAddToSrs(e.target.checked)}
-              />
-              Enable SRS for generated set
-            </label>
-            <button
-              onClick={handleGenerate}
-              className="w-full px-4 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-            >
-              Generate Cards
-            </button>
-          </div>
+          <GenerateConfigForm
+            setName={setName}
+            onSetNameChange={setSetName}
+            methodology={methodology}
+            onMethodologyChange={setMethodology}
+            selectedSetId={selectedSetId}
+            onSelectedSetIdChange={setSelectedSetId}
+            srsEnabledSets={srsEnabledSets}
+            targetCount={targetCount}
+            onTargetCountChange={setTargetCount}
+            model={model}
+            onModelChange={setModel}
+            addToSrs={addToSrs}
+            onAddToSrsChange={setAddToSrs}
+            onGenerate={handleGenerate}
+          />
         )}
 
         {step === "loading" && (
@@ -207,72 +160,13 @@ export default function GenerateClient() {
         )}
 
         {step === "preview" && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-muted">
-                {selectedCount} of {cards.length} cards selected
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setStep("config")}
-                  className="px-3 py-1.5 border border-edge rounded-lg text-sm hover:bg-surface-hover"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={selectedCount === 0}
-                  className="px-4 py-1.5 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
-                >
-                  Create Set ({selectedCount} cards)
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {cards.map((card, idx) => (
-                <div
-                  key={idx}
-                  className={`border rounded-lg p-3 ${card.selected ? "border-edge" : "border-edge opacity-50"}`}
-                >
-                  <div className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      checked={card.selected}
-                      onChange={(e) => {
-                        const updated = [...cards];
-                        updated[idx] = { ...updated[idx], selected: e.target.checked };
-                        setCards(updated);
-                      }}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 text-sm">
-                      {Object.entries(card.fields).map(([key, value]) => (
-                        <div key={key} className="mb-1">
-                          <span className="text-muted">{key}:</span>{" "}
-                          <input
-                            type="text"
-                            value={value}
-                            onChange={(e) => {
-                              const updated = [...cards];
-                              updated[idx] = {
-                                ...updated[idx],
-                                fields: { ...updated[idx].fields, [key]: e.target.value },
-                              };
-                              setCards(updated);
-                            }}
-                            className="border-b border-edge bg-transparent px-1 focus:outline-none focus:border-accent"
-                          />
-                        </div>
-                      ))}
-                      {card.rationale && (
-                        <p className="text-xs text-muted mt-1 italic">{card.rationale}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <GeneratePreview
+            cards={cards}
+            selectedCount={selectedCount}
+            onCardsChange={setCards}
+            onBack={() => setStep("config")}
+            onConfirm={handleConfirm}
+          />
         )}
       </main>
     </div>

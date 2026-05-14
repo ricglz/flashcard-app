@@ -11,9 +11,8 @@ import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
-import SpeakerIcon from "@/components/SpeakerIcon";
-import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { CardRating } from "@/lib/types";
+import SessionHeader from "./SessionHeader";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import Link from "next/link";
 
@@ -153,49 +152,21 @@ export default function StudySessionClient({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/study/${setId}`}
-            className="text-sm text-muted hover:text-foreground"
-          >
-            &larr; Back
-          </Link>
-          <span className="text-sm text-muted">
-            {effectiveIndex + 1} / {session.cardOrder.length}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <TtsSpeedControl speed={effectiveTtsSpeed} onSpeedChange={handleTtsSpeedChange} />
-          <button
-            className="text-sm text-muted hover:text-foreground transition-colors"
-            title={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
-            aria-label={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
-          >
-            <SpeakerIcon muted={!ttsEnabled} />
-          </button>
-          <button
-            onClick={() => {
-              if (confirm("Abandon this session?")) {
-                void abandonSession({ sessionId });
-                router.push(`/study/${setId}`);
-              }
-            }}
-            className="text-sm text-danger hover:text-danger-hover transition-colors"
-          >
-            Abandon
-          </button>
-        </div>
-      </header>
-
-      <div className="h-1 bg-raised">
-        <div
-          className="h-full bg-accent transition-all"
-          style={{
-            width: `${(effectiveIndex / session.cardOrder.length) * 100}%`,
-          }}
-        />
-      </div>
+      <SessionHeader
+        setId={setId}
+        effectiveIndex={effectiveIndex}
+        cardCount={session.cardOrder.length}
+        effectiveTtsSpeed={effectiveTtsSpeed}
+        ttsEnabled={ttsEnabled}
+        onTtsSpeedChange={handleTtsSpeedChange}
+        onToggleTts={() => setTtsEnabled((v) => !v)}
+        onAbandon={() => {
+          if (confirm("Abandon this session?")) {
+            void abandonSession({ sessionId });
+            router.push(`/study/${setId}`);
+          }
+        }}
+      />
 
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         <StudyCard

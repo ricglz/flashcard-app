@@ -7,10 +7,11 @@ import { api } from "../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import TtsButton from "@/components/TtsButton";
 import SrsSetConfig from "@/components/SrsSetConfig";
-import { getTtsConfig } from "@/lib/types";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import CardsTable from "./CardsTable";
+import SetDetailHeader from "./SetDetailHeader";
+import VisitorActions from "./VisitorActions";
 
 type Props = {
   setId: string;
@@ -27,11 +28,8 @@ export default function SetDetailClient({
   const cards = usePreloadedQuery(preloadedCards);
   const router = useRouter();
   const settings = useOfflineQuery(api.userSettings.get);
-  const addToLibrary = useMutation(api.sharing.addToLibrary);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
-  const [isAdding, setIsAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
   const [isForking, setIsForking] = useState(false);
   const [forkError, setForkError] = useState<string | null>(null);
 
@@ -47,25 +45,6 @@ export default function SetDetailClient({
 
   const isOwner = viewer.role === "owner";
   const isMember = viewer.role !== "visitor";
-
-  const handleAddToLibrary = async () => {
-    setIsAdding(true);
-    setAddError(null);
-    try {
-      const result = await addToLibrary({ setId: set._id });
-      if (isFailureResult(result)) {
-        setAddError(result.error.message);
-        return;
-      }
-      router.refresh();
-    } catch (err) {
-      setAddError(
-        err instanceof Error ? err.message : "Failed to add to library"
-      );
-    } finally {
-      setIsAdding(false);
-    }
-  };
 
   const handleFork = async () => {
     setIsForking(true);
@@ -88,32 +67,12 @@ export default function SetDetailClient({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          &larr; Back
-        </button>
-        <div className="flex gap-2">
-          {isMember && (
-            <Link
-              href={`/study/${setId}`}
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-            >
-              Study
-            </Link>
-          )}
-          {isOwner && (
-            <Link
-              href={`/sets/${setId}/edit`}
-              className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
-            >
-              Edit
-            </Link>
-          )}
-        </div>
-      </header>
+      <SetDetailHeader
+        setId={setId}
+        isMember={isMember}
+        isOwner={isOwner}
+        onBack={() => router.back()}
+      />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <h1 className="text-2xl font-bold mb-1">{set.name}</h1>
@@ -177,33 +136,12 @@ export default function SetDetailClient({
         )}
 
         {viewer.role === "visitor" && (
-          <div className="mb-6 p-4 border border-edge rounded-lg">
-            <p className="text-sm text-muted mb-3">
-              This set is not in your library yet.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddToLibrary}
-                disabled={isAdding}
-                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors disabled:opacity-50"
-              >
-                {isAdding ? "Adding..." : "Add to My Library"}
-              </button>
-              <button
-                onClick={handleFork}
-                disabled={isForking}
-                className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors disabled:opacity-50"
-              >
-                {isForking ? "Forking..." : "Fork (Copy to My Sets)"}
-              </button>
-            </div>
-            {addError && (
-              <p className="text-sm text-danger mt-2">{addError}</p>
-            )}
-            {forkError && (
-              <p className="text-sm text-danger mt-2">{forkError}</p>
-            )}
-          </div>
+          <VisitorActions
+            setId={set._id}
+            isForking={isForking}
+            forkError={forkError}
+            onFork={handleFork}
+          />
         )}
 
         {viewer.userSet && (
@@ -234,66 +172,13 @@ export default function SetDetailClient({
           </div>
         )}
 
-        {cards.length === 0 ? (
-          <div className="text-center py-8 border rounded-lg">
-            <p className="text-muted mb-3">No cards yet.</p>
-            {isOwner && (
-              <Link
-                href={`/sets/${setId}/edit`}
-                className="text-accent hover:underline text-sm"
-              >
-                Add cards
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="overflow-x-auto border rounded-lg">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-raised">
-                  <th className="text-left px-4 py-2 text-xs text-muted">
-                    #
-                  </th>
-                  {sortedFieldDefs.map((fd) => (
-                    <th
-                      key={fd.name}
-                      className="text-left px-4 py-2 text-xs text-muted"
-                    >
-                      {fd.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {cards
-                  .sort((a, b) => a.order - b.order)
-                  .map((card, idx) => (
-                    <tr key={card._id} className="border-t hover:bg-surface-hover">
-                      <td className="px-4 py-2 text-muted">{idx + 1}</td>
-                      {sortedFieldDefs.map((fd) => {
-                        const value = card.fields[fd.name] ?? "";
-                        const ttsConfig = getTtsConfig(fd);
-                        return (
-                          <td key={fd.name} className="px-4 py-2">
-                            <div className="flex items-center gap-1">
-                              <span>{value}</span>
-                              {ttsConfig && value && (
-                                <TtsButton
-                                  text={value}
-                                  lang={ttsConfig.lang}
-                                  rate={settings?.ttsPlaybackSpeed}
-                                />
-                              )}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <CardsTable
+          setId={setId}
+          cards={cards}
+          sortedFieldDefs={sortedFieldDefs}
+          isOwner={isOwner}
+          ttsPlaybackSpeed={settings?.ttsPlaybackSpeed}
+        />
       </main>
     </div>
   );
