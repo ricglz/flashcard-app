@@ -3,7 +3,12 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { asId } from "@/lib/convexHelpers";
-import { getTtsConfig } from "@/lib/types";
+import {
+  FIELD_ROLES,
+  FIELD_ROLE_LABELS,
+  getTtsConfig,
+  type FieldRole,
+} from "@/lib/types";
 import TtsButton from "@/components/TtsButton";
 import Link from "next/link";
 
@@ -30,72 +35,105 @@ export default function FlaggedCardsClient() {
     );
   }
 
-  const grouped = new Map<string, typeof flaggedCards>();
-  for (const card of flaggedCards) {
-    if (!card) continue;
-    const existing = grouped.get(card.setId) ?? [];
-    existing.push(card);
-    grouped.set(card.setId, existing);
+  const cards = flaggedCards.filter(
+    (c): c is NonNullable<typeof c> => c !== null
+  );
+
+  const presentRoles = FIELD_ROLES.filter((role) =>
+    cards.some((card) => card.fieldDefinitions?.some((fd) => fd.role === role))
+  );
+
+  const hasNotes = cards.some((card) => card.note);
+
+  function getFieldForRole(card: (typeof cards)[number], role: FieldRole) {
+    const fd = card.fieldDefinitions?.find(
+      (f: { role: string }) => f.role === role
+    );
+    if (!fd) return null;
+    const value = card.fields[fd.name];
+    if (!value) return null;
+    return { value, ttsConfig: getTtsConfig(fd) };
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      {[...grouped.entries()].map(([setId, cards]) => (
-        <section key={setId}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">{cards[0]!.setName}</h2>
-            <Link
-              href={`/study/${setId}`}
-              className="text-sm text-accent hover:text-accent-hover transition-colors"
-            >
-              Study set &rarr;
-            </Link>
-          </div>
-          <div className="space-y-2">
-            {cards.map((card) => {
-              if (!card) return null;
-              const fieldDefs = card.fieldDefinitions ?? [];
-              return (
-                <div
-                  key={card.cardId}
-                  className="bg-card-bg border border-card-border rounded-lg p-3 flex items-center justify-between gap-3"
+    <div className="max-w-4xl mx-auto">
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-raised">
+              <th className="text-left px-4 py-2 text-xs text-muted">#</th>
+              <th className="text-left px-4 py-2 text-xs text-muted">Set</th>
+              {presentRoles.map((role) => (
+                <th
+                  key={role}
+                  className="text-left px-4 py-2 text-xs text-muted"
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {fieldDefs.slice(0, 3).map((fd) => {
-                        const value = card.fields[fd.name];
-                        if (!value) return null;
-                        const ttsConfig = getTtsConfig(fd);
-                        return (
-                          <span key={fd.name} className="flex items-center gap-1">
-                            <span className={fd.role === "primary" ? "font-bold" : "text-muted"}>
-                              {value}
-                            </span>
-                            {ttsConfig && (
-                              <TtsButton text={value} lang={ttsConfig.lang} className="scale-75" />
+                  {FIELD_ROLE_LABELS[role]}
+                </th>
+              ))}
+              {hasNotes && (
+                <th className="text-left px-4 py-2 text-xs text-muted">
+                  Note
+                </th>
+              )}
+              <th className="px-4 py-2 text-xs text-muted w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {cards.map((card, idx) => (
+                <tr key={card.cardId} className="border-t hover:bg-surface-hover">
+                  <td className="px-4 py-2 text-muted">{idx + 1}</td>
+                  <td className="px-4 py-2">
+                    <Link
+                      href={`/study/${card.setId}`}
+                      className="text-accent hover:text-accent-hover transition-colors"
+                    >
+                      {card.setName}
+                    </Link>
+                  </td>
+                  {presentRoles.map((role) => {
+                    const field = getFieldForRole(card, role);
+                    return (
+                      <td key={role} className="px-4 py-2">
+                        {field && (
+                          <div className="flex items-center gap-1">
+                            <span>{field.value}</span>
+                            {field.ttsConfig && (
+                              <TtsButton
+                                text={field.value}
+                                lang={field.ttsConfig.lang}
+                              />
                             )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                    {card.note && (
-                      <p className="text-xs text-muted italic mt-1">{card.note}</p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void toggleFlag({ cardId: asId<"flashcards">(card.cardId), setId: asId<"flashcardSets">(card.setId) })}
-                    className="text-amber-500 hover:text-amber-600 transition-colors text-sm shrink-0"
-                    aria-label="Unflag card"
-                  >
-                    ★
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                  {hasNotes && (
+                    <td className="px-4 py-2 text-xs text-muted italic">
+                      {card.note}
+                    </td>
+                  )}
+                  <td className="px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void toggleFlag({
+                          cardId: asId<"flashcards">(card.cardId),
+                          setId: asId<"flashcardSets">(card.setId),
+                        })
+                      }
+                      className="text-amber-500 hover:text-amber-600 transition-colors"
+                      aria-label="Unflag card"
+                    >
+                      ★
+                    </button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
