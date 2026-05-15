@@ -37,6 +37,14 @@
 ### AI Weak Spot Analysis
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
 
+### Study Assistant Tool Calling
+- [ ] Add tool calling to the study assistant — let the LLM query cards, check SRS stats, suggest related content. multi-llm-ts supports tools via `addPlugin()` with `PluginTool` definitions.
+
+## Code Quality — Error Handling
+
+### Effect-Based Error Patterns
+- [ ] Audit try/catch patterns across the codebase and discuss migrating to Effect-based error handling for more typed, composable error flows (especially in AI actions and frontend async code).
+
 ## E2E Testing
 
 ### Infrastructure
