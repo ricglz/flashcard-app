@@ -68,13 +68,13 @@ export const getHydratedQueue = query({
     );
 
     const cardMap = new Map<string, { _id: string; fields: Record<string, string> }>();
-    const setMap = new Map<string, { fieldDefinitions: FieldDefinition[] }>();
+    const setMap = new Map<string, { name: string; fieldDefinitions: FieldDefinition[] }>();
     const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
 
     for (const { setId, set, userSet, cards } of perSetData) {
       if (!set || !userSet) continue;
       for (const card of cards) cardMap.set(card._id, { _id: card._id, fields: card.fields });
-      setMap.set(setId, { fieldDefinitions: getFieldDefinitions(set) });
+      setMap.set(setId, { name: set.name, fieldDefinitions: getFieldDefinitions(set) });
       userSetMap.set(setId, {
         defaultFrontFields: userSet.defaultFrontFields,
         defaultBackFields: userSet.defaultBackFields,
@@ -92,6 +92,7 @@ export const getHydratedQueue = query({
         _id: item._id,
         srsCardId: item.srsCardId,
         setId: item.setId,
+        setName: setData.name,
         card,
         fieldDefinitions: setData.fieldDefinitions,
         frontFields: userSetData.defaultFrontFields,

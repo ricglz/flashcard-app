@@ -10,6 +10,7 @@ import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
+import AssistantPanel from "@/components/AssistantPanel";
 import { asId } from "@/lib/convexHelpers";
 
 type Props = {
@@ -140,31 +141,40 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const currentAnnotation = annotationMap.get(asId<"flashcards">(currentItem.card._id));
 
   return (
-    <SrsReviewActive
-      currentItem={currentItem}
-      reviewedCount={reviewedCount}
-      totalCards={totalCards}
-      revealed={revealed}
-      isSubmitting={isSubmitting}
-      ttsEnabled={ttsEnabled}
-      ttsRate={effectiveTtsSpeed}
-      ttsSpeed={effectiveTtsSpeed}
-      onTtsSpeedChange={handleTtsSpeedChange}
-      onReveal={() => setRevealed(true)}
-      onRate={handleRate}
-      onToggleTts={() => setTtsEnabled((v) => !v)}
-      annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
-      onToggleFlag={() => {
-        void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
-      }}
-      onSetNote={(note: string) => {
-        void setCardNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
-      }}
-      onEndSession={() => {
-        if (confirm("End review session? Your progress is saved.")) {
-          router.push("/");
-        }
-      }}
-    />
+    <>
+      <SrsReviewActive
+        currentItem={currentItem}
+        reviewedCount={reviewedCount}
+        totalCards={totalCards}
+        revealed={revealed}
+        isSubmitting={isSubmitting}
+        ttsEnabled={ttsEnabled}
+        ttsRate={effectiveTtsSpeed}
+        ttsSpeed={effectiveTtsSpeed}
+        onTtsSpeedChange={handleTtsSpeedChange}
+        onReveal={() => setRevealed(true)}
+        onRate={handleRate}
+        onToggleTts={() => setTtsEnabled((v) => !v)}
+        annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
+        onToggleFlag={() => {
+          void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
+        }}
+        onSetNote={(note: string) => {
+          void setCardNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
+        }}
+        onEndSession={() => {
+          if (confirm("End review session? Your progress is saved.")) {
+            router.push("/");
+          }
+        }}
+      />
+      <AssistantPanel
+        context={{
+          setId: asId<"flashcardSets">(currentItem.setId),
+          setName: currentItem.setName,
+          cardFields: currentItem.card.fields,
+        }}
+      />
+    </>
   );
 }
