@@ -26,10 +26,12 @@ export const get = query({
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
       .first();
     const { llmApiKey: _stripped, ...safe } = settings ?? {};
+    const key = settings?.llmApiKey;
     return {
       ...DEFAULTS,
       ...safe,
-      hasLlmKey: !!settings?.llmApiKey,
+      hasLlmKey: !!key,
+      llmKeyHint: key ? `${"•".repeat(Math.min(key.length - 4, 20))}${key.slice(-4)}` : null,
     };
   },
 });

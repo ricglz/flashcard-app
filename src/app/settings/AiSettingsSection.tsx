@@ -61,10 +61,13 @@ export default function AiSettingsSection() {
         {effectiveProvider && (
           <div>
             <label htmlFor="llm-key" className="block text-sm font-medium mb-1">API Key</label>
+            {settings?.llmKeyHint && !llmApiKey && (
+              <p className="text-xs text-muted mb-1 font-mono">{settings.llmKeyHint}</p>
+            )}
             <input
               id="llm-key"
               type="password"
-              placeholder={settings?.hasLlmKey ? "Key saved (enter new key to replace)" : "Enter your API key"}
+              placeholder={settings?.hasLlmKey ? "Enter new key to replace" : "Enter your API key"}
               value={llmApiKey}
               onChange={(e) => { setLlmApiKey(e.target.value); setLlmSaved(false); }}
               className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
