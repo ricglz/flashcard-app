@@ -35,7 +35,7 @@ export default function SrsReviewActive({
     fieldDefinitions: FieldDefinition[];
     frontFields: string[];
     backFields: string[];
-    ttsOnlyFields?: string[];
+    ttsOnlyFields: string[];
   };
   reviewedCount: number;
   totalCards: number;
@@ -102,7 +102,7 @@ export default function SrsReviewActive({
           fieldDefinitions={currentItem.fieldDefinitions}
           frontFields={currentItem.frontFields}
           backFields={currentItem.backFields}
-          ttsOnlyFields={currentItem.ttsOnlyFields ?? []}
+          ttsOnlyFields={currentItem.ttsOnlyFields}
           onRevealed={onReveal}
           autoPlayTts={ttsEnabled}
           ttsRate={ttsRate}

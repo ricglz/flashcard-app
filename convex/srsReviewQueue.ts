@@ -78,7 +78,7 @@ export const getHydratedQueue = query({
       userSetMap.set(setId, {
         defaultFrontFields: userSet.defaultFrontFields,
         defaultBackFields: userSet.defaultBackFields,
-        defaultTtsOnlyFields: userSet.defaultTtsOnlyFields ?? [],
+        defaultTtsOnlyFields: userSet.defaultTtsOnlyFields,
       });
     }
 

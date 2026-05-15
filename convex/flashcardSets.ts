@@ -57,7 +57,7 @@ export const get = query({
     if (link) {
       return { ...set, viewer: { role: link.role, userSet: link } };
     }
-    const visibility = set.visibility ?? "private";
+    const visibility = set.visibility;
     if (visibility === "private") return null;
     return { ...set, viewer: { role: "visitor" as const, userSet: null } };
   },
@@ -86,6 +86,7 @@ export const create = mutation({
       fieldDefinitions,
       ownerId: identity.tokenIdentifier,
       origin: { kind: "manual" as const },
+      visibility: "private",
       cardCount: 0,
       updatedAt: Date.now(),
       createdAt: Date.now(),
@@ -100,6 +101,7 @@ export const create = mutation({
       srsEnabled: true,
       defaultFrontFields,
       defaultBackFields,
+      defaultTtsOnlyFields: [],
       createdAt: Date.now(),
     });
 
@@ -278,7 +280,7 @@ export const fork = mutation({
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.sourceSetId)
       )
       .first();
-    const visibility = sourceSet.visibility ?? "private";
+    const visibility = sourceSet.visibility;
     if (!link && visibility === "private") {
       return fail(forbidden("Cannot fork a private set."));
     }
@@ -322,6 +324,7 @@ export const fork = mutation({
       srsEnabled: true,
       defaultFrontFields,
       defaultBackFields,
+      defaultTtsOnlyFields: [],
       createdAt: now,
     });
 

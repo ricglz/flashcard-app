@@ -86,12 +86,12 @@ export default defineSchema({
     fieldDefinitions: v.array(fieldDefinitionValidator),
     cardCount: v.number(),
     updatedAt: v.number(),
-    origin: v.optional(setOriginValidator),
-    visibility: v.optional(v.union(
+    origin: setOriginValidator,
+    visibility: v.union(
       v.literal("private"),
       v.literal("unlisted"),
       v.literal("public")
-    )),
+    ),
     createdAt: v.number(),
   })
     .index("by_ownerId", ["ownerId"])
@@ -109,7 +109,7 @@ export default defineSchema({
     userId: v.string(),
     frontFields: v.array(v.string()),
     backFields: v.array(v.string()),
-    ttsOnlyFields: v.optional(v.array(v.string())),
+    ttsOnlyFields: v.array(v.string()),
     cardOrder: v.array(v.id("flashcards")),
     currentIndex: v.number(),
     status: v.union(
@@ -143,7 +143,7 @@ export default defineSchema({
     srsEnabled: v.boolean(),
     defaultFrontFields: v.array(v.string()),
     defaultBackFields: v.array(v.string()),
-    defaultTtsOnlyFields: v.optional(v.array(v.string())),
+    defaultTtsOnlyFields: v.array(v.string()),
     createdAt: v.number(),
   })
     .index("by_userId", ["userId"])

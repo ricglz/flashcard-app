@@ -111,6 +111,7 @@ export const add = mutation({
       srsEnabled,
       defaultFrontFields: args.defaultFrontFields,
       defaultBackFields: args.defaultBackFields,
+      defaultTtsOnlyFields: [],
       createdAt: Date.now(),
     });
 
@@ -153,7 +154,7 @@ export const update = mutation({
         fieldDefinitions: getFieldDefinitions(set),
         frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
         backFields: args.defaultBackFields ?? link.defaultBackFields,
-        ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields ?? [],
+        ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields,
       });
       if (!selection.ok) return selection;
     }

@@ -14,7 +14,7 @@ export const addToLibrary = mutation({
     const set = await ctx.db.get(args.setId);
     if (!set) return fail(notFound("Set not found"));
 
-    const visibility = set.visibility ?? "private";
+    const visibility = set.visibility;
     if (visibility === "private") return fail(forbidden("Cannot add a private set to your library."));
 
     const existing = await ctx.db
@@ -35,6 +35,7 @@ export const addToLibrary = mutation({
       srsEnabled: true,
       defaultFrontFields,
       defaultBackFields,
+      defaultTtsOnlyFields: [],
       createdAt: Date.now(),
     });
 

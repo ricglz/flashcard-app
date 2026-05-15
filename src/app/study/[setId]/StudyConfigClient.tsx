@@ -56,7 +56,7 @@ export default function StudyConfigClient({
   if (!initialized && fieldDefs.length > 0) {
     setFrontFields(userSet.defaultFrontFields);
     setBackFields(userSet.defaultBackFields);
-    setTtsOnlyFields(userSet.defaultTtsOnlyFields ?? []);
+    setTtsOnlyFields(userSet.defaultTtsOnlyFields);
     setInitialized(true);
   }
 

@@ -274,7 +274,7 @@ export async function getWeakCardsHelper(
       if (!link) continue;
       const set = await ctx.db.get(setId);
       if (!set) continue;
-      if (args.filters?.excludeAiGeneratedSets && set.origin?.kind === "ai_generated") continue;
+      if (args.filters?.excludeAiGeneratedSets && set.origin.kind === "ai_generated") continue;
       const fieldDefinitions = getFieldDefinitions(set);
       const fingerprint = schemaFingerprint(fieldDefinitions);
       const srsCards = await ctx.db
@@ -449,6 +449,7 @@ export const createGeneratedSetForTool = internalMutation({
         sourceScope: normalized.sourceScope,
         ...(normalized.weakContextMethodology !== undefined ? { weakContextMethodology: normalized.weakContextMethodology } : {}),
       },
+      visibility: "private",
       cardCount: normalized.cards.length,
       updatedAt: now,
       createdAt: now,
@@ -469,6 +470,7 @@ export const createGeneratedSetForTool = internalMutation({
       srsEnabled: normalized.addToSrs,
       defaultFrontFields,
       defaultBackFields,
+      defaultTtsOnlyFields: [],
       createdAt: now,
     });
 

@@ -33,7 +33,7 @@ export default function SetDetailClient({
   const [isForking, setIsForking] = useState(false);
   const [forkError, setForkError] = useState<string | null>(null);
 
-  const isForked = set.origin?.kind === "forked";
+  const isForked = set.origin.kind === "forked";
   const forkSyncStatus = useQuery(
     api.flashcardSets.getForkSyncStatus,
     isForked ? { setId: set._id } : "skip"
@@ -85,17 +85,17 @@ export default function SetDetailClient({
 
         <div className="flex items-center gap-2 mb-6">
           <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            (set.visibility ?? "private") === "public"
+            set.visibility === "public"
               ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-              : (set.visibility ?? "private") === "unlisted"
+              : set.visibility === "unlisted"
                 ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                 : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
           }`}>
-            {(set.visibility ?? "private").charAt(0).toUpperCase() + (set.visibility ?? "private").slice(1)}
+            {set.visibility.charAt(0).toUpperCase() + set.visibility.slice(1)}
           </span>
           {isOwner && (
             <select
-              value={set.visibility ?? "private"}
+              value={set.visibility}
               onChange={(e) => {
                 void updateVisibility({
                   id: set._id,
@@ -111,7 +111,7 @@ export default function SetDetailClient({
           )}
         </div>
 
-        {set.origin?.kind === "forked" && (
+        {set.origin.kind === "forked" && (
           <p className="text-sm text-muted mb-4">
             Forked from{" "}
             <Link
@@ -151,7 +151,7 @@ export default function SetDetailClient({
               srsEnabled={viewer.userSet.srsEnabled}
               defaultFrontFields={viewer.userSet.defaultFrontFields}
               defaultBackFields={viewer.userSet.defaultBackFields}
-              defaultTtsOnlyFields={viewer.userSet.defaultTtsOnlyFields ?? []}
+              defaultTtsOnlyFields={viewer.userSet.defaultTtsOnlyFields}
               fieldDefinitions={set.fieldDefinitions}
             />
           </div>

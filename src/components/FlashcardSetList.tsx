@@ -45,12 +45,12 @@ export default function FlashcardSetList() {
               <Link href={`/sets/${set._id}`} className="block flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-lg">{set.name}</h3>
-                  {set.origin?.kind === "ai_generated" && (
+                  {set.origin.kind === "ai_generated" && (
                     <span className="px-1.5 py-0.5 bg-info-surface border border-info-edge rounded text-xs text-muted">
                       AI generated
                     </span>
                   )}
-                  {set.origin?.kind === "forked" && (
+                  {set.origin.kind === "forked" && (
                     <span className="px-1.5 py-0.5 bg-info-surface border border-info-edge rounded text-xs text-muted">
                       Forked
                     </span>
