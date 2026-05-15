@@ -9,13 +9,8 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
-### Type-Safety — ESLint & Casts
-- [ ] Migrate ad-hoc result types in `convex/ai.ts` (`ConfirmResult`, `GenerateResult`, `ChatResult`) to use `DomainResult` — align with the wrapped `{ ok: true; value: T } | { ok: false; error: E }` pattern used everywhere else
-- [ ] Fix tooling mutations (`createGeneratedSetForTool`, `appendGeneratedCardsForTool` in `convex/tooling.ts`) to return `ok(...)` on success instead of raw objects — root cause of `"ok" in result` patterns in `convex/ai.ts` and `convex/http.ts`
-
 ### Component State Ownership
 - [ ] Move form state into `GenerateConfigForm` (`src/app/generate/GenerateConfigForm.tsx`) — parent `GenerateClient` passes 6 state+setter pairs that should be owned by the form, calling back with final values via `onGenerate`
-- [ ] Move form state into `SrsSettingsPanel` (`src/components/SrsSettingsPanel.tsx`) — parent `SrsSettingsSectionInner` passes 4 local edit states that should be owned by the panel, calling back with final values via `onSave`
 
 ### Settings UI
 - [ ] Document `useQuery` vs `useOfflineQuery` convention — currently inconsistent across components with no clear rule for when to use which
@@ -52,11 +47,7 @@
   - **If adopted**: Start with `FieldDefinition` and `FieldMetadata` schemas, then gradually migrate domain validators. Keep DomainResult pattern - Zod complements it rather than replaces it.
 
 ### Test Infrastructure & Coverage Gaps
-- [ ] Add TTS `speakSequence` error-path tests — no coverage for mid-sequence errors (error on first, middle, or last item)
 - [ ] Add offline outbox async tests — only `normalizeSyncFailure()` is tested; `addToOutbox()`, `markSyncing()`, and event dispatch are untested
-
-### Schema Indexes
-- [ ] Consider `by_userId_and_status` index on `studySessions` — current index is `by_setId_and_userId_and_status` but some queries filter by `(userId, status)` alone
 
 ## Marketplace & Multi-User
 
