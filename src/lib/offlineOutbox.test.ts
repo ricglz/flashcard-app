@@ -48,22 +48,20 @@ vi.mock("./offlineDb", () => ({
   getDb: () => Promise.resolve(mockDb),
 }));
 
-// Stub window.dispatchEvent since edge-runtime doesn't have it
+const dispatchSpy = vi.fn(() => true);
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard for edge-runtime test environment
-if (typeof window !== "undefined" && !window.dispatchEvent) {
-  window.dispatchEvent = () => true;
-}
-if (typeof window === "undefined") {
+if (typeof window !== "undefined") {
+  window.dispatchEvent = dispatchSpy;
+} else {
   // @ts-expect-error — test-only global stub for edge-runtime environment
-  globalThis.window = {
-    dispatchEvent: () => true,
-  };
+  globalThis.window = { dispatchEvent: dispatchSpy };
 }
 
 let outboxModule: typeof import("./offlineOutbox");
 
 beforeEach(async () => {
   mockDb = createMockDb();
+  dispatchSpy.mockClear();
   outboxModule = await import("./offlineOutbox");
 });
 
@@ -202,5 +200,83 @@ describe("getPendingCount", () => {
 
     const count = await outboxModule.getPendingCount();
     expect(count).toBe(2);
+  });
+});
+
+describe("addToOutbox", () => {
+  it("returns queued outcome with a positive id", async () => {
+    const result = await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    expect(result).toMatchObject({ ok: true, status: "queued", id: expect.any(Number) });
+    expect(result.id).toBeGreaterThan(0);
+  });
+
+  it("dispatches outbox-changed event on success", async () => {
+    await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "outbox-changed" }));
+  });
+
+  it("returns permanentFailure when IndexedDB write fails", async () => {
+    mockDb.add = () => { throw new Error("QuotaExceededError"); };
+    const result = await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    expect(result).toEqual({ ok: false, status: "permanentFailure", id: -1, message: "QuotaExceededError" });
+  });
+
+  it("does not dispatch event when IndexedDB write fails", async () => {
+    mockDb.add = () => { throw new Error("QuotaExceededError"); };
+    await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("markSyncing", () => {
+  it("does not dispatch outbox-changed event", async () => {
+    const result = await outboxModule.addToOutbox("mutation.a", {});
+    if (!result.ok) throw new Error("addToOutbox failed");
+    dispatchSpy.mockClear();
+
+    await outboxModule.markSyncing(result.id);
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+
+  it("silently handles non-existent id", async () => {
+    await expect(outboxModule.markSyncing(999)).resolves.toBeUndefined();
+  });
+});
+
+describe("event dispatch", () => {
+  it("addToOutbox dispatches outbox-changed", async () => {
+    await outboxModule.addToOutbox("mutation.a", {});
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "outbox-changed" }));
+  });
+
+  it("markFailed dispatches outbox-changed", async () => {
+    const result = await outboxModule.addToOutbox("mutation.a", {});
+    if (!result.ok) throw new Error("addToOutbox failed");
+    dispatchSpy.mockClear();
+
+    await outboxModule.markFailed(result.id, 1);
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "outbox-changed" }));
+  });
+
+  it("removeEntry dispatches outbox-changed", async () => {
+    const result = await outboxModule.addToOutbox("mutation.a", {});
+    if (!result.ok) throw new Error("addToOutbox failed");
+    dispatchSpy.mockClear();
+
+    await outboxModule.removeEntry(result.id);
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "outbox-changed" }));
+  });
+
+  it("markSyncing does NOT dispatch outbox-changed", async () => {
+    const result = await outboxModule.addToOutbox("mutation.a", {});
+    if (!result.ok) throw new Error("addToOutbox failed");
+    dispatchSpy.mockClear();
+
+    await outboxModule.markSyncing(result.id);
+    expect(dispatchSpy).not.toHaveBeenCalled();
   });
 });
