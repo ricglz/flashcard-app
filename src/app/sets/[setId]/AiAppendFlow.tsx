@@ -62,10 +62,9 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         setPhase("config");
         return;
       }
-      const payload = result.payload as { cards: Array<{ fields: Record<string, string>; rationale?: string }> };
+      const { cards } = result.payload;
       setCards(
-        payload.cards.map((c) => ({
-          fields: { ...c.fields },
+        cards.map((c) => ({          fields: { ...c.fields },
           rationale: c.rationale,
           selected: true,
         })),

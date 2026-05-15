@@ -1,13 +1,15 @@
 "use node";
 
 import { v } from "convex/values";
-import type { FunctionArgs } from "convex/server";
 import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, Message } from "multi-llm-ts";
+import { Schema, ParseResult } from "effect";
+import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
 import type { CommonFailure } from "./domain/result";
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -23,7 +25,7 @@ const DEFAULT_MODELS: Record<string, string> = {
 
 type GenerateResult =
   | { ok: false; error: string; raw?: string }
-  | { ok: true; validation: { ok: boolean; issues: string[] }; payload: Record<string, unknown> };
+  | { ok: true; validation: { ok: boolean; issues: string[] }; payload: GeneratedSetPayload };
 
 type AuthAndConfig = {
   userId: string;
@@ -55,19 +57,36 @@ async function generateAndValidateJson(
   if (!response.content) {
     return { ok: false, error: "LLM returned empty response." };
   }
-  let payload: Record<string, unknown>;
+  let parsed: unknown;
   try {
     const cleaned = response.content
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
-    payload = JSON.parse(cleaned);
+    parsed = JSON.parse(cleaned);
   } catch {
     return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
   }
+  const decoded = Schema.decodeUnknownEither(GeneratedSetPayloadSchema)(parsed);
+  if (decoded._tag === "Left") {
+    const issues = ParseResult.ArrayFormatter.formatErrorSync(decoded.left);
+    const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    return { ok: false, error: `LLM returned invalid payload: ${message}`, raw: response.content };
+  }
+  const payload = decoded.right;
   const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
     internal.tooling.validateGeneratedSetForTool,
-    { ...payload, userId: opts.userId } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>,
+    {
+      ...payload,
+      sourceSetIds: [...payload.sourceSetIds] as Id<"flashcardSets">[],
+      fieldDefinitions: [...payload.fieldDefinitions],
+      cards: payload.cards.map(c => ({
+        ...c,
+        fields: { ...c.fields },
+        sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] as Id<"flashcards">[] : undefined,
+      })),
+      userId: opts.userId,
+    },
   );
   return { ok: true, validation, payload };
 }

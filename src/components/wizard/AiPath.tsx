@@ -7,7 +7,6 @@ import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
 import AiCardPreview from "./AiCardPreview";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
-import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 
 type GeneratedCard = {
   fields: Record<string, string>;
@@ -57,7 +56,7 @@ export default function AiPath({
         setError(`Validation issues: ${result.validation.issues.join(", ")}`);
         return;
       }
-      const payload = result.payload as GeneratedSetPayload;
+      const payload = result.payload;
       const cards = payload.cards.map((c) => ({
         fields: { ...c.fields },
         rationale: c.rationale,

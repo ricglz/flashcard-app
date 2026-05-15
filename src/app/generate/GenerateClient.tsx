@@ -67,8 +67,8 @@ export default function GenerateClient() {
         setStep("config");
         return;
       }
-      setPayload(result.payload as GeneratedSetPayload);
-      const payloadCards = (result.payload as GeneratedSetPayload).cards;
+      setPayload(result.payload);
+      const payloadCards = result.payload.cards;
       setCards(
         payloadCards.map((c) => ({
           fields: { ...c.fields },
