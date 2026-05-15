@@ -7,13 +7,13 @@ function statusClasses(status: TtsStatus): string {
   switch (status) {
     case "preparing":
     case "queued":
-      return "rounded bg-accent/10 animate-pulse";
+      return "rounded bg-accent/10 text-accent animate-pulse";
     case "speaking":
-      return "rounded bg-accent/20 animate-pulse";
+      return "rounded bg-accent/20 text-accent animate-pulse";
     case "error":
     case "timeout":
     case "unsupported":
-      return "rounded bg-red-100 dark:bg-red-900/30";
+      return "rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
     default:
       return "";
   }
