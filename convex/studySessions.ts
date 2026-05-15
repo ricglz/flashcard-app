@@ -5,7 +5,7 @@ import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetup, type StudySessionSetupFailure } from "./domain/studySessionSetup";
-import { fail, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
+import { fail, ok, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
 import type { CardRating, ActiveStudySession } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 
@@ -100,7 +100,7 @@ export const start = mutation({
           .eq("status", "in_progress")
       )
       .first();
-    if (existingActive) return existingActive._id;
+    if (existingActive) return ok(existingActive._id);
 
     const cards = await ctx.db
       .query("flashcards")
@@ -141,7 +141,7 @@ export const start = mutation({
       status: "in_progress",
       startedAt: Date.now(),
     });
-    return id;
+    return ok(id);
   },
 });
 
@@ -159,7 +159,7 @@ export const recordResult = mutation({
       return fail(notFound("Session not found"));
     }
     if (session.status !== "in_progress") {
-      return { isComplete: true, outcome: "alreadyComplete" as const };
+      return ok({ isComplete: true, outcome: "alreadyComplete" as const });
     }
 
     const expectedCardId = session.cardOrder[session.currentIndex];
@@ -169,7 +169,7 @@ export const recordResult = mutation({
         .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
         .take(1000);
       if (alreadyRecorded.some((result) => result.cardId === args.cardId)) {
-        return { isComplete: false, outcome: "duplicate" as const };
+        return ok({ isComplete: false, outcome: "duplicate" as const });
       }
       return fail(conflict("cardId does not match the current card in the session"));
     }
@@ -204,7 +204,7 @@ export const recordResult = mutation({
       await ctx.db.patch(args.sessionId, { currentIndex: nextIndex });
     }
 
-    return { isComplete, outcome: "recorded" as const };
+    return ok({ isComplete, outcome: "recorded" as const });
   },
 });
 
@@ -218,13 +218,13 @@ export const abandon = mutation({
       return fail(notFound("Session not found"));
     }
     if (session.status !== "in_progress") {
-      return { outcome: "alreadyClosed" as const };
+      return ok({ outcome: "alreadyClosed" as const });
     }
     await ctx.db.patch(args.sessionId, {
       status: "abandoned" as const,
       completedAt: Date.now(),
     });
-    return { outcome: "abandoned" as const };
+    return ok({ outcome: "abandoned" as const });
   },
 });
 

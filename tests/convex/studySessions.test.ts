@@ -224,7 +224,7 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
-    const { isComplete } = await as.mutation(
+    const { value: { isComplete } } = await as.mutation(
       api.studySessions.recordResult,
       {
         sessionId,
@@ -255,7 +255,7 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
-    const { isComplete } = await as.mutation(
+    const { value: { isComplete } } = await as.mutation(
       api.studySessions.recordResult,
       {
         sessionId,
@@ -316,7 +316,7 @@ describe("studySessions.recordResult", () => {
       sessionId,
       cardId: session!.cardOrder[0],
       rating: "good",
-    })).toMatchObject({ outcome: "alreadyComplete" });
+    })).toMatchObject({ ok: true, value: { outcome: "alreadyComplete" } });
   });
 });
 
@@ -362,7 +362,7 @@ describe("studySessions.abandon", () => {
       rating: "good",
     });
 
-    expect(await as.mutation(api.studySessions.abandon, { sessionId })).toMatchObject({ outcome: "alreadyClosed" });
+    expect(await as.mutation(api.studySessions.abandon, { sessionId })).toMatchObject({ ok: true, value: { outcome: "alreadyClosed" } });
   });
 });
 

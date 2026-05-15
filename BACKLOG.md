@@ -9,9 +9,6 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
-### Study Session Setup / Results
-- [ ] Standardize study session result types to use DomainResult pattern — abandon/complete already return discriminated outcomes (`"abandoned"`, `"alreadyClosed"`, `"duplicate"`, `"recorded"`), but the types are inline object literals rather than the shared DomainResult union used elsewhere.
-
 ### SRS Queue / Scheduling
 - [ ] Validate review actions before scheduling:
   - SRS card belongs to user,

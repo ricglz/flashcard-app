@@ -91,7 +91,7 @@ export default function StudyConfigClient({
         setError(result.error.message);
         return;
       }
-      router.push(`/study/${setId}/session?sessionId=${result}`);
+      router.push(`/study/${setId}/session?sessionId=${result.value}`);
     } catch (err) {
       setIsNavigating(false);
       setError(err instanceof Error ? err.message : "Failed to start session");
