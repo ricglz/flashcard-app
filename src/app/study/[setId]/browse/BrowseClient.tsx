@@ -9,6 +9,7 @@ import { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
+import AssistantPanel from "@/components/AssistantPanel";
 import SpeakerIcon from "@/components/SpeakerIcon";
 import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
@@ -217,6 +218,14 @@ export default function BrowseClient({
           />
         )}
       </main>
+
+      <AssistantPanel
+        context={{
+          setId: asId<"flashcardSets">(setId),
+          setName: set.name,
+          cardFields: currentCard.fields,
+        }}
+      />
     </div>
   );
 }
