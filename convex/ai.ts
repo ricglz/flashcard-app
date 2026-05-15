@@ -10,7 +10,6 @@ import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, Message } from "multi-llm-ts";
 import { Schema, ParseResult } from "effect";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
-import type { CommonFailure } from "./domain/result";
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: "gpt-4o",
@@ -198,11 +197,7 @@ export const confirmGeneratedSet = action({
     const auth = await resolveAuthAndConfig(ctx);
     if (!auth.ok) return auth;
 
-    type CreateResult =
-      | { readonly ok: true; readonly value: never }
-      | { readonly ok: false; readonly error: CommonFailure }
-      | { setId: string; cardCount: number; srsEnabled: boolean };
-    const result: CreateResult = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
+    const result = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
       name: args.name,
       description: args.description,
       sourceSetIds: args.sourceSetIds,
@@ -214,11 +209,10 @@ export const confirmGeneratedSet = action({
       userId: auth.userId,
     });
 
-    if ("ok" in result && result.ok === false) {
+    if (!result.ok) {
       return { ok: false, error: result.error.message };
     }
-    const { setId, cardCount, srsEnabled } = result as { setId: string; cardCount: number; srsEnabled: boolean };
-    return { ok: true, setId, cardCount, srsEnabled };
+    return { ok: true, setId: result.value.setId as string, cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
   },
 });
 
@@ -241,22 +235,17 @@ export const confirmAppendCards = action({
     const auth = await resolveAuthAndConfig(ctx);
     if (!auth.ok) return auth;
 
-    type AppendResult =
-      | { readonly ok: true; readonly value: never }
-      | { readonly ok: false; readonly error: CommonFailure }
-      | { setId: string; cardCount: number; srsEnabled: boolean };
-    const result: AppendResult = await ctx.runMutation(internal.tooling.appendGeneratedCardsForTool, {
+    const result = await ctx.runMutation(internal.tooling.appendGeneratedCardsForTool, {
       userId: auth.userId,
       targetSetId: args.targetSetId,
       fieldDefinitions: args.fieldDefinitions,
       cards: args.cards,
     });
 
-    if ("ok" in result && result.ok === false) {
+    if (!result.ok) {
       return { ok: false, error: result.error.message };
     }
-    const { setId, cardCount, srsEnabled } = result as { setId: string; cardCount: number; srsEnabled: boolean };
-    return { ok: true, setId, cardCount, srsEnabled };
+    return { ok: true, setId: result.value.setId as string, cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
   },
 });
 

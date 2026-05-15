@@ -10,7 +10,7 @@ import {
   weakContextMethodologyValidator,
 } from "./schema";
 import { validateCardFields } from "./domain/cardFields";
-import { invalidInput, fail, notFound } from "./domain/result";
+import { invalidInput, fail, notFound, ok } from "./domain/result";
 import { getFieldDefinitions } from "./lib/typed";
 import { enrollCardsForSetHelper } from "./userSets";
 import { getDefaultFieldLayout } from "../src/lib/types";
@@ -88,7 +88,7 @@ async function assertAccessibleSets(
       .first();
     if (!link) return fail(notFound("Source set not found."));
   }
-  return { ok: true as const, value: unique };
+  return ok(unique);
 }
 
 async function countCards(ctx: QueryCtx, setId: Id<"flashcardSets">) {
@@ -477,7 +477,7 @@ export const createGeneratedSetForTool = internalMutation({
       await enrollCardsForSetHelper(ctx, args.userId, setId);
     }
 
-    return { setId, cardCount: normalized.cards.length, srsEnabled: normalized.addToSrs };
+    return ok({ setId, cardCount: normalized.cards.length, srsEnabled: normalized.addToSrs });
   },
 });
 
@@ -550,10 +550,10 @@ export const appendGeneratedCardsForTool = internalMutation({
       await enrollCardsForSetHelper(ctx, args.userId, args.targetSetId);
     }
 
-    return {
+    return ok({
       setId: args.targetSetId,
       cardCount: args.cards.length,
       srsEnabled: ownerLink.srsEnabled,
-    };
+    });
   },
 });

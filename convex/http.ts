@@ -194,10 +194,10 @@ http.route({
         ...payload,
         userId: auth.auth.userId,
       });
-      if ("ok" in result && result.ok === false) {
+      if (!result.ok) {
         return errorResponse(result.error._tag, result.error.message, 400);
       }
-      return jsonResponse(result);
+      return jsonResponse(result.value);
     } catch (err) {
       return errorResponse("bad_request", err instanceof Error ? err.message : "Invalid request.", 400);
     }
