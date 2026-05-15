@@ -20,6 +20,8 @@ import type * as domain_studySessionSetup from "../domain/studySessionSetup.js";
 import type * as flashcardSets from "../flashcardSets.js";
 import type * as flashcards from "../flashcards.js";
 import type * as http from "../http.js";
+import type * as lib_batch from "../lib/batch.js";
+import type * as lib_freeformPrompt from "../lib/freeformPrompt.js";
 import type * as lib_remedialPrompt from "../lib/remedialPrompt.js";
 import type * as lib_typed from "../lib/typed.js";
 import type * as migrations from "../migrations.js";
@@ -53,6 +55,8 @@ declare const fullApi: ApiFromModules<{
   flashcardSets: typeof flashcardSets;
   flashcards: typeof flashcards;
   http: typeof http;
+  "lib/batch": typeof lib_batch;
+  "lib/freeformPrompt": typeof lib_freeformPrompt;
   "lib/remedialPrompt": typeof lib_remedialPrompt;
   "lib/typed": typeof lib_typed;
   migrations: typeof migrations;
