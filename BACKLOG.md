@@ -9,6 +9,10 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
+### Component Props Hygiene
+- [ ] Refactor `SrsReviewActive` — 18 individual props should be grouped into typed objects (e.g., `studyContext`, `ttsConfig`, `annotationHandlers`)
+- [ ] Add ESLint rule `max-props` (or equivalent) to prevent components from accumulating excessive flat prop interfaces
+
 ### SRS Queue / Scheduling
 - [ ] Validate review actions before scheduling:
   - SRS card belongs to user,
