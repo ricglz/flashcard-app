@@ -144,7 +144,8 @@ function validateTtsOnlyFields(
         });
       }
 
-      const fieldDefinition = fieldDefsMap.get(fieldName)!;
+      const fieldDefinition = fieldDefsMap.get(fieldName);
+      if (!fieldDefinition) continue;
       if (!fieldDefinition.metadata.tts) {
         return yield* Effect.fail({
           _tag: "NonTtsOnlyField" as const,

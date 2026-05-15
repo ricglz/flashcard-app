@@ -79,9 +79,9 @@ export const create = mutation({
     );
     if (!validation.ok) return validation;
 
-    const fieldDefinitions = validation.value.fieldDefinitions!;
+    const fieldDefinitions = validation.value.fieldDefinitions ?? (args.fieldDefinitions as FieldDefinition[]);
     const setId = await ctx.db.insert("flashcardSets", {
-      name: validation.value.name!,
+      name: validation.value.name ?? args.name,
       description: args.description?.trim() || undefined,
       fieldDefinitions,
       ownerId: identity.tokenIdentifier,

@@ -49,14 +49,18 @@ export default function GeneratePreview({
         cards={cards}
         onToggle={(idx) => {
           const updated = [...cards];
-          updated[idx] = { ...updated[idx]!, selected: !updated[idx]!.selected };
+          const card = updated[idx];
+          if (!card) return;
+          updated[idx] = { ...card, selected: !card.selected };
           onCardsChange(updated);
         }}
         onEdit={(idx, key, value) => {
           const updated = [...cards];
+          const card = updated[idx];
+          if (!card) return;
           updated[idx] = {
-            ...updated[idx]!,
-            fields: { ...updated[idx]!.fields, [key]: value },
+            ...card,
+            fields: { ...card.fields, [key]: value },
           };
           onCardsChange(updated);
         }}

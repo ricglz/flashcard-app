@@ -59,7 +59,7 @@ export function validateCardFields(
       (fieldName) => normalizeFieldName(fieldName) === normalizeFieldName(validName)
     );
     if (matchingKey !== undefined) {
-      normalizedFields[validName] = fields[matchingKey]!;
+      normalizedFields[validName] = fields[matchingKey] ?? "";
     }
   }
 

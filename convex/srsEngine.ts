@@ -107,8 +107,7 @@ export async function populateQueue(
 
   const toQueue = shuffleArray([...dueSrsCards, ...newCards]);
 
-  for (let i = 0; i < toQueue.length; i++) {
-    const sc = toQueue[i]!;
+  for (const [i, sc] of toQueue.entries()) {
     await ctx.db.insert("reviewQueue", {
       userId,
       cardId: sc.cardId,

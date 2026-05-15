@@ -264,7 +264,7 @@ export const sendChatMessage = action({
         userId,
         include: { fieldDefinitions: true },
       });
-      const matchedSet = setList.sets.find((s) => s.setId === args.context!.setId);
+      const matchedSet = setList.sets.find((s) => s.setId === args.context?.setId);
       if (matchedSet) {
         const fieldNames = matchedSet.fieldDefinitions?.map((f) => f.name).join(", ");
         systemPrompt += `\n\nThe user is studying the set "${matchedSet.name}" with fields: ${fieldNames}.`;

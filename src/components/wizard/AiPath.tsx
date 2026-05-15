@@ -75,14 +75,18 @@ export default function AiPath({
 
   const toggleCard = (idx: number) => {
     const updated = [...generatedCards];
-    updated[idx] = { ...updated[idx]!, selected: !updated[idx]!.selected };
+    const card = updated[idx];
+    if (!card) return;
+    updated[idx] = { ...card, selected: !card.selected };
     setGeneratedCards(updated);
     dispatch({ type: "SET_CARDS", payload: updated.filter((c) => c.selected).map(({ fields }) => fields) });
   };
 
   const updateCardField = (idx: number, key: string, value: string) => {
     const updated = [...generatedCards];
-    updated[idx] = { ...updated[idx]!, fields: { ...updated[idx]!.fields, [key]: value } };
+    const card = updated[idx];
+    if (!card) return;
+    updated[idx] = { ...card, fields: { ...card.fields, [key]: value } };
     setGeneratedCards(updated);
     dispatch({ type: "SET_CARDS", payload: updated.filter((c) => c.selected).map(({ fields }) => fields) });
   };

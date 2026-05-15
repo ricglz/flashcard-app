@@ -124,7 +124,7 @@ export function preloadTtsVoices(): void {
 }
 
 export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
-  const prefix = lang.split("-")[0]!;
+  const prefix = lang.split("-")[0] ?? lang;
   let score = 0;
 
   if (voice.lang === lang) score += 100;
@@ -146,7 +146,7 @@ export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
 export function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined {
   const voices = cachedVoices.length > 0 ? cachedVoices : readVoices();
   const normalizedLang = lang.toLowerCase();
-  const prefix = normalizedLang.split("-")[0]!;
+  const prefix = normalizedLang.split("-")[0] ?? normalizedLang;
   const candidates = voices.filter(
     (voice) => {
       const voiceLang = voice.lang.toLowerCase();
@@ -502,7 +502,7 @@ export async function getAvailableVoices(
 ): Promise<SpeechSynthesisVoice[]> {
   if (!isTtsSupported()) return [];
   const voices = await ensureVoices();
-  const prefix = lang.split("-")[0]!;
+  const prefix = lang.split("-")[0] ?? lang;
   return voices.filter(
     (voice) => voice.lang === lang || voice.lang.startsWith(prefix),
   );

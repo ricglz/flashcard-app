@@ -13,20 +13,21 @@ export type TextSegment = { text: string; isCjk: boolean };
 
 export function segmentCjkText(text: string): TextSegment[] {
   const chars = Array.from(text);
-  if (chars.length === 0) return [];
+  const first = chars[0];
+  if (first === undefined) return [];
 
   const segments: TextSegment[] = [];
-  let currentIsCjk = isCjkChar(chars[0]!);
-  let currentText: string = chars[0]!;
+  let currentIsCjk = isCjkChar(first);
+  let currentText: string = first;
 
-  for (let i = 1; i < chars.length; i++) {
-    const charIsCjk = isCjkChar(chars[i]!);
+  for (const char of chars.slice(1)) {
+    const charIsCjk = isCjkChar(char);
     if (charIsCjk === currentIsCjk) {
-      currentText += chars[i]!;
+      currentText += char;
     } else {
       segments.push({ text: currentText, isCjk: currentIsCjk });
       currentIsCjk = charIsCjk;
-      currentText = chars[i]!;
+      currentText = char;
     }
   }
   segments.push({ text: currentText, isCjk: currentIsCjk });

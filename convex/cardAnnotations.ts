@@ -47,11 +47,11 @@ export const getFlagged = query({
 
     const setIds = [...new Set(flagged.map((a) => a.setId))];
     const sets = await Promise.all(setIds.map((id) => ctx.db.get(id)));
-    const setMap = new Map(sets.filter(Boolean).map((s) => [s!._id, s!]));
+    const setMap = new Map(sets.filter((s): s is NonNullable<typeof s> => s !== null).map((s) => [s._id, s]));
 
     const cardIds = flagged.map((a) => a.cardId);
     const cards = await Promise.all(cardIds.map((id) => ctx.db.get(id)));
-    const cardMap = new Map(cards.filter(Boolean).map((c) => [c!._id, c!]));
+    const cardMap = new Map(cards.filter((c): c is NonNullable<typeof c> => c !== null).map((c) => [c._id, c]));
 
     return flagged
       .map((a) => {

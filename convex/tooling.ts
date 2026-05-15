@@ -187,7 +187,7 @@ function scoreWeakCard(input: {
   }
 
   if (reviews.length > 0) {
-    const ageDays = Math.max(0, (now - reviews[0]!.timestamp) / MS_PER_DAY);
+    const ageDays = Math.max(0, (now - (reviews[0]?.timestamp ?? now)) / MS_PER_DAY);
     score += Math.max(0, 2 - ageDays / 14);
   }
 
@@ -292,7 +292,7 @@ export async function getWeakCardsHelper(
           .take(50);
         const recentReviews = reviews.filter((review) => review.timestamp >= since);
         if ((args.filters?.minReviews ?? 0) > recentReviews.length) continue;
-        if (args.filters?.ratings && !recentReviews.some((review) => args.filters!.ratings!.includes(review.rating))) continue;
+        if (args.filters?.ratings && !recentReviews.some((review) => args.filters?.ratings?.includes(review.rating))) continue;
         const card = await ctx.db.get(srsCard.cardId);
         if (!card) continue;
         const scored = scoreWeakCard({ methodology, srsCard, reviews: recentReviews, now });
@@ -455,8 +455,7 @@ export const createGeneratedSetForTool = internalMutation({
       createdAt: now,
     });
 
-    for (let i = 0; i < normalized.cards.length; i++) {
-      const card = normalized.cards[i]!;
+    for (const [i, card] of normalized.cards.entries()) {
       const validated = validateCardFields(fieldDefinitions.map((field) => field.name), card.fields);
       if (!validated.ok) return fail(invalidInput(validated.error.message));
       await ctx.db.insert("flashcards", { setId, fields: validated.value, order: i });
@@ -527,8 +526,7 @@ export const appendGeneratedCardsForTool = internalMutation({
     const fieldNames = (args.fieldDefinitions as FieldDefinition[]).map(
       (f) => f.name,
     );
-    for (let i = 0; i < args.cards.length; i++) {
-      const card = args.cards[i]!;
+    for (const [i, card] of args.cards.entries()) {
       const validated = validateCardFields(fieldNames, card.fields);
       if (!validated.ok) return fail(invalidInput(validated.error.message));
       await ctx.db.insert("flashcards", {

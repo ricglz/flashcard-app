@@ -117,8 +117,9 @@ export function getDefaultFieldLayout(fieldDefinitions: readonly FieldDefinition
   defaultBackFields: string[];
 } {
   const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
+  const first = sorted[0];
   return {
-    defaultFrontFields: sorted.length > 0 ? [sorted[0]!.name] : [],
+    defaultFrontFields: first ? [first.name] : [],
     defaultBackFields: sorted.slice(1).map((fd) => fd.name),
   };
 }

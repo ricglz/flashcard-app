@@ -134,15 +134,15 @@ export default function BrowseClient({
     }
   };
 
-  const handleNext = () => {
-    if (safeIndex < activeCardIds.length - 1) {
+  const handleNext = () => {    if (safeIndex < activeCardIds.length - 1) {
       setCurrentIndex(safeIndex + 1);
       setRevealed(false);
     }
   };
 
   const handleDismiss = () => {
-    setDismissed(new Set([...dismissed, currentCardId!]));
+    if (!currentCardId) return;
+    setDismissed(new Set([...dismissed, currentCardId]));
     setRevealed(false);
     if (safeIndex >= activeCardIds.length - 2) {
       setCurrentIndex(Math.max(0, safeIndex - 1));

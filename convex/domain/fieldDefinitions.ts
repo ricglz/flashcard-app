@@ -67,8 +67,7 @@ export function validateFieldDefinitions(
   const orders = new Set<number>();
   const normalized: FieldDefinition[] = [];
 
-  for (let index = 0; index < fieldDefinitions.length; index++) {
-    const field = fieldDefinitions[index]!;
+  for (const [index, field] of fieldDefinitions.entries()) {
     const trimmedName = field.name.trim();
     if (trimmedName.length === 0) {
       return fail({
