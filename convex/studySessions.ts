@@ -124,7 +124,7 @@ export const start = mutation({
     if (args.shuffle) {
       for (let i = cardOrder.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [cardOrder[i], cardOrder[j]] = [cardOrder[j], cardOrder[i]];
+        [cardOrder[i], cardOrder[j]] = [cardOrder[j]!, cardOrder[i]!];
       }
     }
 

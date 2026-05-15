@@ -107,11 +107,11 @@ export async function populateQueue(
   const toQueue = [...dueSrsCards, ...newCards];
   for (let i = toQueue.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [toQueue[i], toQueue[j]] = [toQueue[j], toQueue[i]];
+    [toQueue[i], toQueue[j]] = [toQueue[j]!, toQueue[i]!];
   }
 
   for (let i = 0; i < toQueue.length; i++) {
-    const sc = toQueue[i];
+    const sc = toQueue[i]!;
     await ctx.db.insert("reviewQueue", {
       userId,
       cardId: sc.cardId,

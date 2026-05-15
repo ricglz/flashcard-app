@@ -72,7 +72,7 @@ export function validateFieldDefinitions(
   const normalized: FieldDefinition[] = [];
 
   for (let index = 0; index < fieldDefinitions.length; index++) {
-    const field = fieldDefinitions[index];
+    const field = fieldDefinitions[index]!;
     const trimmedName = field.name.trim();
     if (trimmedName.length === 0) {
       return fail({

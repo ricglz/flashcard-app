@@ -26,7 +26,7 @@ export const addToLibrary = mutation({
 
     const fieldDefs = getFieldDefinitions(set);
     const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
-    const defaultFrontFields = sorted.length > 0 ? [sorted[0].name] : [];
+    const defaultFrontFields = sorted.length > 0 ? [sorted[0]!.name] : [];
     const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
 
     const userSetId = await ctx.db.insert("userSets", {

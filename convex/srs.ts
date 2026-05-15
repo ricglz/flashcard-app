@@ -109,9 +109,9 @@ export function selectNewCardsRoundRobin<T>(
     exhausted = true;
     for (let s = 0; s < perSetCards.length; s++) {
       if (result.length >= limit) break;
-      if (indices[s] < perSetCards[s].length) {
-        result.push(perSetCards[s][indices[s]]);
-        indices[s]++;
+      if (indices[s]! < perSetCards[s]!.length) {
+        result.push(perSetCards[s]![indices[s]!]!);
+        indices[s]!++;
         exhausted = false;
       }
     }

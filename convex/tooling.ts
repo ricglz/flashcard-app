@@ -186,7 +186,7 @@ function scoreWeakCard(input: {
   }
 
   if (reviews.length > 0) {
-    const ageDays = Math.max(0, (now - reviews[0].timestamp) / MS_PER_DAY);
+    const ageDays = Math.max(0, (now - reviews[0]!.timestamp) / MS_PER_DAY);
     score += Math.max(0, 2 - ageDays / 14);
   }
 
@@ -452,7 +452,7 @@ export const createGeneratedSetForTool = internalMutation({
     });
 
     for (let i = 0; i < normalized.cards.length; i++) {
-      const card = normalized.cards[i];
+      const card = normalized.cards[i]!;
       const validated = validateCardFields(fieldDefinitions.map((field) => field.name), card.fields);
       if (!validated.ok) return fail(invalidInput(validated.error.message));
       await ctx.db.insert("flashcards", { setId, fields: validated.value, order: i });
@@ -464,7 +464,7 @@ export const createGeneratedSetForTool = internalMutation({
       setId,
       role: "owner",
       srsEnabled: normalized.addToSrs,
-      defaultFrontFields: sorted.length > 0 ? [sorted[0].name] : [],
+      defaultFrontFields: sorted.length > 0 ? [sorted[0]!.name] : [],
       defaultBackFields: sorted.slice(1).map((field) => field.name),
       createdAt: now,
     });
