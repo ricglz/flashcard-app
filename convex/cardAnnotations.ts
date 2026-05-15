@@ -38,12 +38,12 @@ export const getFlagged = query({
     if (!identity) return [];
     const userId = identity.tokenIdentifier;
 
-    const annotations = await ctx.db
+    const flagged = await ctx.db
       .query("cardAnnotations")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .withIndex("by_userId_and_flagged", (q) =>
+        q.eq("userId", userId).eq("flagged", true)
+      )
       .collect();
-
-    const flagged = annotations.filter((a) => a.flagged);
 
     const setIds = [...new Set(flagged.map((a) => a.setId))];
     const sets = await Promise.all(setIds.map((id) => ctx.db.get(id)));

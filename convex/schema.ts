@@ -233,5 +233,6 @@ export default defineSchema({
   })
     .index("by_userId_and_cardId", ["userId", "cardId"])
     .index("by_userId_and_setId", ["userId", "setId"])
+    .index("by_userId_and_flagged", ["userId", "flagged"])
     .index("by_userId", ["userId"]),
 });
