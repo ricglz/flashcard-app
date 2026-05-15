@@ -6,5 +6,6 @@ import type { Id, TableNames } from "../../convex/_generated/dataModel";
  * as long as queries handle null/not-found gracefully.
  */
 export function asId<T extends TableNames>(raw: string): Id<T> {
-  return raw as unknown as Id<T>;
+  // @ts-expect-error — safe runtime coercion; Convex validates at query time
+  return raw;
 }

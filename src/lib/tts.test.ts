@@ -61,7 +61,7 @@ function makeSpeechSynthesis(voices: SpeechSynthesisVoice[] = []): FakeSpeechSyn
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  } as unknown as FakeSpeechSynthesis;
+  } as FakeSpeechSynthesis;
 }
 
 function installSpeechSynthesis({

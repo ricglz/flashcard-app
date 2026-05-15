@@ -49,11 +49,13 @@ vi.mock("./offlineDb", () => ({
 }));
 
 // Stub window.dispatchEvent since edge-runtime doesn't have it
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard for edge-runtime test environment
 if (typeof window !== "undefined" && !window.dispatchEvent) {
   window.dispatchEvent = () => true;
 }
 if (typeof window === "undefined") {
-  (globalThis as unknown as { window: { dispatchEvent: () => boolean } }).window = {
+  // @ts-expect-error — test-only global stub for edge-runtime environment
+  globalThis.window = {
     dispatchEvent: () => true,
   };
 }

@@ -45,6 +45,10 @@ const eslintConfig = defineConfig([
           selector: "TSAsExpression[typeAnnotation.type='TSNeverKeyword']",
           message: "'as never' is forbidden. This indicates a type system escape hatch. Use proper typing or @ts-expect-error with explanation instead.",
         },
+        {
+          selector: "TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
+          message: "'as unknown' is forbidden. Use @ts-expect-error with explanation or proper typing instead.",
+        },
       ],
     },
   },

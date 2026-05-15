@@ -2,16 +2,16 @@
 
 export type {};
 
-const sw = globalThis as unknown as ServiceWorkerGlobalScope & {
+declare const self: ServiceWorkerGlobalScope & {
   __SW_MANIFEST: Array<{ url: string; revision: string }>;
 };
 
 const PRECACHE_NAME = "precache-v1";
 const RUNTIME_NAME = "runtime-v1";
 
-sw.addEventListener("install", (event: ExtendableEvent) => {
-  sw.skipWaiting();
-  const manifest = sw.__SW_MANIFEST;
+self.addEventListener("install", (event: ExtendableEvent) => {
+  self.skipWaiting();
+  const manifest = self.__SW_MANIFEST;
   if (!manifest?.length) return;
   event.waitUntil(
     caches.open(PRECACHE_NAME).then((cache) =>
@@ -26,7 +26,7 @@ sw.addEventListener("install", (event: ExtendableEvent) => {
   );
 });
 
-sw.addEventListener("activate", (event: ExtendableEvent) => {
+self.addEventListener("activate", (event: ExtendableEvent) => {
   event.waitUntil(
     caches.keys().then((names) =>
       Promise.all(
@@ -36,10 +36,10 @@ sw.addEventListener("activate", (event: ExtendableEvent) => {
       ),
     ),
   );
-  sw.clients.claim();
+  self.clients.claim();
 });
 
-sw.addEventListener("fetch", (event: FetchEvent) => {
+self.addEventListener("fetch", (event: FetchEvent) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
@@ -54,7 +54,7 @@ sw.addEventListener("fetch", (event: FetchEvent) => {
   }
 
   // Network-first for same-origin navigations and other requests
-  if (url.origin === sw.location.origin) {
+  if (url.origin === self.location.origin) {
     event.respondWith(networkFirst(request));
     return;
   }
