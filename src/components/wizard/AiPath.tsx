@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
+import AiCardPreview from "./AiCardPreview";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
@@ -173,54 +174,17 @@ export default function AiPath({
       )}
 
       {hasGenerated && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted">
-              {selectedCount} of {generatedCards.length} cards selected
-            </p>
-            <button
-              onClick={() => {
-                setGeneratedCards([]);
-                setError(null);
-                dispatch({ type: "SET_CARDS", payload: [] });
-              }}
-              className="text-sm text-muted hover:text-foreground"
-            >
-              Regenerate
-            </button>
-          </div>
-          {generatedCards.map((card, idx) => (
-            <div
-              key={idx}
-              className={`border rounded-lg p-3 ${card.selected ? "border-edge" : "border-edge opacity-50"}`}
-            >
-              <div className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={card.selected}
-                  onChange={() => toggleCard(idx)}
-                  className="mt-1"
-                />
-                <div className="flex-1 text-sm">
-                  {Object.entries(card.fields).map(([key, value]) => (
-                    <div key={key} className="mb-1">
-                      <span className="text-muted">{key}:</span>{" "}
-                      <input
-                        type="text"
-                        value={value}
-                        onChange={(e) => updateCardField(idx, key, e.target.value)}
-                        className="border-b border-edge bg-transparent px-1 focus:outline-none focus:border-accent"
-                      />
-                    </div>
-                  ))}
-                  {card.rationale && (
-                    <p className="text-xs text-muted mt-1 italic">{card.rationale}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <AiCardPreview
+          cards={generatedCards}
+          selectedCount={selectedCount}
+          onToggle={toggleCard}
+          onEdit={updateCardField}
+          onRegenerate={() => {
+            setGeneratedCards([]);
+            setError(null);
+            dispatch({ type: "SET_CARDS", payload: [] });
+          }}
+        />
       )}
     </div>
   );
