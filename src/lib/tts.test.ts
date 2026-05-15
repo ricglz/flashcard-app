@@ -393,3 +393,136 @@ describe("speech flow", () => {
     );
   });
 });
+
+describe("speakSequence error paths", () => {
+  it("resolves with error when first item in sequence fails", async () => {
+    const synth = installSpeechSynthesis();
+    const { speakSequence } = await importTts();
+    const onEvent = vi.fn();
+
+    const resultPromise = speakSequence(
+      [
+        { text: "hello", lang: "en-US" },
+        { text: "world", lang: "en-US" },
+      ],
+      { onEvent },
+    );
+
+    synth.spoken[0]!.onerror?.call(synth.spoken[0]!, {
+      error: "not-allowed",
+    } as SpeechSynthesisErrorEvent);
+
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({
+        ok: false,
+        status: "error",
+        kind: "permission_blocked",
+      }),
+    );
+  });
+
+  it("resolves with error when middle item in sequence fails", async () => {
+    const synth = installSpeechSynthesis();
+    const { speakSequence } = await importTts();
+    const onEvent = vi.fn();
+
+    const resultPromise = speakSequence(
+      [
+        { text: "a", lang: "en-US" },
+        { text: "b", lang: "en-US" },
+        { text: "c", lang: "en-US" },
+      ],
+      { onEvent },
+    );
+
+    const first = synth.spoken[0]!;
+    first.onstart?.call(first, {} as SpeechSynthesisEvent);
+    first.onend?.call(first, {} as SpeechSynthesisEvent);
+
+    synth.spoken[1]!.onerror?.call(synth.spoken[1]!, {
+      error: "audio-busy",
+    } as SpeechSynthesisErrorEvent);
+
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({ ok: false, status: "error" }),
+    );
+  });
+
+  it("resolves with error when last item in sequence fails", async () => {
+    const synth = installSpeechSynthesis();
+    const { speakSequence } = await importTts();
+    const onEvent = vi.fn();
+
+    const resultPromise = speakSequence(
+      [
+        { text: "hello", lang: "en-US" },
+        { text: "world", lang: "en-US" },
+      ],
+      { onEvent },
+    );
+
+    const first = synth.spoken[0]!;
+    first.onstart?.call(first, {} as SpeechSynthesisEvent);
+    first.onend?.call(first, {} as SpeechSynthesisEvent);
+
+    synth.spoken[1]!.onerror?.call(synth.spoken[1]!, {
+      error: "synthesis-failed",
+    } as SpeechSynthesisErrorEvent);
+
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({ ok: false, status: "error" }),
+    );
+  });
+
+  it("cancelled error on one item does not immediately resolve", async () => {
+    const synth = installSpeechSynthesis();
+    const { speakSequence } = await importTts();
+    const onEvent = vi.fn();
+
+    const resultPromise = speakSequence(
+      [
+        { text: "hello", lang: "en-US" },
+        { text: "world", lang: "en-US" },
+      ],
+      { onEvent },
+    );
+
+    synth.spoken[0]!.onerror?.call(synth.spoken[0]!, {
+      error: "canceled",
+    } as SpeechSynthesisErrorEvent);
+
+    const second = synth.spoken[1]!;
+    second.onstart?.call(second, {} as SpeechSynthesisEvent);
+    second.onend?.call(second, {} as SpeechSynthesisEvent);
+
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({ ok: true, status: "ended" }),
+    );
+  });
+
+  it("resolves as cancelled when all items are cancelled", async () => {
+    const synth = installSpeechSynthesis();
+    const { speakSequence } = await importTts();
+    const onEvent = vi.fn();
+
+    const resultPromise = speakSequence(
+      [
+        { text: "hello", lang: "en-US" },
+        { text: "world", lang: "en-US" },
+      ],
+      { onEvent },
+    );
+
+    synth.spoken[0]!.onerror?.call(synth.spoken[0]!, {
+      error: "canceled",
+    } as SpeechSynthesisErrorEvent);
+
+    synth.spoken[1]!.onerror?.call(synth.spoken[1]!, {
+      error: "canceled",
+    } as SpeechSynthesisErrorEvent);
+
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({ ok: true, status: "cancelled" }),
+    );
+  });
+});
