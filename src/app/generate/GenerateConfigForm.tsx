@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Methodology } from "@/lib/types";
 
 type SrsSet = {
@@ -7,39 +8,33 @@ type SrsSet = {
   name: string;
 };
 
-type GenerateConfigFormProps = {
+export type GenerateConfig = {
   setName: string;
-  onSetNameChange: (v: string) => void;
   methodology: Methodology;
-  onMethodologyChange: (v: Methodology) => void;
   selectedSetId: string;
-  onSelectedSetIdChange: (v: string) => void;
-  srsEnabledSets: SrsSet[];
   targetCount: number;
-  onTargetCountChange: (v: number) => void;
   model: string;
-  onModelChange: (v: string) => void;
   addToSrs: boolean;
-  onAddToSrsChange: (v: boolean) => void;
-  onGenerate: () => void;
 };
 
 export default function GenerateConfigForm({
-  setName,
-  onSetNameChange,
-  methodology,
-  onMethodologyChange,
-  selectedSetId,
-  onSelectedSetIdChange,
+  initialMethodology,
+  initialSetId,
   srsEnabledSets,
-  targetCount,
-  onTargetCountChange,
-  model,
-  onModelChange,
-  addToSrs,
-  onAddToSrsChange,
   onGenerate,
-}: GenerateConfigFormProps) {
+}: {
+  initialMethodology: Methodology;
+  initialSetId: string;
+  srsEnabledSets: SrsSet[];
+  onGenerate: (config: GenerateConfig) => void;
+}) {
+  const [setName, setSetName] = useState("Remedial Cards");
+  const [methodology, setMethodology] = useState<Methodology>(initialMethodology);
+  const [selectedSetId, setSelectedSetId] = useState(initialSetId);
+  const [targetCount, setTargetCount] = useState(20);
+  const [model, setModel] = useState("");
+  const [addToSrs, setAddToSrs] = useState(true);
+
   return (
     <div className="space-y-4">
       <div>
@@ -47,7 +42,7 @@ export default function GenerateConfigForm({
         <input
           type="text"
           value={setName}
-          onChange={(e) => onSetNameChange(e.target.value)}
+          onChange={(e) => setSetName(e.target.value)}
           className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
         />
       </div>
@@ -56,7 +51,7 @@ export default function GenerateConfigForm({
           <label className="block text-sm font-medium mb-1">Methodology</label>
           <select
             value={methodology}
-            onChange={(e) => onMethodologyChange(e.target.value as Methodology)}
+            onChange={(e) => setMethodology(e.target.value as Methodology)}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           >
             <option value="balanced">Balanced</option>
@@ -69,7 +64,7 @@ export default function GenerateConfigForm({
           <label className="block text-sm font-medium mb-1">Source Set</label>
           <select
             value={selectedSetId}
-            onChange={(e) => onSelectedSetIdChange(e.target.value)}
+            onChange={(e) => setSelectedSetId(e.target.value)}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           >
             <option value="">All SRS-enabled sets</option>
@@ -87,7 +82,7 @@ export default function GenerateConfigForm({
             min={1}
             max={100}
             value={targetCount}
-            onChange={(e) => onTargetCountChange(Number(e.target.value))}
+            onChange={(e) => setTargetCount(Number(e.target.value))}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           />
         </div>
@@ -97,7 +92,7 @@ export default function GenerateConfigForm({
             type="text"
             placeholder="Use default for provider"
             value={model}
-            onChange={(e) => onModelChange(e.target.value)}
+            onChange={(e) => setModel(e.target.value)}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           />
         </div>
@@ -106,12 +101,12 @@ export default function GenerateConfigForm({
         <input
           type="checkbox"
           checked={addToSrs}
-          onChange={(e) => onAddToSrsChange(e.target.checked)}
+          onChange={(e) => setAddToSrs(e.target.checked)}
         />
         Enable SRS for generated set
       </label>
       <button
-        onClick={onGenerate}
+        onClick={() => onGenerate({ setName, methodology, selectedSetId, targetCount, model, addToSrs })}
         className="w-full px-4 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
       >
         Generate Cards

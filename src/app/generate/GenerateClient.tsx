@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 import { METHODOLOGIES, type Methodology } from "@/lib/types";
-import GenerateConfigForm from "./GenerateConfigForm";
+import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
 
 type Step = "config" | "loading" | "preview" | "done";
@@ -35,27 +35,23 @@ export default function GenerateClient() {
     ? (searchParams.get("methodology") as Methodology)
     : "balanced";
 
+  const initialSetId = searchParams.get("setId") ?? "";
+
   const [step, setStep] = useState<Step>("config");
-  const [methodology, setMethodology] = useState<Methodology>(initialMethodology);
-  const [selectedSetId, setSelectedSetId] = useState<string>(searchParams.get("setId") ?? "");
-  const [targetCount, setTargetCount] = useState(20);
-  const [setName, setSetName] = useState("Remedial Cards");
-  const [model, setModel] = useState("");
-  const [addToSrs, setAddToSrs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
   const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
-  const handleGenerate = async () => {
+  const handleGenerate = async (config: GenerateConfig) => {
     setStep("loading");
     setError(null);
     try {
       const result = await generateCards({
-        methodology,
-        ...(selectedSetId ? { setId: asId<"flashcardSets">(selectedSetId) } : {}),
-        targetCardCount: targetCount,
-        name: setName,
-        ...(model ? { model } : {}),
-        addToSrs,
+        methodology: config.methodology,
+        ...(config.selectedSetId ? { setId: asId<"flashcardSets">(config.selectedSetId) } : {}),
+        targetCardCount: config.targetCount,
+        name: config.setName,
+        ...(config.model ? { model: config.model } : {}),
+        addToSrs: config.addToSrs,
       });
       if (!result.ok) {
         setError(result.error);
@@ -141,19 +137,9 @@ export default function GenerateClient() {
 
         {step === "config" && (
           <GenerateConfigForm
-            setName={setName}
-            onSetNameChange={setSetName}
-            methodology={methodology}
-            onMethodologyChange={setMethodology}
-            selectedSetId={selectedSetId}
-            onSelectedSetIdChange={setSelectedSetId}
+            initialMethodology={initialMethodology}
+            initialSetId={initialSetId}
             srsEnabledSets={srsEnabledSets}
-            targetCount={targetCount}
-            onTargetCountChange={setTargetCount}
-            model={model}
-            onModelChange={setModel}
-            addToSrs={addToSrs}
-            onAddToSrsChange={setAddToSrs}
             onGenerate={handleGenerate}
           />
         )}
