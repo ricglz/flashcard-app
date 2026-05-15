@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { utcHourToLocal, localHourToUtc } from "@/lib/time";
 import SrsSettingsPanel from "./SrsSettingsPanel";
 import SrsQueueEmpty from "./SrsQueueEmpty";
 import SrsQueueComplete from "./SrsQueueComplete";
@@ -17,18 +18,6 @@ function formatResetTime(dayResetUtcHour: number): string {
     d.setUTCDate(d.getUTCDate() + 1);
   }
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function utcHourToLocal(utcHour: number): number {
-  const d = new Date();
-  d.setUTCHours(utcHour, 0, 0, 0);
-  return d.getHours();
-}
-
-function localHourToUtc(localHour: number): number {
-  const d = new Date();
-  d.setHours(localHour, 0, 0, 0);
-  return d.getUTCHours();
 }
 
 export default function SrsQueueStatus() {

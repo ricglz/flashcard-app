@@ -5,19 +5,8 @@ import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { isFailureResult } from "@/lib/appResult";
+import { utcHourToLocal, localHourToUtc } from "@/lib/time";
 import SrsSettingsPanel from "@/components/SrsSettingsPanel";
-
-function utcHourToLocal(utcHour: number): number {
-  const d = new Date();
-  d.setUTCHours(utcHour, 0, 0, 0);
-  return d.getHours();
-}
-
-function localHourToUtc(localHour: number): number {
-  const d = new Date();
-  d.setHours(localHour, 0, 0, 0);
-  return d.getUTCHours();
-}
 
 export default function SrsSettingsSection() {
   const settings = useOfflineQuery(api.userSettings.get);
