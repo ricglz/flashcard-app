@@ -9,12 +9,6 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
-### Component State Ownership
-- [ ] Move form state into `GenerateConfigForm` (`src/app/generate/GenerateConfigForm.tsx`) — parent `GenerateClient` passes 6 state+setter pairs that should be owned by the form, calling back with final values via `onGenerate`
-
-### Settings UI
-- [ ] Document `useQuery` vs `useOfflineQuery` convention — currently inconsistent across components with no clear rule for when to use which
-
 ### Study Session Setup / Results
 - [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
   - **PARTIAL**: Mutations return DomainResult, but offline replay could be enhanced with more specific result types.
@@ -46,8 +40,6 @@
     - Team grows and needs more standardized validation patterns
   - **If adopted**: Start with `FieldDefinition` and `FieldMetadata` schemas, then gradually migrate domain validators. Keep DomainResult pattern - Zod complements it rather than replaces it.
 
-### Test Infrastructure & Coverage Gaps
-- [ ] Add offline outbox async tests — only `normalizeSyncFailure()` is tested; `addToOutbox()`, `markSyncing()`, and event dispatch are untested
 
 ## Marketplace & Multi-User
 

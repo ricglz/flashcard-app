@@ -19,6 +19,7 @@ Chinese-first flashcard PWA with generic field-based data model.
 
 ## Code Style
 - Prefer event handlers or server-side logic over `useEffect` — follow React's "you might not need an effect"
+- Use `useOfflineQuery` for offline-capable features (study, SRS, settings, progress). Use `useQuery` for online-dependent gating (AI/LLM key checks, real-time search, transient state) — it returns `undefined` when offline, correctly hiding features that require connectivity.
 
 ## Data Privacy
 - Minimize user-sensitive data in the database. No PII storage (names, emails, avatars). User identity stays in Clerk; the DB stores only `tokenIdentifier` as an opaque reference.
