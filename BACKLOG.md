@@ -10,8 +10,6 @@
 ## Code Quality — Typed Domain Validation Candidates
 
 ### Shared Utilities
-- [ ] Extract `shuffleArray` (Fisher-Yates) to a shared utility — currently duplicated in `BrowseClient.tsx`, `studySessions.ts`, `srsEngine.ts`
-- [ ] Extract UTC ↔ local hour conversion to `src/lib/time.ts` — duplicated in `SrsQueueStatus.tsx` and `SrsSettingsSection.tsx`
 - [ ] Extract `getDefaultFieldLayout(fieldDefs)` helper — the `sorted[0]!.name` / `sorted.slice(1)` pattern for default front/back fields is repeated in 5+ files
 - [ ] Extract shared `CardPreviewList` component — card select/edit/deselect UI is duplicated between `GeneratePreview.tsx` and `AiPath.tsx`
 
@@ -40,8 +38,6 @@
 - [ ] Extract `deleteAllByIndex()` helper — the batched while-loop deletion pattern (`.take(500)` + delete loop) is repeated 3x in `flashcardSets.ts` and `userSets.ts`
 - [ ] Standardize batch size constant — some queries use `.take(500)`, others `.take(1000)`, with no shared constant or documented rationale
 - [ ] Remove redundant status check in `studySessions.ts:45` — query already filters `.eq("status", "in_progress")`, then re-checks in the if-condition. Narrow the return type with `status: "in_progress" as const` so TS prevents this
-- [ ] Deduplicate `normalizeFieldMetadata()` — defined in both `src/lib/types.ts:72` and `convex/domain/fieldDefinitions.ts:54`
-- [ ] Remove dead export `hasFieldDefinitions()` in `convex/lib/typed.ts:34` — created speculatively in `39b8745`, never used
 
 ### LANGUAGE_PRESETS Typing
 - [ ] Type `LANGUAGE_PRESETS` with explicit keys instead of `Record<string, LanguagePreset>` — eliminates need for `!` assertions on every access
@@ -78,13 +74,8 @@
   - **If adopted**: Start with `FieldDefinition` and `FieldMetadata` schemas, then gradually migrate domain validators. Keep DomainResult pattern - Zod complements it rather than replaces it.
 
 ### Test Infrastructure & Coverage Gaps
-- [ ] Extract shared test helpers — `unwrap()` is redefined in each convex test file; extract to `tests/convex/fixtures.ts`
-- [ ] Extract shared test fixtures — `fieldDefs` and `TEST_USER` constants are duplicated across `flashcards.test.ts`, `progress.test.ts`, etc.
 - [ ] Add TTS `speakSequence` error-path tests — no coverage for mid-sequence errors (error on first, middle, or last item)
 - [ ] Add offline outbox async tests — only `normalizeSyncFailure()` is tested; `addToOutbox()`, `markSyncing()`, and event dispatch are untested
-
-### Config Cleanup
-- [ ] Move `commander` to `devDependencies` — only used in `scripts/flashcard-ai.ts`, not a production dependency
 
 ### Schema Indexes
 - [ ] Add composite index on `cardAnnotations` for `(userId, setId, flagged)` — queries filter on this combination but no matching index exists
