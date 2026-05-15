@@ -7,7 +7,7 @@ import type { Id } from "./_generated/dataModel";
 import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
-import { igniteModel, Message } from "multi-llm-ts";
+import { igniteModel, loadModels, Message } from "multi-llm-ts";
 import { Schema, ParseResult } from "effect";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
 
@@ -261,7 +261,7 @@ export const sendChatMessage = action({
     model: v.optional(v.string()),
     context: v.optional(v.object({
       setId: v.optional(v.id("flashcardSets")),
-      cardId: v.optional(v.id("flashcards")),
+      cardFields: v.optional(v.record(v.string(), v.string())),
     })),
   },
   handler: async (ctx, args): Promise<ChatResult> => {
@@ -283,6 +283,13 @@ export const sendChatMessage = action({
       }
     }
 
+    if (args.context?.cardFields) {
+      const entries = Object.entries(args.context.cardFields)
+        .map(([field, value]) => `- ${field}: ${value}`)
+        .join("\n");
+      systemPrompt += `\n\nThey are currently looking at this card:\n${entries}`;
+    }
+
     const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
     const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
 
@@ -294,5 +301,27 @@ export const sendChatMessage = action({
 
     const response = await llm.complete(thread);
     return { ok: true, content: response.content ?? "" };
+  },
+});
+
+type AvailableModelsResult =
+  | { ok: false; error: string }
+  | { ok: true; models: { id: string; name: string }[] };
+
+export const getAvailableModels = action({
+  args: {},
+  handler: async (ctx): Promise<AvailableModelsResult> => {
+    const auth = await resolveAuthAndConfig(ctx);
+    if (!auth.ok) return auth;
+    try {
+      const result = await loadModels(auth.keyInfo.provider, { apiKey: auth.keyInfo.apiKey });
+      if (!result) return { ok: true, models: [] };
+      return {
+        ok: true,
+        models: result.chat.map((m) => ({ id: m.id, name: m.name })),
+      };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Failed to load models" };
+    }
   },
 });

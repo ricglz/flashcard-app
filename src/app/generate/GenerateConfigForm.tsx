@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Methodology } from "@/lib/types";
+import { useAvailableModels } from "@/lib/useAvailableModels";
 
 type SrsSet = {
   _id: string;
@@ -34,6 +35,7 @@ export default function GenerateConfigForm({
   const [targetCount, setTargetCount] = useState(20);
   const [model, setModel] = useState("");
   const [addToSrs, setAddToSrs] = useState(true);
+  const { models: availableModels } = useAvailableModels();
 
   return (
     <div className="space-y-4">
@@ -87,14 +89,17 @@ export default function GenerateConfigForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Model (optional)</label>
-          <input
-            type="text"
-            placeholder="Use default for provider"
+          <label className="block text-sm font-medium mb-1">Model</label>
+          <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          />
+          >
+            <option value="">Default for provider</option>
+            {availableModels.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm">
