@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { ratingValidator } from "./schema";
 import { assertMember } from "./userSets";
 import { incrementDailyStats } from "./progress";
+import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetup, type StudySessionSetupFailure } from "./domain/studySessionSetup";
 import { fail, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
 import type { CardRating } from "../src/lib/types";
@@ -122,10 +123,7 @@ export const start = mutation({
       .map((c) => c._id);
 
     if (args.shuffle) {
-      for (let i = cardOrder.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [cardOrder[i], cardOrder[j]] = [cardOrder[j]!, cardOrder[i]!];
-      }
+      cardOrder = shuffleArray(cardOrder);
     }
 
     if (setup.cardLimit !== undefined && setup.cardLimit < cardOrder.length) {

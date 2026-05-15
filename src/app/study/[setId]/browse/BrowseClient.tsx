@@ -12,15 +12,7 @@ import BrowseNavigation from "@/components/BrowseNavigation";
 import SpeakerIcon from "@/components/SpeakerIcon";
 import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
-  }
-  return result;
-}
+import { shuffleArray } from "@/lib/shuffle";
 
 type Props = {
   setId: string;

@@ -3,6 +3,7 @@ import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { SRS_DEFAULTS, selectNewCardsRoundRobin } from "./srs";
+import { shuffleArray } from "../src/lib/shuffle";
 
 export async function populateQueue(
   ctx: MutationCtx,
@@ -104,11 +105,7 @@ export async function populateQueue(
     );
   }
 
-  const toQueue = [...dueSrsCards, ...newCards];
-  for (let i = toQueue.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [toQueue[i], toQueue[j]] = [toQueue[j]!, toQueue[i]!];
-  }
+  const toQueue = shuffleArray([...dueSrsCards, ...newCards]);
 
   for (let i = 0; i < toQueue.length; i++) {
     const sc = toQueue[i]!;
