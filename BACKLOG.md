@@ -10,10 +10,8 @@
 ## Code Quality — Typed Domain Validation Candidates
 
 ### Type-Safety — ESLint & Casts
-- [ ] Type the `userSets.update` patch object (`convex/userSets.ts:161`) — currently `Record<string, unknown>`, should use a schema-derived partial type
 
 ### AI Response Typing
-- [ ] Type the AI generation payload (`convex/ai.ts:26,82`) — `Record<string, unknown>` after JSON.parse. Validate with Effect Schema into a typed `GeneratedSetPayload` instead of unsafe casting
 
 ### Settings UI
 - [ ] Document `useQuery` vs `useOfflineQuery` convention — currently inconsistent across components with no clear rule for when to use which
