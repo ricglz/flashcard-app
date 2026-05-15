@@ -11,6 +11,7 @@ import {
 import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
+import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
 export function validateSetFields(
   name: string | undefined,
@@ -147,73 +148,31 @@ export const remove = mutation({
     const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
     if (!owner.ok) return owner;
 
-    let cardBatch = await ctx.db
-      .query("flashcards")
-      .withIndex("by_setId", (q) => q.eq("setId", args.id))
-      .take(500);
-    while (cardBatch.length > 0) {
-      for (const card of cardBatch) await ctx.db.delete(card._id);
-      cardBatch = await ctx.db
-        .query("flashcards")
-        .withIndex("by_setId", (q) => q.eq("setId", args.id))
-        .take(500);
-    }
+    await deleteAllMatching(ctx,
+      () => ctx.db.query("flashcards").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+    );
 
-    let sessionBatch = await ctx.db
-      .query("studySessions")
-      .withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id))
-      .take(500);
-    while (sessionBatch.length > 0) {
-      for (const session of sessionBatch) {
-        let resultBatch = await ctx.db
-          .query("cardResults")
-          .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
-          .take(500);
-        while (resultBatch.length > 0) {
-          for (const result of resultBatch) await ctx.db.delete(result._id);
-          resultBatch = await ctx.db
-            .query("cardResults")
-            .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
-            .take(500);
-        }
-        await ctx.db.delete(session._id);
-      }
-      sessionBatch = await ctx.db
-        .query("studySessions")
-        .withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id))
-        .take(500);
-    }
+    await deleteAllMatching(ctx,
+      () => ctx.db.query("studySessions").withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+      async (ctx, session) => {
+        await deleteAllMatching(ctx,
+          () => ctx.db.query("cardResults").withIndex("by_sessionId", (q) => q.eq("sessionId", session._id)).take(DELETION_BATCH_SIZE),
+        );
+      },
+    );
 
-    let srsBatch = await ctx.db
-      .query("srsCards")
-      .withIndex("by_setId", (q) => q.eq("setId", args.id))
-      .take(500);
-    while (srsBatch.length > 0) {
-      for (const srsCard of srsBatch) {
-        const queueItems = await ctx.db
-          .query("reviewQueue")
-          .withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id))
-          .take(100);
-        for (const qi of queueItems) await ctx.db.delete(qi._id);
-        await ctx.db.delete(srsCard._id);
-      }
-      srsBatch = await ctx.db
-        .query("srsCards")
-        .withIndex("by_setId", (q) => q.eq("setId", args.id))
-        .take(500);
-    }
+    await deleteAllMatching(ctx,
+      () => ctx.db.query("srsCards").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+      async (ctx, srsCard) => {
+        await deleteAllMatching(ctx,
+          () => ctx.db.query("reviewQueue").withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id)).take(DELETION_BATCH_SIZE),
+        );
+      },
+    );
 
-    let linkBatch = await ctx.db
-      .query("userSets")
-      .withIndex("by_setId", (q) => q.eq("setId", args.id))
-      .take(500);
-    while (linkBatch.length > 0) {
-      for (const link of linkBatch) await ctx.db.delete(link._id);
-      linkBatch = await ctx.db
-        .query("userSets")
-        .withIndex("by_setId", (q) => q.eq("setId", args.id))
-        .take(500);
-    }
+    await deleteAllMatching(ctx,
+      () => ctx.db.query("userSets").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+    );
 
     const set = await ctx.db.get(args.id);
     if (!set) return fail(notFound("Set not found"));

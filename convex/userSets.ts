@@ -8,6 +8,7 @@ import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./doma
 import { validateStudySessionSetup } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
+import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
 // ---------------------------------------------------------------------------
 // Access control helpers — used by other Convex function files
@@ -191,32 +192,16 @@ export const remove = mutation({
       .first();
     if (!link) return fail(notFound("Set not found"));
 
-    // Delete srsCards for this user+set
-    let batch = await ctx.db
-      .query("srsCards")
-      .withIndex("by_userId_and_setId", (q) =>
+    await deleteAllMatching(ctx,
+      () => ctx.db.query("srsCards").withIndex("by_userId_and_setId", (q) =>
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
-      )
-      .take(500);
-    while (batch.length > 0) {
-      for (const row of batch) {
-        // Delete any review queue items for this srsCard
-        const queueItems = await ctx.db
-          .query("reviewQueue")
-          .withIndex("by_srsCardId", (q) => q.eq("srsCardId", row._id))
-          .take(100);
-        for (const qi of queueItems) {
-          await ctx.db.delete(qi._id);
-        }
-        await ctx.db.delete(row._id);
-      }
-      batch = await ctx.db
-        .query("srsCards")
-        .withIndex("by_userId_and_setId", (q) =>
-          q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
-        )
-        .take(500);
-    }
+      ).take(DELETION_BATCH_SIZE),
+      async (ctx, srsCard) => {
+        await deleteAllMatching(ctx,
+          () => ctx.db.query("reviewQueue").withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id)).take(DELETION_BATCH_SIZE),
+        );
+      },
+    );
 
     await ctx.db.delete(link._id);
     return ok(null);
