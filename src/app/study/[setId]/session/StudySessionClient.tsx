@@ -41,7 +41,7 @@ export default function StudySessionClient({
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
   const settings = useOfflineQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.update);
+  const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: asId<"flashcardSets">(setId) });
   const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useMutation(api.cardAnnotations.setNote);

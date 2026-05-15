@@ -68,7 +68,7 @@ describe("forceRefreshQueue", () => {
     const t = convexTest(schema, modules);
     const { as } = await setupSrsSet(t, 2);
 
-    await as.mutation(api.userSettings.update, { maxNewCardsPerDay: 20 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 4, dailyGoal: 0 });
 
     const first = await as.mutation(api.srsReviewQueue.forceRefreshQueue, {});
     expect(first.added).toBe(2);
@@ -91,7 +91,7 @@ describe("forceRefreshQueue", () => {
     const t = convexTest(schema, modules);
     const { as } = await setupSrsSet(t, 10);
 
-    await as.mutation(api.userSettings.update, { maxNewCardsPerDay: 3 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 3, dayResetUtcHour: 4, dailyGoal: 0 });
 
     const result = await as.mutation(api.srsReviewQueue.forceRefreshQueue, {});
     expect(result.added).toBe(3);

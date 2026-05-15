@@ -7,7 +7,7 @@ import { isFailureResult } from "@/lib/appResult";
 
 export default function AiSettingsSection() {
   const settings = useQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.update);
+  const updateAiConfig = useMutation(api.userSettings.updateAiConfig);
 
   const [llmProvider, setLlmProvider] = useState("");
   const [llmApiKey, setLlmApiKey] = useState("");
@@ -21,6 +21,8 @@ export default function AiSettingsSection() {
     setChatPrompt(settings.customChatPrompt ?? "");
     setChatPromptInitialized(true);
   }
+
+  const effectiveProvider = llmProvider || settings?.llmProvider || "";
 
   return (
     <section className="border border-edge rounded-xl p-5 space-y-4 mt-6">
@@ -37,8 +39,12 @@ export default function AiSettingsSection() {
           <label htmlFor="llm-provider" className="block text-sm font-medium mb-1">Provider</label>
           <select
             id="llm-provider"
-            value={llmProvider || settings?.llmProvider || ""}
-            onChange={(e) => { setLlmProvider(e.target.value); setLlmSaved(false); }}
+            value={effectiveProvider}
+            onChange={(e) => {
+              setLlmProvider(e.target.value);
+              if (!e.target.value) setLlmApiKey("");
+              setLlmSaved(false);
+            }}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           >
             <option value="">Select a provider...</option>
@@ -52,17 +58,19 @@ export default function AiSettingsSection() {
             <option value="deepseek">DeepSeek</option>
           </select>
         </div>
-        <div>
-          <label htmlFor="llm-key" className="block text-sm font-medium mb-1">API Key</label>
-          <input
-            id="llm-key"
-            type="password"
-            placeholder={settings?.hasLlmKey ? "Key saved (enter new key to replace)" : "Enter your API key"}
-            value={llmApiKey}
-            onChange={(e) => { setLlmApiKey(e.target.value); setLlmSaved(false); }}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          />
-        </div>
+        {effectiveProvider && (
+          <div>
+            <label htmlFor="llm-key" className="block text-sm font-medium mb-1">API Key</label>
+            <input
+              id="llm-key"
+              type="password"
+              placeholder={settings?.hasLlmKey ? "Key saved (enter new key to replace)" : "Enter your API key"}
+              value={llmApiKey}
+              onChange={(e) => { setLlmApiKey(e.target.value); setLlmSaved(false); }}
+              className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+            />
+          </div>
+        )}
         <div>
           <label htmlFor="chat-prompt" className="block text-sm font-medium mb-1">Chat Assistant Prompt (optional)</label>
           <textarea
@@ -83,15 +91,19 @@ export default function AiSettingsSection() {
               setLlmSaved(false);
               try {
                 const provider = llmProvider || settings?.llmProvider;
-                const patch: { llmProvider?: string; llmApiKey?: string; customChatPrompt?: string } = {};
-                if (llmProvider) patch.llmProvider = llmProvider;
-                if (llmApiKey) patch.llmApiKey = llmApiKey;
-                patch.customChatPrompt = chatPrompt || undefined;
-                if (!provider && !patch.llmProvider) {
+                if (!provider) {
                   setLlmError("Please select a provider.");
                   return;
                 }
-                const result = await updateSettings(patch);
+                if (!llmApiKey && !settings?.hasLlmKey) {
+                  setLlmError("Please enter an API key.");
+                  return;
+                }
+                const result = await updateAiConfig({
+                  provider,
+                  apiKey: llmApiKey,
+                  customChatPrompt: chatPrompt || undefined,
+                });
                 if (isFailureResult(result)) {
                   setLlmError(result.error.message);
                   return;
@@ -104,7 +116,7 @@ export default function AiSettingsSection() {
                 setLlmSaving(false);
               }
             }}
-            disabled={llmSaving || (!llmProvider && !llmApiKey)}
+            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === (settings?.customChatPrompt ?? ""))}
             className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm disabled:opacity-50"
           >
             {llmSaving ? "Saving..." : "Save"}

@@ -173,7 +173,7 @@ describe("getQueueStats", () => {
     const t = convexTest(schema, modules);
 
     const as = t.withIdentity(TEST_USER);
-    await as.mutation(api.userSettings.update, { dayResetUtcHour: 8 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
 
     const beforeBoundary = new Date("2025-06-15T07:00:00Z").getTime();
     const afterBoundary = new Date("2025-06-15T09:00:00Z").getTime();
@@ -190,7 +190,7 @@ describe("getQueueStats", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await as.mutation(api.userSettings.update, { dayResetUtcHour: 12 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 12, dailyGoal: 0 });
 
     const stats = await as.query(api.srsReviewQueue.getQueueStats);
     expect(stats?.dayResetUtcHour).toBe(12);

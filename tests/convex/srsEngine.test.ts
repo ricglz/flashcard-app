@@ -102,7 +102,7 @@ describe("populateQueueForUser respects dayResetUtcHour", () => {
     const t = convexTest(schema, modules);
     const { as } = await setupSrsSet(t);
 
-    await as.mutation(api.userSettings.update, { dayResetUtcHour: 8 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
 
     await populateForTestUser(t);
 
@@ -115,7 +115,7 @@ describe("populateQueueForUser respects dayResetUtcHour", () => {
     const t = convexTest(schema, modules);
     const { as } = await setupSrsSet(t);
 
-    await as.mutation(api.userSettings.update, { dayResetUtcHour: 8 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
 
     await populateForTestUser(t);
 
@@ -139,7 +139,7 @@ describe("populateQueueForUser respects dayResetUtcHour", () => {
     const t = convexTest(schema, modules);
     const { setId, as } = await setupSrsSet(t, 1);
 
-    await as.mutation(api.userSettings.update, { dayResetUtcHour: 8 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
 
     const cardList = await as.query(api.flashcards.list, { setId });
 
@@ -192,7 +192,7 @@ describe("populateQueueForUser queue population edge cases", () => {
     vi.setSystemTime(new Date("2025-06-15T14:00:00Z"));
     const t = convexTest(schema, modules);
     const { setId, as } = await setupSrsSet(t, 2);
-    await as.mutation(api.userSettings.update, { dayResetUtcHour: 8 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
     const cardList = await as.query(api.flashcards.list, { setId });
     const firstSrsCardId = await insertDueReviewCard(t, {
       setId,
@@ -231,9 +231,10 @@ describe("populateQueueForUser queue population edge cases", () => {
     vi.setSystemTime(new Date("2025-06-15T04:00:00Z"));
     const t = convexTest(schema, modules);
     const { as } = await setupSrsSet(t, 5);
-    await as.mutation(api.userSettings.update, {
+    await as.mutation(api.userSettings.updateSrsSettings, {
       dayResetUtcHour: 4,
       maxNewCardsPerDay: 2,
+      dailyGoal: 0,
     });
 
     await populateForTestUser(t);
@@ -263,9 +264,10 @@ describe("populateQueueForUser queue population edge cases", () => {
 
     const first = await setupSrsSet(t, 4, "First Set");
     const second = await setupSrsSet(t, 4, "Second Set");
-    await first.as.mutation(api.userSettings.update, {
+    await first.as.mutation(api.userSettings.updateSrsSettings, {
       dayResetUtcHour: 4,
       maxNewCardsPerDay: 3,
+      dailyGoal: 0,
     });
 
     await populateForTestUser(t);

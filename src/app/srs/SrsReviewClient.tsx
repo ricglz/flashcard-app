@@ -23,7 +23,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
   const settings = useOfflineQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.update);
+  const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const annotations = useOfflineQuery(api.cardAnnotations.getAll);
   const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
   const setCardNote = useMutation(api.cardAnnotations.setNote);

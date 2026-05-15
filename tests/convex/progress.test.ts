@@ -96,7 +96,7 @@ describe("getDailyGoalProgress", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    await as.mutation(api.userSettings.update, { dailyGoal: 10 });
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 4, dailyGoal: 10 });
 
     // Re-read settings to verify dailyGoal persisted
     const settings = await as.query(api.userSettings.get, {});

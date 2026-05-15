@@ -23,7 +23,8 @@ function formatResetTime(dayResetUtcHour: number): string {
 export default function SrsQueueStatus() {
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
   const settings = useOfflineQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.update);
+  const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
+  const updateTtsSpeed = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -56,14 +57,20 @@ export default function SrsQueueStatus() {
   async function handleSave() {
     setIsSaving(true);
     try {
-      const result = await updateSettings({
-        maxNewCardsPerDay: parsedMaxValue,
-        dayResetUtcHour: localHourToUtc(parsedResetHour),
-        ttsPlaybackSpeed: editTtsSpeed,
-        dailyGoal: Math.max(0, Math.min(500, Number(editDailyGoal) || 0)),
-      });
-      if (isFailureResult(result)) {
-        console.error(result.error.message);
+      const [srsResult, ttsResult] = await Promise.all([
+        updateSrsSettings({
+          maxNewCardsPerDay: parsedMaxValue,
+          dayResetUtcHour: localHourToUtc(parsedResetHour),
+          dailyGoal: Math.max(0, Math.min(500, Number(editDailyGoal) || 0)),
+        }),
+        updateTtsSpeed({ ttsPlaybackSpeed: editTtsSpeed }),
+      ]);
+      if (isFailureResult(srsResult)) {
+        console.error(srsResult.error.message);
+        return;
+      }
+      if (isFailureResult(ttsResult)) {
+        console.error(ttsResult.error.message);
         return;
       }
       setShowSettings(false);
