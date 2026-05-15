@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { asId } from "@/lib/convexHelpers";
@@ -17,6 +17,7 @@ export default function AssistantPanel() {
   const [model, setModel] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const settings = useQuery(api.userSettings.get);
   const sendMessage = useAction(api.ai.sendChatMessage);
   const userSets = useOfflineQuery(api.flashcardSets.list);
 
@@ -25,6 +26,8 @@ export default function AssistantPanel() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  if (!settings?.hasLlmKey) return null;
 
   const handleSend = async () => {
     const text = input.trim();
