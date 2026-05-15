@@ -27,16 +27,3 @@ export function getFieldDefinitions(
     order: fd.order,
   }));
 }
-
-/**
- * Type guard to check if a value is a flashcard set with field definitions.
- */
-export function hasFieldDefinitions(
-  doc: unknown
-): doc is { fieldDefinitions: unknown } {
-  return (
-    doc !== null &&
-    typeof doc === "object" &&
-    "fieldDefinitions" in doc
-  );
-}
