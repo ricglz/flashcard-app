@@ -2,7 +2,7 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useReducer, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
@@ -22,6 +22,8 @@ const STEP_LABELS = ["Name & Source", "Add Cards", "Configure Fields", "Review"]
 export default function WizardShell() {
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
+  const settings = useQuery(api.userSettings.get);
+  const hasLlmKey = settings?.hasLlmKey ?? false;
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdSetId, setCreatedSetId] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export default function WizardShell() {
       {/* Step content */}
       <div>
         {state.step === 1 && (
-          <StepNameAndSource state={state} dispatch={dispatch} />
+          <StepNameAndSource state={state} dispatch={dispatch} hasLlmKey={hasLlmKey} />
         )}
         {state.step === 2 && (
           <StepAddCards state={state} dispatch={dispatch} />

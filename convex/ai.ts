@@ -6,6 +6,7 @@ import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
+import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, Message } from "multi-llm-ts";
 import type { CommonFailure } from "./domain/result";
 
@@ -32,6 +33,7 @@ export const generateRemedialCards = action({
     name: v.string(),
     model: v.optional(v.string()),
     addToSrs: v.boolean(),
+    instructions: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<GenerateResult> => {
     const identity = await ctx.auth.getUserIdentity();
@@ -61,6 +63,7 @@ export const generateRemedialCards = action({
       targetCardCount: args.targetCardCount ?? 20,
       name: args.name,
       addToSrs: args.addToSrs,
+      instructions: args.instructions,
     });
 
     const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
@@ -90,6 +93,70 @@ export const generateRemedialCards = action({
     const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
       internal.tooling.validateGeneratedSetForTool,
       { ...payload, userId } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>
+    );
+
+    return { ok: true, validation, payload };
+  },
+});
+
+export const generateFromPrompt = action({
+  args: {
+    prompt: v.string(),
+    fieldDefinitions: v.array(v.object({
+      name: v.string(),
+      role: v.union(v.literal("primary"), v.literal("pronunciation"), v.literal("definition"), v.literal("note")),
+      metadata: v.record(v.string(), v.any()),
+      order: v.number(),
+    })),
+    targetCardCount: v.number(),
+    name: v.string(),
+    model: v.optional(v.string()),
+    addToSrs: v.boolean(),
+    instructions: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<GenerateResult> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return { ok: false, error: "Please sign in to continue." };
+
+    const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, { userId: identity.tokenIdentifier });
+    if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
+
+    const prompt = renderFreeformPrompt({
+      prompt: args.prompt,
+      fieldDefinitions: args.fieldDefinitions as Parameters<typeof renderFreeformPrompt>[0]["fieldDefinitions"],
+      targetCardCount: args.targetCardCount,
+      name: args.name,
+      addToSrs: args.addToSrs,
+      instructions: args.instructions,
+    });
+
+    const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
+    const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
+
+    const thread = [
+      new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
+      new Message("user", prompt),
+    ];
+
+    const response = await llm.complete(thread);
+    if (!response.content) {
+      return { ok: false, error: "LLM returned empty response." };
+    }
+
+    let payload: Record<string, unknown>;
+    try {
+      const cleaned = response.content
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+      payload = JSON.parse(cleaned);
+    } catch {
+      return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
+    }
+
+    const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
+      internal.tooling.validateGeneratedSetForTool,
+      { ...payload, userId: identity.tokenIdentifier } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>
     );
 
     return { ok: true, validation, payload };

@@ -37,8 +37,9 @@ export function renderRemedialPrompt(options: {
   targetCardCount: number;
   name: string;
   addToSrs: boolean;
+  instructions?: string;
 }): string {
-  const { context, targetCardCount, name, addToSrs } = options;
+  const { context, targetCardCount, name, addToSrs, instructions } = options;
   const sourceSetIds = collectSourceSetIds(context);
   const firstGroup = context.schemaGroups[0];
   const fieldDefinitions = firstGroup?.fieldDefinitions ?? [];
@@ -87,7 +88,7 @@ ${JSON.stringify({
 - If the fields are Chinese-oriented, include accurate Chinese, pinyin with tones, and concise English meaning.
 - Use the weak scores, reasons, metrics, and recent ratings to prioritize what to practice.
 - Keep output parseable as strict JSON.
-
+${instructions ? `\n## Additional Instructions\n\n${instructions}\n` : ""}
 ## Weak SRS Context
 
 ${JSON.stringify(compactWeakCardsContext(context), null, 2)}

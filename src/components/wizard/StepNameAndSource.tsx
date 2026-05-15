@@ -5,9 +5,10 @@ import SourceCard from "./SourceCard";
 type Props = {
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
+  hasLlmKey?: boolean;
 };
 
-export default function StepNameAndSource({ state, dispatch }: Props) {
+export default function StepNameAndSource({ state, dispatch, hasLlmKey }: Props) {
   const handlePresetSelect = (key: string) => {
     const preset = LANGUAGE_PRESETS[key];
     if (preset) {
@@ -45,7 +46,7 @@ export default function StepNameAndSource({ state, dispatch }: Props) {
         <label className="block text-sm font-medium mb-3">
           How do you want to add cards?
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <SourceCard
             title="Import CSV"
             description="Upload a CSV file with your cards"
@@ -58,10 +59,18 @@ export default function StepNameAndSource({ state, dispatch }: Props) {
             selected={state.sourceMethod === "manual"}
             onClick={() => dispatch({ type: "SET_SOURCE_METHOD", payload: "manual" })}
           />
+          {hasLlmKey && (
+            <SourceCard
+              title="AI Generate"
+              description="Generate cards with AI from a prompt"
+              selected={state.sourceMethod === "ai"}
+              onClick={() => dispatch({ type: "SET_SOURCE_METHOD", payload: "ai" })}
+            />
+          )}
         </div>
       </div>
 
-      {state.sourceMethod === "manual" && (
+      {(state.sourceMethod === "manual" || state.sourceMethod === "ai") && (
         <div>
           <label className="block text-sm font-medium mb-1">
             Start from a preset (optional)
@@ -76,7 +85,7 @@ export default function StepNameAndSource({ state, dispatch }: Props) {
             <option value="">No preset — define fields in next step</option>
             {PRESET_KEYS.map((key) => (
               <option key={key} value={key}>
-                {LANGUAGE_PRESETS[key].label}
+                {LANGUAGE_PRESETS[key]!.label}
               </option>
             ))}
           </select>

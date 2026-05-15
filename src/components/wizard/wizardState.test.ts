@@ -399,7 +399,7 @@ describe("hasSourceMethod", () => {
   it("narrows the type so sourceMethod is non-null", () => {
     const state = stateWith({ sourceMethod: "manual" });
     if (hasSourceMethod(state)) {
-      const method: "csv" | "manual" = state.sourceMethod;
+      const method: "csv" | "manual" | "ai" = state.sourceMethod;
       expect(method).toBe("manual");
     }
   });

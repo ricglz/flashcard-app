@@ -2,7 +2,7 @@ import { FieldDefinition } from "@/lib/types";
 import { validateCardFields } from "../../../convex/domain/cardFields";
 import { validateFieldDefinitions, validateSetName } from "../../../convex/domain/fieldDefinitions";
 
-export type SourceMethod = "csv" | "manual";
+export type SourceMethod = "csv" | "manual" | "ai";
 
 export type WizardState = {
   step: 1 | 2 | 3 | 4;
