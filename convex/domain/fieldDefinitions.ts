@@ -1,5 +1,5 @@
-import type { FieldDefinition, FieldMetadata } from "../../src/lib/types";
-import { FIELD_ROLES, isFieldMetadata, isFieldRole } from "../../src/lib/types";
+import type { FieldDefinition } from "../../src/lib/types";
+import { FIELD_ROLES, isFieldMetadata, isFieldRole, normalizeFieldMetadata } from "../../src/lib/types";
 import { fail, ok, type DomainFailure, type DomainResult } from "./result";
 
 export type EmptySetNameFailure = DomainFailure<"EmptySetName">;
@@ -48,10 +48,6 @@ export function validateSetName(
     return fail({ _tag: "EmptySetName", message: "Set name must not be empty" });
   }
   return ok(undefined);
-}
-
-function normalizeMetadata(metadata: FieldMetadata): FieldMetadata {
-  return metadata.tts ? { tts: { lang: metadata.tts.lang.trim() } } : {};
 }
 
 type FieldDefinitionInput = FieldDefinition | { name: string; role?: FieldDefinition["role"]; metadata?: FieldDefinition["metadata"]; order?: number };
@@ -136,7 +132,7 @@ export function validateFieldDefinitions(
     normalized.push({
       name: trimmedName,
       role,
-      metadata: normalizeMetadata(metadata),
+      metadata: normalizeFieldMetadata(metadata),
       order,
     });
   }
