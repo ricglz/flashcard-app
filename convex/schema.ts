@@ -1,6 +1,10 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+// Field roles, card ratings, and methodologies are defined as source-of-truth
+// arrays in src/lib/types.ts (FIELD_ROLES, CARD_RATINGS, METHODOLOGIES).
+// These validators must stay in sync with those arrays.
+
 export const fieldDefinitionValidator = v.object({
   name: v.string(),
   role: v.union(

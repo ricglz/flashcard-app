@@ -1,11 +1,8 @@
 import * as Schema from "effect/Schema";
+import { FIELD_ROLES, CARD_RATINGS } from "./types";
+import { METHODOLOGIES } from "./types";
 
-export const FieldRoleSchema = Schema.Literal(
-  "primary",
-  "pronunciation",
-  "definition",
-  "note"
-);
+export const FieldRoleSchema = Schema.Literal(...FIELD_ROLES);
 
 export const FieldMetadataSchema = Schema.Struct({
   tts: Schema.optional(
@@ -22,7 +19,7 @@ export const FieldDefinitionSchema = Schema.Struct({
   order: Schema.Number,
 });
 
-export const CardRatingSchema = Schema.Literal("wrong", "hard", "good", "easy");
+export const CardRatingSchema = Schema.Literal(...CARD_RATINGS);
 export const SrsCardStatusSchema = Schema.Literal("new", "learning", "review");
 
 export const CliScopeSchema = Schema.Literal(
@@ -32,12 +29,7 @@ export const CliScopeSchema = Schema.Literal(
   "srs:enroll"
 );
 
-export const WeakContextMethodologySchema = Schema.Literal(
-  "balanced",
-  "recent_lapses",
-  "low_ease",
-  "learning_stuck"
-);
+export const WeakContextMethodologySchema = Schema.Literal(...METHODOLOGIES);
 
 export const SourceScopeSchema = Schema.Literal(
   "single_set",
@@ -222,6 +214,6 @@ export function schemaFingerprint(
 ): string {
   return [...fieldDefinitions]
     .sort((a, b) => a.order - b.order)
-    .map((field) => `${field.name}:${field.role}:${JSON.stringify(field.metadata ?? {})}`)
+    .map((field) => `${field.name}:${field.role}:${JSON.stringify(field.metadata)}`)
     .join("|");
 }
