@@ -3,6 +3,7 @@
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import CliTokenSection from "./CliTokenSection";
+import SrsSettingsSection from "./SrsSettingsSection";
 import AiSettingsSection from "./AiSettingsSection";
 
 export default function SettingsPage() {
@@ -38,6 +39,7 @@ export default function SettingsPage() {
 
         <Show when="signed-in">
           <CliTokenSection />
+          <SrsSettingsSection />
           <AiSettingsSection />
         </Show>
       </main>
