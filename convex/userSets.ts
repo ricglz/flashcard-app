@@ -7,7 +7,6 @@ import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./domain/result";
 import { validateStudySessionSetup } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
-import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
 // ---------------------------------------------------------------------------
@@ -251,34 +250,5 @@ export const enrollCardsForSet = internalMutation({
   },
   handler: async (ctx, args) => {
     await enrollCardsForSetHelper(ctx, args.userId, args.setId);
-  },
-});
-
-export const backfillExistingSets = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const sets = await ctx.db.query("flashcardSets").take(500);
-    for (const set of sets) {
-      const existing = await ctx.db
-        .query("userSets")
-        .withIndex("by_userId_and_setId", (q) =>
-          q.eq("userId", set.ownerId).eq("setId", set._id)
-        )
-        .first();
-      if (existing) continue;
-
-      const fieldDefs = getFieldDefinitions(set);
-      const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
-
-      await ctx.db.insert("userSets", {
-        userId: set.ownerId,
-        setId: set._id,
-        role: "owner",
-        srsEnabled: true,
-        defaultFrontFields,
-        defaultBackFields,
-        createdAt: Date.now(),
-      });
-    }
   },
 });

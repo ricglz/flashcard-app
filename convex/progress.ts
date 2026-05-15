@@ -1,8 +1,7 @@
 import { v } from "convex/values";
-import { query, internalMutation } from "./_generated/server";
+import { query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { computeDayStartMs, computeDayKey, SRS_DEFAULTS } from "./srs";
-import { RATING_SCORES } from "./studySessions";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -323,64 +322,5 @@ export const getPerSetMastery = query({
     }
 
     return results;
-  },
-});
-
-export const backfillDailyStats = internalMutation({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const settings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
-    const dayResetUtcHour =
-      settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
-
-    const reviews = await ctx.db
-      .query("srsReviews")
-      .withIndex("by_userId_and_timestamp", (q) =>
-        q.eq("userId", args.userId)
-      )
-      .take(5000);
-
-    for (const review of reviews) {
-      const ratingScore = RATING_SCORES[review.rating];
-      const isCorrect = ratingScore >= 2;
-
-      const reviewDate = new Date(review.timestamp);
-      reviewDate.setUTCHours(dayResetUtcHour, 0, 0, 0);
-      if (reviewDate.getTime() > review.timestamp) {
-        reviewDate.setUTCDate(reviewDate.getUTCDate() - 1);
-      }
-      const dayStartMs = reviewDate.getTime();
-      const dayKey = new Date(dayStartMs).toISOString().slice(0, 10);
-
-      const existing = await ctx.db
-        .query("dailyStats")
-        .withIndex("by_userId_and_dayKey", (q) =>
-          q.eq("userId", args.userId).eq("dayKey", dayKey)
-        )
-        .first();
-
-      if (existing) {
-        await ctx.db.patch(existing._id, {
-          srsReviewCount: existing.srsReviewCount + 1,
-          correctCount: existing.correctCount + (isCorrect ? 1 : 0),
-          totalRatingScore: existing.totalRatingScore + ratingScore,
-        });
-      } else {
-        await ctx.db.insert("dailyStats", {
-          userId: args.userId,
-          dayKey,
-          dayStartMs,
-          srsReviewCount: 1,
-          sessionCardCount: 0,
-          correctCount: isCorrect ? 1 : 0,
-          totalRatingScore: ratingScore,
-        });
-      }
-    }
   },
 });
