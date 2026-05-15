@@ -10,8 +10,12 @@
 ## Code Quality — Typed Domain Validation Candidates
 
 ### Type-Safety — ESLint & Casts
+- [ ] Migrate ad-hoc result types in `convex/ai.ts` (`ConfirmResult`, `GenerateResult`, `ChatResult`) to use `DomainResult` — align with the wrapped `{ ok: true; value: T } | { ok: false; error: E }` pattern used everywhere else
+- [ ] Fix tooling mutations (`createGeneratedSetForTool`, `appendGeneratedCardsForTool` in `convex/tooling.ts`) to return `ok(...)` on success instead of raw objects — root cause of `"ok" in result` patterns in `convex/ai.ts` and `convex/http.ts`
 
-### AI Response Typing
+### Component State Ownership
+- [ ] Move form state into `GenerateConfigForm` (`src/app/generate/GenerateConfigForm.tsx`) — parent `GenerateClient` passes 6 state+setter pairs that should be owned by the form, calling back with final values via `onGenerate`
+- [ ] Move form state into `SrsSettingsPanel` (`src/components/SrsSettingsPanel.tsx`) — parent `SrsSettingsSectionInner` passes 4 local edit states that should be owned by the panel, calling back with final values via `onSave`
 
 ### Settings UI
 - [ ] Document `useQuery` vs `useOfflineQuery` convention — currently inconsistent across components with no clear rule for when to use which
