@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import type { FunctionArgs } from "convex/server";
-import { action } from "./_generated/server";
+import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
@@ -25,6 +25,53 @@ type GenerateResult =
   | { ok: false; error: string; raw?: string }
   | { ok: true; validation: { ok: boolean; issues: string[] }; payload: Record<string, unknown> };
 
+type AuthAndConfig = {
+  userId: string;
+  keyInfo: { provider: string; apiKey: string; customChatPrompt?: string };
+};
+
+async function resolveAuthAndConfig(
+  ctx: ActionCtx,
+): Promise<{ ok: true } & AuthAndConfig | { ok: false; error: string }> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return { ok: false, error: "Please sign in to continue." };
+  const userId = identity.tokenIdentifier;
+  const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, { userId });
+  if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
+  return { ok: true, userId, keyInfo };
+}
+
+async function generateAndValidateJson(
+  ctx: ActionCtx,
+  opts: { prompt: string; model: string | undefined; keyInfo: AuthAndConfig["keyInfo"]; userId: string },
+): Promise<GenerateResult> {
+  const modelName = opts.model || DEFAULT_MODELS[opts.keyInfo.provider] || "gpt-4o";
+  const llm = igniteModel(opts.keyInfo.provider, modelName, { apiKey: opts.keyInfo.apiKey });
+  const thread = [
+    new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
+    new Message("user", opts.prompt),
+  ];
+  const response = await llm.complete(thread);
+  if (!response.content) {
+    return { ok: false, error: "LLM returned empty response." };
+  }
+  let payload: Record<string, unknown>;
+  try {
+    const cleaned = response.content
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    payload = JSON.parse(cleaned);
+  } catch {
+    return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
+  }
+  const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
+    internal.tooling.validateGeneratedSetForTool,
+    { ...payload, userId: opts.userId } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>,
+  );
+  return { ok: true, validation, payload };
+}
+
 export const generateRemedialCards = action({
   args: {
     methodology: v.optional(weakContextMethodologyValidator),
@@ -36,12 +83,9 @@ export const generateRemedialCards = action({
     instructions: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<GenerateResult> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { ok: false, error: "Please sign in to continue." };
-    const userId = identity.tokenIdentifier;
-
-    const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, { userId });
-    if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
+    const auth = await resolveAuthAndConfig(ctx);
+    if (!auth.ok) return auth;
+    const { userId, keyInfo } = auth;
 
     const scope = args.setId
       ? { kind: "set" as const, setId: args.setId }
@@ -66,36 +110,7 @@ export const generateRemedialCards = action({
       instructions: args.instructions,
     });
 
-    const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
-    const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
-
-    const thread = [
-      new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
-      new Message("user", prompt),
-    ];
-
-    const response = await llm.complete(thread);
-    if (!response.content) {
-      return { ok: false, error: "LLM returned empty response." };
-    }
-
-    let payload: Record<string, unknown>;
-    try {
-      const cleaned = response.content
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-      payload = JSON.parse(cleaned);
-    } catch {
-      return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
-    }
-
-    const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
-      internal.tooling.validateGeneratedSetForTool,
-      { ...payload, userId } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>
-    );
-
-    return { ok: true, validation, payload };
+    return generateAndValidateJson(ctx, { prompt, model: args.model, keyInfo, userId });
   },
 });
 
@@ -115,11 +130,9 @@ export const generateFromPrompt = action({
     instructions: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<GenerateResult> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { ok: false, error: "Please sign in to continue." };
-
-    const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, { userId: identity.tokenIdentifier });
-    if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
+    const auth = await resolveAuthAndConfig(ctx);
+    if (!auth.ok) return auth;
+    const { userId, keyInfo } = auth;
 
     const prompt = renderFreeformPrompt({
       prompt: args.prompt,
@@ -130,36 +143,7 @@ export const generateFromPrompt = action({
       instructions: args.instructions,
     });
 
-    const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
-    const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
-
-    const thread = [
-      new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
-      new Message("user", prompt),
-    ];
-
-    const response = await llm.complete(thread);
-    if (!response.content) {
-      return { ok: false, error: "LLM returned empty response." };
-    }
-
-    let payload: Record<string, unknown>;
-    try {
-      const cleaned = response.content
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-      payload = JSON.parse(cleaned);
-    } catch {
-      return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
-    }
-
-    const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
-      internal.tooling.validateGeneratedSetForTool,
-      { ...payload, userId: identity.tokenIdentifier } as FunctionArgs<typeof internal.tooling.validateGeneratedSetForTool>
-    );
-
-    return { ok: true, validation, payload };
+    return generateAndValidateJson(ctx, { prompt, model: args.model, keyInfo, userId });
   },
 });
 
@@ -190,8 +174,8 @@ export const confirmGeneratedSet = action({
     addToSrs: v.boolean(),
   },
   handler: async (ctx, args): Promise<ConfirmResult> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { ok: false, error: "Please sign in to continue." };
+    const auth = await resolveAuthAndConfig(ctx);
+    if (!auth.ok) return auth;
 
     type CreateResult =
       | { readonly ok: true; readonly value: never }
@@ -206,7 +190,7 @@ export const confirmGeneratedSet = action({
       fieldDefinitions: args.fieldDefinitions,
       cards: args.cards,
       addToSrs: args.addToSrs,
-      userId: identity.tokenIdentifier,
+      userId: auth.userId,
     });
 
     if ("ok" in result && result.ok === false) {
@@ -232,19 +216,15 @@ export const sendChatMessage = action({
     })),
   },
   handler: async (ctx, args): Promise<ChatResult> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { ok: false, error: "Please sign in to continue." };
-
-    const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, {
-      userId: identity.tokenIdentifier,
-    });
-    if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
+    const auth = await resolveAuthAndConfig(ctx);
+    if (!auth.ok) return auth;
+    const { userId, keyInfo } = auth;
 
     let systemPrompt = keyInfo.customChatPrompt || "You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful.";
 
     if (args.context?.setId) {
       const setList = await ctx.runQuery(internal.tooling.listSetsForTool, {
-        userId: identity.tokenIdentifier,
+        userId,
         include: { fieldDefinitions: true },
       });
       const matchedSet = setList.sets.find((s) => s.setId === args.context!.setId);
