@@ -38,7 +38,7 @@ export const generateRemedialCards = action({
     if (!identity) return { ok: false, error: "Please sign in to continue." };
     const userId = identity.tokenIdentifier;
 
-    const keyInfo = await ctx.runQuery(internal.userSettings.getApiKey, { userId });
+    const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, { userId });
     if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
 
     const scope = args.setId
@@ -168,12 +168,12 @@ export const sendChatMessage = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return { ok: false, error: "Please sign in to continue." };
 
-    const keyInfo = await ctx.runQuery(internal.userSettings.getApiKey, {
+    const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, {
       userId: identity.tokenIdentifier,
     });
     if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
 
-    let systemPrompt = "You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful.";
+    let systemPrompt = keyInfo.customChatPrompt || "You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful.";
 
     if (args.context?.setId) {
       const setList = await ctx.runQuery(internal.tooling.listSetsForTool, {

@@ -13,18 +13,23 @@ export type InvalidTtsPlaybackSpeedFailure = DomainFailure<
   { value: number }
 >;
 export type InvalidDailyGoalFailure = DomainFailure<"InvalidDailyGoal", { value: number }>;
+export type IncompleteAiConfigFailure = DomainFailure<"IncompleteAiConfig">;
 
 export type SrsSettingsFailure =
   | InvalidMaxNewCardsPerDayFailure
   | InvalidDayResetUtcHourFailure
   | InvalidTtsPlaybackSpeedFailure
-  | InvalidDailyGoalFailure;
+  | InvalidDailyGoalFailure
+  | IncompleteAiConfigFailure;
 
 export type UserSettingsPatch = {
   maxNewCardsPerDay?: number;
   dayResetUtcHour?: number;
   ttsPlaybackSpeed?: number;
   dailyGoal?: number | undefined;
+  llmProvider?: string;
+  llmApiKey?: string;
+  customChatPrompt?: string;
 };
 
 export function validateUserSettingsPatch(input: {
@@ -32,6 +37,9 @@ export function validateUserSettingsPatch(input: {
   dayResetUtcHour?: number;
   ttsPlaybackSpeed?: number;
   dailyGoal?: number;
+  llmProvider?: string;
+  llmApiKey?: string;
+  customChatPrompt?: string;
 }): DomainResult<UserSettingsPatch, SrsSettingsFailure> {
   const patch: UserSettingsPatch = {};
 
@@ -82,5 +90,26 @@ export function validateUserSettingsPatch(input: {
     patch.dailyGoal = input.dailyGoal === 0 ? undefined : input.dailyGoal;
   }
 
+  if (input.llmProvider !== undefined) patch.llmProvider = input.llmProvider;
+  if (input.llmApiKey !== undefined) patch.llmApiKey = input.llmApiKey;
+  if (input.customChatPrompt !== undefined) patch.customChatPrompt = input.customChatPrompt;
+
   return ok(patch);
+}
+
+export function validateAiConfig(
+  provider: string | undefined,
+  apiKey: string | undefined,
+): DomainResult<void, IncompleteAiConfigFailure> {
+  const hasProvider = !!provider;
+  const hasKey = !!apiKey;
+  if (hasProvider !== hasKey) {
+    return fail({
+      _tag: "IncompleteAiConfig",
+      message: hasProvider
+        ? "API key is required when a provider is set"
+        : "Provider is required when an API key is set",
+    });
+  }
+  return ok(undefined);
 }

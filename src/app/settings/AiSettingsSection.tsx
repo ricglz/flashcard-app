@@ -11,9 +11,16 @@ export default function AiSettingsSection() {
 
   const [llmProvider, setLlmProvider] = useState("");
   const [llmApiKey, setLlmApiKey] = useState("");
+  const [chatPrompt, setChatPrompt] = useState("");
+  const [chatPromptInitialized, setChatPromptInitialized] = useState(false);
   const [llmSaving, setLlmSaving] = useState(false);
   const [llmSaved, setLlmSaved] = useState(false);
   const [llmError, setLlmError] = useState<string | null>(null);
+
+  if (settings && !chatPromptInitialized) {
+    setChatPrompt(settings.customChatPrompt ?? "");
+    setChatPromptInitialized(true);
+  }
 
   return (
     <section className="border border-edge rounded-xl p-5 space-y-4 mt-6">
@@ -56,6 +63,18 @@ export default function AiSettingsSection() {
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           />
         </div>
+        <div>
+          <label htmlFor="chat-prompt" className="block text-sm font-medium mb-1">Chat Assistant Prompt (optional)</label>
+          <textarea
+            id="chat-prompt"
+            value={chatPrompt}
+            onChange={(e) => { setChatPrompt(e.target.value); setLlmSaved(false); }}
+            rows={3}
+            placeholder="You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful."
+            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+          />
+          <p className="text-xs text-muted mt-1">Leave empty to use the default prompt.</p>
+        </div>
         <div className="flex items-center gap-3">
           <button
             onClick={async () => {
@@ -64,9 +83,10 @@ export default function AiSettingsSection() {
               setLlmSaved(false);
               try {
                 const provider = llmProvider || settings?.llmProvider;
-                const patch: { llmProvider?: string; llmApiKey?: string } = {};
+                const patch: { llmProvider?: string; llmApiKey?: string; customChatPrompt?: string } = {};
                 if (llmProvider) patch.llmProvider = llmProvider;
                 if (llmApiKey) patch.llmApiKey = llmApiKey;
+                patch.customChatPrompt = chatPrompt || undefined;
                 if (!provider && !patch.llmProvider) {
                   setLlmError("Please select a provider.");
                   return;

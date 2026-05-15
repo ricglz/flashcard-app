@@ -206,6 +206,7 @@ export default defineSchema({
     dailyGoal: v.optional(v.number()),
     llmProvider: v.optional(v.string()),
     llmApiKey: v.optional(v.string()),
+    customChatPrompt: v.optional(v.string()),
   }).index("by_userId", ["userId"]),
 
   cliAccessTokens: defineTable({
