@@ -104,13 +104,13 @@ export default function GenerateClient() {
         addToSrs: payload.addToSrs,
         cards: selectedCards,
       });
-      if ("ok" in result) {
+      if (!result.ok) {
         setError(result.error);
         setStep("preview");
         return;
       }
       setStep("done");
-      if ("setId" in result) router.push(`/sets/${result.setId}`);
+      router.push(`/sets/${result.setId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create set");
       setStep("preview");

@@ -93,7 +93,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         })),
         cards: selectedCards,
       });
-      if ("ok" in result && !result.ok) {
+      if (!result.ok) {
         setError(result.error);
         setPhase("preview");
         return;

@@ -166,7 +166,9 @@ export const generateFromPrompt = action({
   },
 });
 
-type ConfirmResult = { ok: false; error: string } | { setId: string; cardCount: number; srsEnabled: boolean };
+type ConfirmResult =
+  | { ok: false; error: string }
+  | { ok: true; setId: string; cardCount: number; srsEnabled: boolean };
 
 export const confirmGeneratedSet = action({
   args: {
@@ -215,7 +217,8 @@ export const confirmGeneratedSet = action({
     if ("ok" in result && result.ok === false) {
       return { ok: false, error: result.error.message };
     }
-    return result as ConfirmResult;
+    const { setId, cardCount, srsEnabled } = result as { setId: string; cardCount: number; srsEnabled: boolean };
+    return { ok: true, setId, cardCount, srsEnabled };
   },
 });
 
@@ -252,7 +255,8 @@ export const confirmAppendCards = action({
     if ("ok" in result && result.ok === false) {
       return { ok: false, error: result.error.message };
     }
-    return result as ConfirmResult;
+    const { setId, cardCount, srsEnabled } = result as { setId: string; cardCount: number; srsEnabled: boolean };
+    return { ok: true, setId, cardCount, srsEnabled };
   },
 });
 
