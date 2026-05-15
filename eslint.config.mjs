@@ -39,6 +39,7 @@ const eslintConfig = defineConfig([
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "eqeqeq": ["error", "always"],
       "@typescript-eslint/no-unnecessary-condition": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
       "max-lines-per-function": ["error", {
         max: 175,
         skipBlankLines: true,
@@ -56,6 +57,12 @@ const eslintConfig = defineConfig([
           message: "'as unknown' is forbidden. Use @ts-expect-error with explanation or proper typing instead.",
         },
       ],
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "e2e/**"],
+    rules: {
+      "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
   {
