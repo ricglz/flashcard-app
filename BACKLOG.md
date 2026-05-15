@@ -10,8 +10,7 @@
 ## Code Quality — Typed Domain Validation Candidates
 
 ### Study Session Setup / Results
-- [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
-  - **PARTIAL**: Mutations return DomainResult, but offline replay could be enhanced with more specific result types.
+- [ ] Standardize study session result types to use DomainResult pattern — abandon/complete already return discriminated outcomes (`"abandoned"`, `"alreadyClosed"`, `"duplicate"`, `"recorded"`), but the types are inline object literals rather than the shared DomainResult union used elsewhere.
 
 ### SRS Queue / Scheduling
 - [ ] Validate review actions before scheduling:
@@ -19,23 +18,10 @@
   - queue item exists or action is an idempotent replay,
   - rating is supported.
   - **PARTIAL**: Basic validation exists, but could be enhanced with more specific failure types.
-- [ ] Keep pure scheduling math in plain/testable TypeScript unless a richer result type adds meaningful typed failure handling.
 
 ### TTS / External Integration Boundary
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
-- [ ] Keep UI-facing TTS results serializable and independent of server/domain internals.
 
-### Zod Integration Consideration
-- [ ] Evaluate adding Zod for schema validation
-  - **Context**: Current validation is hand-rolled in `convex/domain/` modules. Works well but requires manual type definitions + runtime validators.
-  - **Pros**: Zod would provide single source of truth (schema → TypeScript types), better error messages, composable schemas, and ecosystem integrations.
-  - **Cons**: Adds dependency, learning curve, and migration effort. Current solution is working well with 201 tests passing.
-  - **Recommendation**: Consider Zod if:
-    - Validation logic becomes more complex
-    - Need to share schemas between frontend/backend more extensively
-    - Want automatic OpenAPI/docs generation
-    - Team grows and needs more standardized validation patterns
-  - **If adopted**: Start with `FieldDefinition` and `FieldMetadata` schemas, then gradually migrate domain validators. Keep DomainResult pattern - Zod complements it rather than replaces it.
 
 
 ## Marketplace & Multi-User
