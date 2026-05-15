@@ -9,9 +9,6 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
-### Shared Utilities
-- [ ] Extract shared AI generation helper in `convex/ai.ts` — `generateRemedialCards` and `generateFromPrompt` share ~30 lines of identical auth/LLM/parse/validate logic
-
 ### Type-Safety — ESLint & Casts
 - [ ] Type the `userSets.update` patch object (`convex/userSets.ts:161`) — currently `Record<string, unknown>`, should use a schema-derived partial type
 
@@ -19,8 +16,6 @@
 - [ ] Type the AI generation payload (`convex/ai.ts:26,82`) — `Record<string, unknown>` after JSON.parse. Validate with Effect Schema into a typed `GeneratedSetPayload` instead of unsafe casting
 
 ### Settings UI
-- [ ] Couple provider + API key in AI settings UI — currently two flat independent fields; should be a single grouped element where selecting a provider reveals the key field, and clearing the provider clears the key
-- [ ] Split `userSettings.update` into per-category mutations (`updateSrsSettings`, `updateAiConfig`) — each takes the full state for its category (no optional fields), enforcing coupling via types instead of runtime validation. UI loads current values as defaults, sends complete state on save. Removes need for `validateAiConfig` runtime check and the generic partial-patch pattern.
 - [ ] Document `useQuery` vs `useOfflineQuery` convention — currently inconsistent across components with no clear rule for when to use which
 
 ### Study Session Setup / Results
@@ -73,9 +68,6 @@
 ### Multi-Provider Key Management
 - [ ] Support multiple API keys per user (e.g., OpenAI for generation, Anthropic for assistant) — currently limited to one provider at a time
 - [ ] Per-feature provider selection (which key to use for generation vs. chat)
-
-### AI Card Generation
-- [ ] Generate into existing set (append cards to an existing set from AI generation) — see `docs/append-ai-cards.md` for design decisions
 
 ### AI Weak Spot Analysis
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
