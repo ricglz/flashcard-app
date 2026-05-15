@@ -4,13 +4,9 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import { parseCliToken } from "../../convex/cliTokens";
 import schema from "../../convex/schema";
+import { TEST_USER } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
-
-const TEST_USER = {
-  tokenIdentifier: "test-user-1",
-  subject: "user1",
-};
 
 describe("parseCliToken", () => {
   it("parses tokens whose public id and secret do not contain underscores", () => {

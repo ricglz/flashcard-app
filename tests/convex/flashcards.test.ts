@@ -4,47 +4,17 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import type { Id } from "../../convex/_generated/dataModel";
+import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
-
-const TEST_USER = {
-  tokenIdentifier: "test-user-1",
-  subject: "user1",
-};
-
-const fieldDefs = [
-  { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
-  { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
-];
-
-type TestDomainResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: { message: string } };
-
-function isDomainResult<T>(result: unknown): result is TestDomainResult<T> {
-  return result !== null && typeof result === "object" && "ok" in result;
-}
 
 async function createSet(
   as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>
 ): Promise<Id<"flashcardSets">> {
-  const result = await as.mutation(api.flashcardSets.create, {
+  return unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Test Set",
     fieldDefinitions: fieldDefs,
-  });
-  if (isDomainResult<Id<"flashcardSets">>(result)) {
-    if (result.ok === false) throw new Error(result.error.message);
-    return result.value;
-  }
-  return result;
-}
-
-async function unwrap<T>(result: T | TestDomainResult<T>): Promise<T> {
-  if (isDomainResult<T>(result)) {
-    if (result.ok === false) throw new Error(result.error.message);
-    return result.value;
-  }
-  return result;
+  }));
 }
 
 describe("flashcards.create", () => {

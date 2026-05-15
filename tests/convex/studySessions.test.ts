@@ -4,32 +4,10 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { computeOverallScore, RATING_SCORES } from "../../convex/studySessions";
+import { unwrap, TEST_USER, fieldDefs, fieldDefsWithTts } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
-
-async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
-  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
-    throw new Error(result.error.message);
-  }
-  return result as T;
-}
-
-const TEST_USER = {
-  tokenIdentifier: "test-user-1",
-  subject: "user1",
-};
-
-const fieldDefs = [
-  { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
-  { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
-];
-
-const fieldDefsWithTts = [
-  { name: "Character", role: "primary" as const, metadata: { tts: { lang: "zh-CN" } }, order: 0 },
-  { name: "Pinyin", role: "pronunciation" as const, metadata: {}, order: 1 },
-  { name: "Meaning", role: "definition" as const, metadata: {}, order: 2 },
-];
 
 async function createSetWithCards(
   as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>,

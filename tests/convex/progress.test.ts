@@ -3,26 +3,10 @@ import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
+import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
-
-async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
-  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
-    throw new Error(result.error.message);
-  }
-  return result as T;
-}
-
-const TEST_USER = {
-  tokenIdentifier: "test-user-1",
-  subject: "user1",
-};
-
-const fieldDefs = [
-  { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
-  { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
-];
 
 async function createSetWithCards(
   as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>,

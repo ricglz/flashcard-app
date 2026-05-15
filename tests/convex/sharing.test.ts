@@ -4,17 +4,10 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
+import { unwrap, fieldDefs } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
-
-async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
-  if (result && typeof result === "object" && "ok" in result) {
-    if (result.ok === false) throw new Error(result.error.message);
-    return result.value;
-  }
-  return result as T;
-}
 
 const OWNER = {
   tokenIdentifier: "test-owner",
@@ -26,16 +19,11 @@ const VISITOR = {
   subject: "visitor",
 };
 
-const validFieldDefs = [
-  { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
-  { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
-];
-
 async function createSetWithCards(t: ReturnType<typeof convexTest>) {
   const as = t.withIdentity(OWNER);
   const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Shared Set",
-    fieldDefinitions: validFieldDefs,
+    fieldDefinitions: fieldDefs,
   }));
   await unwrap(await as.mutation(api.flashcardSets.updateVisibility, {
     id: setId,

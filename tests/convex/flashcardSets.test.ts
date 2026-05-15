@@ -5,31 +5,15 @@ import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { validateSetFields } from "../../convex/flashcardSets";
 import { asId } from "../../src/lib/convexHelpers";
+import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
-
-async function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { message: string } } | T): Promise<T> {
-  if (result && typeof result === "object" && "ok" in result && result.ok === false) {
-    throw new Error(result.error.message);
-  }
-  return result as T;
-}
-
-const TEST_USER = {
-  tokenIdentifier: "test-user-1",
-  subject: "user1",
-};
 
 const OTHER_USER = {
   tokenIdentifier: "test-user-2",
   subject: "user2",
 };
-
-const validFieldDefs = [
-  { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
-  { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
-];
 
 describe("validateSetFields", () => {
   it("passes with valid inputs", () => {
@@ -81,7 +65,7 @@ describe("flashcardSets.create", () => {
     const as = t.withIdentity(TEST_USER);
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test Set",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     expect(id).toBeDefined();
 
@@ -94,7 +78,7 @@ describe("flashcardSets.create", () => {
     const t = convexTest(schema, modules);
     const result = await t.mutation(api.flashcardSets.create, {
       name: "Test",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     });
     expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
@@ -104,7 +88,7 @@ describe("flashcardSets.create", () => {
     const as = t.withIdentity(TEST_USER);
     const result = await as.mutation(api.flashcardSets.create, {
       name: "",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     });
     expect(result).toMatchObject({ ok: false, error: { message: "Set name must not be empty" } });
   });
@@ -116,7 +100,7 @@ describe("flashcardSets.update", () => {
     const as = t.withIdentity(TEST_USER);
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Original",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
 
     await as.mutation(api.flashcardSets.update, { id, name: "Updated" });
@@ -132,7 +116,7 @@ describe("flashcardSets.update", () => {
 
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
 
     const result = await other.mutation(api.flashcardSets.update, { id, name: "Hacked" });
@@ -148,7 +132,7 @@ describe("flashcardSets.get visibility gating", () => {
 
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Private Set",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
 
     const result = await other.query(api.flashcardSets.get, { id });
@@ -162,7 +146,7 @@ describe("flashcardSets.get visibility gating", () => {
 
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Public Set",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     await as.mutation(api.flashcardSets.updateVisibility, { id, visibility: "public" });
 
@@ -178,7 +162,7 @@ describe("flashcardSets.get visibility gating", () => {
 
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Unlisted Set",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     await as.mutation(api.flashcardSets.updateVisibility, { id, visibility: "unlisted" });
 
@@ -193,7 +177,7 @@ describe("flashcardSets.get visibility gating", () => {
 
     const id = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Private Set",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
 
     const result = await as.query(api.flashcardSets.get, { id });
@@ -210,7 +194,7 @@ describe("flashcardSets.remove", () => {
     // Create set with cards
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     await as.mutation(api.flashcards.batchCreate, {
       setId,
@@ -257,7 +241,7 @@ describe("flashcardSets.fork", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Original Set",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     await unwrap(await as.mutation(api.flashcardSets.updateVisibility, {
       id: setId,
@@ -298,7 +282,7 @@ describe("flashcardSets.fork", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Unlisted",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     await as.mutation(api.flashcardSets.updateVisibility, { id: setId, visibility: "unlisted" });
 
@@ -312,7 +296,7 @@ describe("flashcardSets.fork", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Private",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
 
     const other = t.withIdentity(OTHER_USER);
@@ -325,7 +309,7 @@ describe("flashcardSets.fork", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Private Shared",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
 
     const other = t.withIdentity(OTHER_USER);
@@ -340,7 +324,7 @@ describe("flashcardSets.fork", () => {
 
     const id = await unwrap(await owner.mutation(api.flashcardSets.create, {
       name: "Was Public",
-      fieldDefinitions: validFieldDefs,
+      fieldDefinitions: fieldDefs,
     }));
     await owner.mutation(api.flashcardSets.updateVisibility, { id, visibility: "public" });
     await member.mutation(api.sharing.addToLibrary, { setId: id });
