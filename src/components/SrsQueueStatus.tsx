@@ -5,8 +5,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import { utcHourToLocal, localHourToUtc } from "@/lib/time";
-import SrsSettingsPanel from "./SrsSettingsPanel";
+import SrsSettingsPanel, { SrsConfig } from "./SrsSettingsPanel";
 import SrsQueueEmpty from "./SrsQueueEmpty";
 import SrsQueueComplete from "./SrsQueueComplete";
 import SrsQueueActive from "./SrsQueueActive";
@@ -28,10 +27,6 @@ export default function SrsQueueStatus() {
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
-  const [localResetHour, setLocalResetHour] = useState<string | null>(null);
-  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
-  const [localDailyGoal, setLocalDailyGoal] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
@@ -39,45 +34,27 @@ export default function SrsQueueStatus() {
   if (stats === undefined) return null;
   if (stats === null) return null;
 
-  const currentMax = settings?.maxNewCardsPerDay ?? 20;
-  const currentResetUtcHour = settings?.dayResetUtcHour ?? 4;
-  const editMaxValue = localMaxNew ?? String(currentMax);
-  const parsedMaxValue = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
-  const editResetHour =
-    localResetHour ?? String(utcHourToLocal(currentResetUtcHour));
-  const parsedResetHour = Math.max(
-    0,
-    Math.min(23, Math.round(Number(editResetHour) || 0))
-  );
-  const currentTtsSpeed = settings?.ttsPlaybackSpeed ?? 0.75;
-  const editTtsSpeed = localTtsSpeed ?? currentTtsSpeed;
-  const currentDailyGoal = settings?.dailyGoal ?? 0;
-  const editDailyGoal = localDailyGoal ?? String(currentDailyGoal);
-
-  async function handleSave() {
+  async function handleSave(config: SrsConfig): Promise<boolean> {
     setIsSaving(true);
     try {
       const [srsResult, ttsResult] = await Promise.all([
         updateSrsSettings({
-          maxNewCardsPerDay: parsedMaxValue,
-          dayResetUtcHour: localHourToUtc(parsedResetHour),
-          dailyGoal: Math.max(0, Math.min(500, Number(editDailyGoal) || 0)),
+          maxNewCardsPerDay: config.maxNewCardsPerDay,
+          dayResetUtcHour: config.dayResetUtcHour,
+          dailyGoal: config.dailyGoal,
         }),
-        updateTtsSpeed({ ttsPlaybackSpeed: editTtsSpeed }),
+        updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
       if (isFailureResult(srsResult)) {
         console.error(srsResult.error.message);
-        return;
+        return false;
       }
       if (isFailureResult(ttsResult)) {
         console.error(ttsResult.error.message);
-        return;
+        return false;
       }
       setShowSettings(false);
-      setLocalMaxNew(null);
-      setLocalResetHour(null);
-      setLocalTtsSpeed(null);
-      setLocalDailyGoal(null);
+      return true;
     } finally {
       setIsSaving(false);
     }
@@ -105,15 +82,13 @@ export default function SrsQueueStatus() {
 
   const settingsPanel = showSettings ? (
     <SrsSettingsPanel
-      editMaxValue={editMaxValue}
-      editResetHour={editResetHour}
-      editTtsSpeed={editTtsSpeed}
-      editDailyGoal={editDailyGoal}
+      settings={{
+        maxNewCardsPerDay: settings?.maxNewCardsPerDay ?? 20,
+        dayResetUtcHour: settings?.dayResetUtcHour ?? 4,
+        ttsPlaybackSpeed: settings?.ttsPlaybackSpeed ?? 0.75,
+        dailyGoal: settings?.dailyGoal ?? 0,
+      }}
       isSaving={isSaving}
-      onChangeMaxValue={(v) => setLocalMaxNew(v)}
-      onChangeResetHour={(v) => setLocalResetHour(v)}
-      onChangeTtsSpeed={(v) => setLocalTtsSpeed(v)}
-      onChangeDailyGoal={(v) => setLocalDailyGoal(v)}
       onSave={handleSave}
     />
   ) : null;

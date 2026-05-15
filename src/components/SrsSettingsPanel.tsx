@@ -1,26 +1,64 @@
+"use client";
+
+import { useState } from "react";
+import { utcHourToLocal, localHourToUtc } from "@/lib/time";
+
+export type SrsConfig = {
+  maxNewCardsPerDay: number;
+  dayResetUtcHour: number;
+  ttsPlaybackSpeed: number;
+  dailyGoal: number;
+};
+
 export default function SrsSettingsPanel({
-  editMaxValue,
-  editResetHour,
-  editTtsSpeed,
-  editDailyGoal,
+  settings,
   isSaving,
-  onChangeMaxValue,
-  onChangeResetHour,
-  onChangeTtsSpeed,
-  onChangeDailyGoal,
   onSave,
 }: {
-  editMaxValue: string;
-  editResetHour: string;
-  editTtsSpeed: number;
-  editDailyGoal: string;
+  settings: {
+    maxNewCardsPerDay: number;
+    dayResetUtcHour: number;
+    ttsPlaybackSpeed: number;
+    dailyGoal: number;
+  };
   isSaving: boolean;
-  onChangeMaxValue: (v: string) => void;
-  onChangeResetHour: (v: string) => void;
-  onChangeTtsSpeed: (v: number) => void;
-  onChangeDailyGoal: (v: string) => void;
-  onSave: () => void;
+  onSave: (config: SrsConfig) => Promise<boolean>;
 }) {
+  const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
+  const [localResetHour, setLocalResetHour] = useState<string | null>(null);
+  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
+  const [localDailyGoal, setLocalDailyGoal] = useState<string | null>(null);
+
+  const editMaxValue = localMaxNew ?? String(settings.maxNewCardsPerDay);
+  const editResetHour =
+    localResetHour ?? String(utcHourToLocal(settings.dayResetUtcHour));
+  const editTtsSpeed = localTtsSpeed ?? settings.ttsPlaybackSpeed;
+  const editDailyGoal = localDailyGoal ?? String(settings.dailyGoal ?? 0);
+
+  async function handleSave() {
+    const parsedMax = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
+    const parsedHour = Math.max(
+      0,
+      Math.min(23, Math.round(Number(editResetHour) || 0))
+    );
+    const parsedGoal = Math.max(
+      0,
+      Math.min(500, Number(editDailyGoal) || 0)
+    );
+    const success = await onSave({
+      maxNewCardsPerDay: parsedMax,
+      dayResetUtcHour: localHourToUtc(parsedHour),
+      ttsPlaybackSpeed: editTtsSpeed,
+      dailyGoal: parsedGoal,
+    });
+    if (success) {
+      setLocalMaxNew(null);
+      setLocalResetHour(null);
+      setLocalTtsSpeed(null);
+      setLocalDailyGoal(null);
+    }
+  }
+
   return (
     <div className="mt-3 pt-3 border-t border-edge space-y-3">
       <div>
@@ -32,13 +70,13 @@ export default function SrsSettingsPanel({
           min={1}
           max={100}
           value={editMaxValue}
-          onChange={(e) => onChangeMaxValue(e.target.value)}
+          onChange={(e) => setLocalMaxNew(e.target.value)}
           onBlur={(e) => {
             const clamped = Math.max(
               1,
               Math.min(100, Number(e.target.value) || 1)
             );
-            onChangeMaxValue(String(clamped));
+            setLocalMaxNew(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
@@ -52,13 +90,13 @@ export default function SrsSettingsPanel({
           min={0}
           max={23}
           value={editResetHour}
-          onChange={(e) => onChangeResetHour(e.target.value)}
+          onChange={(e) => setLocalResetHour(e.target.value)}
           onBlur={(e) => {
             const clamped = Math.max(
               0,
               Math.min(23, Math.round(Number(e.target.value) || 0))
             );
-            onChangeResetHour(String(clamped));
+            setLocalResetHour(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
@@ -73,7 +111,7 @@ export default function SrsSettingsPanel({
           max={2}
           step={0.25}
           value={editTtsSpeed}
-          onChange={(e) => onChangeTtsSpeed(Number(e.target.value))}
+          onChange={(e) => setLocalTtsSpeed(Number(e.target.value))}
           className="w-full accent-accent"
         />
         <div className="flex justify-between text-xs text-muted mt-0.5">
@@ -91,19 +129,19 @@ export default function SrsSettingsPanel({
           min={0}
           max={500}
           value={editDailyGoal}
-          onChange={(e) => onChangeDailyGoal(e.target.value)}
+          onChange={(e) => setLocalDailyGoal(e.target.value)}
           onBlur={(e) => {
             const clamped = Math.max(
               0,
               Math.min(500, Number(e.target.value) || 0)
             );
-            onChangeDailyGoal(String(clamped));
+            setLocalDailyGoal(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
       </div>
       <button
-        onClick={onSave}
+        onClick={handleSave}
         disabled={isSaving}
         className="px-3 py-1 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
       >

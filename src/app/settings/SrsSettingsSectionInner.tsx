@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { isFailureResult } from "@/lib/appResult";
-import { utcHourToLocal, localHourToUtc } from "@/lib/time";
-import SrsSettingsPanel from "@/components/SrsSettingsPanel";
+import SrsSettingsPanel, { SrsConfig } from "@/components/SrsSettingsPanel";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 
 type Settings = NonNullable<ReturnType<typeof useOfflineQuery<typeof api.userSettings.get>>>;
@@ -14,42 +13,28 @@ export default function SrsSettingsSectionInner({ settings }: { settings: Settin
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
   const updateTtsSpeed = useMutation(api.userSettings.updateTtsPlaybackSpeed);
 
-  const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
-  const [localResetHour, setLocalResetHour] = useState<string | null>(null);
-  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
-  const [localDailyGoal, setLocalDailyGoal] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const editMaxValue = localMaxNew ?? String(settings.maxNewCardsPerDay);
-  const parsedMaxValue = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
-  const editResetHour = localResetHour ?? String(utcHourToLocal(settings.dayResetUtcHour));
-  const parsedResetHour = Math.max(0, Math.min(23, Math.round(Number(editResetHour) || 0)));
-  const editTtsSpeed = localTtsSpeed ?? settings.ttsPlaybackSpeed;
-  const editDailyGoal = localDailyGoal ?? String(settings.dailyGoal ?? 0);
-
-  async function handleSave() {
+  async function handleSave(config: SrsConfig): Promise<boolean> {
     setIsSaving(true);
     try {
       const [srsResult, ttsResult] = await Promise.all([
         updateSrsSettings({
-          maxNewCardsPerDay: parsedMaxValue,
-          dayResetUtcHour: localHourToUtc(parsedResetHour),
-          dailyGoal: Math.max(0, Math.min(500, Number(editDailyGoal) || 0)),
+          maxNewCardsPerDay: config.maxNewCardsPerDay,
+          dayResetUtcHour: config.dayResetUtcHour,
+          dailyGoal: config.dailyGoal,
         }),
-        updateTtsSpeed({ ttsPlaybackSpeed: editTtsSpeed }),
+        updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
       if (isFailureResult(srsResult)) {
         console.error(srsResult.error.message);
-        return;
+        return false;
       }
       if (isFailureResult(ttsResult)) {
         console.error(ttsResult.error.message);
-        return;
+        return false;
       }
-      setLocalMaxNew(null);
-      setLocalResetHour(null);
-      setLocalTtsSpeed(null);
-      setLocalDailyGoal(null);
+      return true;
     } finally {
       setIsSaving(false);
     }
@@ -62,15 +47,13 @@ export default function SrsSettingsSectionInner({ settings }: { settings: Settin
         Daily new card limits, study schedule, and TTS preferences.
       </p>
       <SrsSettingsPanel
-        editMaxValue={editMaxValue}
-        editResetHour={editResetHour}
-        editTtsSpeed={editTtsSpeed}
-        editDailyGoal={editDailyGoal}
+        settings={{
+          maxNewCardsPerDay: settings.maxNewCardsPerDay,
+          dayResetUtcHour: settings.dayResetUtcHour,
+          ttsPlaybackSpeed: settings.ttsPlaybackSpeed,
+          dailyGoal: settings.dailyGoal ?? 0,
+        }}
         isSaving={isSaving}
-        onChangeMaxValue={setLocalMaxNew}
-        onChangeResetHour={setLocalResetHour}
-        onChangeTtsSpeed={setLocalTtsSpeed}
-        onChangeDailyGoal={setLocalDailyGoal}
         onSave={handleSave}
       />
     </section>
