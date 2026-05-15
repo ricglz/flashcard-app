@@ -43,7 +43,7 @@ export const getActiveSession = query({
           .eq("status", "in_progress")
       )
       .first();
-    if (!session || session.status !== "in_progress") return null;
+    if (!session) return null;
     return session;
   },
 });
