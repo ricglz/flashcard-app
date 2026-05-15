@@ -40,13 +40,13 @@ export default function FlaggedCardsClient() {
   );
 
   const presentRoles = FIELD_ROLES.filter((role) =>
-    cards.some((card) => card.fieldDefinitions?.some((fd) => fd.role === role))
+    cards.some((card) => card.fieldDefinitions.some((fd) => fd.role === role))
   );
 
   const hasNotes = cards.some((card) => card.note);
 
   function getFieldForRole(card: (typeof cards)[number], role: FieldRole) {
-    const fd = card.fieldDefinitions?.find(
+    const fd = card.fieldDefinitions.find(
       (f: { role: string }) => f.role === role
     );
     if (!fd) return null;

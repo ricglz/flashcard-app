@@ -63,7 +63,7 @@ export default function BrowseClient({
   // Compute card order once when cards first load, then filter dismissed
   const [cardOrder, setCardOrder] = useState<Id<"flashcards">[] | null>(null);
 
-  if (cards && cardOrder === null) {
+  if (cardOrder === null) {
     const sorted = [...cards]
       .sort((a, b) => a.order - b.order)
       .map((c) => c._id);

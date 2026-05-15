@@ -100,15 +100,18 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
 
       setIsSyncing(true);
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
       for (let attempt = 0; attempt < MAX_ATTEMPTS && !cancelled; attempt++) {
         if (attempt > 0) {
           await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
           if (cancelled) break;
         }
         const success = await flushEntries(client);
         if (success) break;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
       if (!cancelled) {
         setIsSyncing(false);
         await refreshCount();

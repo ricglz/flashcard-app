@@ -82,7 +82,7 @@ export const getAiConfig = internalQuery({
       .query("userSettings")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
-    if (!settings?.llmApiKey || !settings?.llmProvider) return null;
+    if (!settings?.llmApiKey || !settings.llmProvider) return null;
     return {
       provider: settings.llmProvider,
       apiKey: settings.llmApiKey,

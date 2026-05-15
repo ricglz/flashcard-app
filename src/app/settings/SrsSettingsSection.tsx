@@ -22,7 +22,7 @@ export default function SrsSettingsSection() {
 
   const editMaxValue = localMaxNew ?? String(settings.maxNewCardsPerDay);
   const parsedMaxValue = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
-  const editResetHour = localResetHour ?? String(utcHourToLocal(settings.dayResetUtcHour ?? 4));
+  const editResetHour = localResetHour ?? String(utcHourToLocal(settings.dayResetUtcHour));
   const parsedResetHour = Math.max(0, Math.min(23, Math.round(Number(editResetHour) || 0)));
   const editTtsSpeed = localTtsSpeed ?? settings.ttsPlaybackSpeed;
   const editDailyGoal = localDailyGoal ?? String(settings.dailyGoal ?? 0);

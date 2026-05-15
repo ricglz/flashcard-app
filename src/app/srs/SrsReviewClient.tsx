@@ -137,9 +137,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
     );
   }
 
-  const currentAnnotation = currentItem
-    ? annotationMap.get(asId<"flashcards">(currentItem.card._id))
-    : undefined;
+  const currentAnnotation = annotationMap.get(asId<"flashcards">(currentItem.card._id));
 
   return (
     <SrsReviewActive

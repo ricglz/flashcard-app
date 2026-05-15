@@ -23,6 +23,11 @@ const eslintConfig = defineConfig([
     linterOptions: {
       reportUnusedDisableDirectives: "error",
     },
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+      },
+    },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": ["error", {
@@ -33,6 +38,7 @@ const eslintConfig = defineConfig([
       "react/no-multi-comp": ["error", { ignoreStateless: false }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "eqeqeq": ["error", "always"],
+      "@typescript-eslint/no-unnecessary-condition": "error",
       "max-lines-per-function": ["error", {
         max: 175,
         skipBlankLines: true,
@@ -50,6 +56,17 @@ const eslintConfig = defineConfig([
           message: "'as unknown' is forbidden. Use @ts-expect-error with explanation or proper typing instead.",
         },
       ],
+    },
+  },
+  {
+    files: ["src/sw.ts"],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-unnecessary-condition": "off",
     },
   },
 ]);

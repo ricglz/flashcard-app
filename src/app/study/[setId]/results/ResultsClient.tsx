@@ -42,7 +42,7 @@ export default function ResultsClient({
   };
   for (const r of results) {
     const rating = r.rating;
-    ratingCounts[rating] = (ratingCounts[rating] ?? 0) + 1;
+    ratingCounts[rating] = ratingCounts[rating] + 1;
   }
 
   const totalCards = session.cardOrder.length;

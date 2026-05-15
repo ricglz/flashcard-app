@@ -210,7 +210,7 @@ export const confirmGeneratedSet = action({
     });
 
     if ("ok" in result && result.ok === false) {
-      return { ok: false, error: result.error.message ?? "Failed to create set" };
+      return { ok: false, error: result.error.message };
     }
     return result as ConfirmResult;
   },

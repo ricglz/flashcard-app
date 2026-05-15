@@ -13,7 +13,7 @@ export default async function SrsReviewPage() {
   );
 
   const queue = preloadedQueryResult(preloadedQueue);
-  if (!queue || queue.length === 0) {
+  if (queue.length === 0) {
     redirect("/");
   }
 

@@ -145,7 +145,7 @@ function validateTtsOnlyFields(
       }
 
       const fieldDefinition = fieldDefsMap.get(fieldName)!;
-      if (!fieldDefinition.metadata?.tts) {
+      if (!fieldDefinition.metadata.tts) {
         return yield* Effect.fail({
           _tag: "NonTtsOnlyField" as const,
           message: `Field "${fieldName}" has no TTS config and cannot be TTS-only`,

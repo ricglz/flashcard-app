@@ -6,7 +6,7 @@ import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getTtsConfig, getDefaultFieldLayout } from "@/lib/types";
+import { getTtsConfig } from "@/lib/types";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import { asId } from "@/lib/convexHelpers";
 import { cycleFieldAssignment } from "@/lib/fieldToggle";
@@ -54,15 +54,9 @@ export default function StudyConfigClient({
   const fieldDefs = set.fieldDefinitions;
 
   if (!initialized && fieldDefs.length > 0) {
-    if (userSet) {
-      setFrontFields(userSet.defaultFrontFields);
-      setBackFields(userSet.defaultBackFields);
-      setTtsOnlyFields(userSet.defaultTtsOnlyFields ?? []);
-    } else {
-      const layout = getDefaultFieldLayout(fieldDefs);
-      setFrontFields(layout.defaultFrontFields);
-      setBackFields(layout.defaultBackFields);
-    }
+    setFrontFields(userSet.defaultFrontFields);
+    setBackFields(userSet.defaultBackFields);
+    setTtsOnlyFields(userSet.defaultTtsOnlyFields ?? []);
     setInitialized(true);
   }
 
