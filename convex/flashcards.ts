@@ -46,7 +46,7 @@ export const create = mutation({
       fields: fields.value,
       order: args.order,
     });
-    await ctx.db.patch(args.setId, { cardCount: (set.cardCount ?? 0) + 1, updatedAt: Date.now() });
+    await ctx.db.patch(args.setId, { cardCount: set.cardCount + 1, updatedAt: Date.now() });
     return id;
   },
 });
@@ -85,7 +85,7 @@ export const batchCreate = mutation({
       ids.push(id);
     }
     await ctx.db.patch(args.setId, {
-      cardCount: (set.cardCount ?? 0) + normalizedCards.length,
+      cardCount: set.cardCount + normalizedCards.length,
       updatedAt: Date.now(),
     });
     return ids;
@@ -134,7 +134,7 @@ export const remove = mutation({
     await ctx.db.delete(args.id);
     if (set) {
       await ctx.db.patch(set._id, {
-        cardCount: Math.max(0, (set.cardCount ?? 1) - 1),
+        cardCount: Math.max(0, set.cardCount - 1),
         updatedAt: Date.now(),
       });
     }

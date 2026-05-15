@@ -84,8 +84,8 @@ export default defineSchema({
     ownerId: v.string(),
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
-    cardCount: v.optional(v.number()),
-    updatedAt: v.optional(v.number()),
+    cardCount: v.number(),
+    updatedAt: v.number(),
     origin: v.optional(setOriginValidator),
     visibility: v.optional(v.union(
       v.literal("private"),

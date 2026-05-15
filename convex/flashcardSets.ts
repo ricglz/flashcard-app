@@ -87,6 +87,7 @@ export const create = mutation({
       ownerId: identity.tokenIdentifier,
       origin: { kind: "manual" as const },
       cardCount: 0,
+      updatedAt: Date.now(),
       createdAt: Date.now(),
     });
 
@@ -194,11 +195,11 @@ export const getForkSyncStatus = query({
     const { sourceSetId, forkedAt } = origin;
     const source = await ctx.db.get(sourceSetId);
     if (!source) return { sourceDeleted: true, sourceUpdated: false };
-    const sourceUpdatedAt = source.updatedAt ?? source._creationTime;
+    const sourceUpdatedAt = source.updatedAt;
     return {
       sourceDeleted: false,
       sourceUpdated: sourceUpdatedAt > forkedAt,
-      sourceCardCount: source.cardCount ?? 0,
+      sourceCardCount: source.cardCount,
       forkedAt,
     };
   },
@@ -300,6 +301,7 @@ export const fork = mutation({
       },
       visibility: "private",
       cardCount: sourceCards.length,
+      updatedAt: now,
       createdAt: now,
     });
 

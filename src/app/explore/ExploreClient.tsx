@@ -37,7 +37,7 @@ export default function ExploreClient() {
         sorted.sort((a, b) => a.name.localeCompare(b.name));
         break;
       case "cards":
-        sorted.sort((a, b) => (b.cardCount ?? 0) - (a.cardCount ?? 0));
+        sorted.sort((a, b) => b.cardCount - a.cardCount);
         break;
     }
     return sorted;

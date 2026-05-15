@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export function SetCard({ set }: { set: { _id: string; name: string; description?: string; fieldDefinitions: { name: string }[]; cardCount?: number } }) {
+export function SetCard({ set }: { set: { _id: string; name: string; description?: string; fieldDefinitions: { name: string }[]; cardCount: number } }) {
   return (
     <Link
       href={`/sets/${set._id}`}
@@ -18,8 +18,8 @@ export function SetCard({ set }: { set: { _id: string; name: string; description
           {set.fieldDefinitions.length !== 1 ? "s" : ""}
         </span>
         <span>
-          {set.cardCount ?? "?"} card
-          {(set.cardCount ?? 0) !== 1 ? "s" : ""}
+          {set.cardCount} card
+          {set.cardCount !== 1 ? "s" : ""}
         </span>
       </div>
     </Link>

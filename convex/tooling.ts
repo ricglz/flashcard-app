@@ -449,6 +449,8 @@ export const createGeneratedSetForTool = internalMutation({
         sourceScope: normalized.sourceScope,
         ...(normalized.weakContextMethodology !== undefined ? { weakContextMethodology: normalized.weakContextMethodology } : {}),
       },
+      cardCount: normalized.cards.length,
+      updatedAt: now,
       createdAt: now,
     });
 
