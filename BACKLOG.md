@@ -25,9 +25,6 @@
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
 - [ ] Keep UI-facing TTS results serializable and independent of server/domain internals.
 
-### Offline Sync / Outbox
-- [ ] Add tests for outbox drain ordering, duplicate review replay, and failure recovery.
-
 ### Zod Integration Consideration
 - [ ] Evaluate adding Zod for schema validation
   - **Context**: Current validation is hand-rolled in `convex/domain/` modules. Works well but requires manual type definitions + runtime validators.
