@@ -13,6 +13,7 @@ import { validateCardFields } from "./domain/cardFields";
 import { invalidInput, fail, notFound } from "./domain/result";
 import { getFieldDefinitions } from "./lib/typed";
 import { enrollCardsForSetHelper } from "./userSets";
+import { getDefaultFieldLayout } from "../src/lib/types";
 import { schemaFingerprint } from "../src/lib/aiToolingSchemas";
 import type {
   GeneratedSetPayload,
@@ -458,14 +459,14 @@ export const createGeneratedSetForTool = internalMutation({
       await ctx.db.insert("flashcards", { setId, fields: validated.value, order: i });
     }
 
-    const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
+    const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefinitions);
     await ctx.db.insert("userSets", {
       userId: args.userId,
       setId,
       role: "owner",
       srsEnabled: normalized.addToSrs,
-      defaultFrontFields: sorted.length > 0 ? [sorted[0]!.name] : [],
-      defaultBackFields: sorted.slice(1).map((field) => field.name),
+      defaultFrontFields,
+      defaultBackFields,
       createdAt: now,
     });
 

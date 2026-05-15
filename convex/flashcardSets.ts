@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import { fieldDefinitionValidator } from "./schema";
 import { assertOwner, enrollCardsForSetHelper } from "./userSets";
@@ -11,6 +10,7 @@ import {
 } from "./domain/fieldDefinitions";
 import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
+import { getDefaultFieldLayout } from "../src/lib/types";
 
 export function validateSetFields(
   name: string | undefined,
@@ -89,9 +89,7 @@ export const create = mutation({
       createdAt: Date.now(),
     });
 
-    const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
-    const defaultFrontFields = sorted.length > 0 ? [sorted[0]!.name] : [];
-    const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
+    const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefinitions);
 
     await ctx.db.insert("userSets", {
       userId: identity.tokenIdentifier,
@@ -232,9 +230,9 @@ export const getForkSyncStatus = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     const set = await ctx.db.get(args.setId);
-    if (!set || set.origin?.kind !== "forked") return null;
-    const sourceSetId = (set.origin as { sourceSetId: Id<"flashcardSets">; forkedAt: number }).sourceSetId;
-    const forkedAt = (set.origin as { forkedAt: number }).forkedAt;
+    const origin = set?.origin;
+    if (!set || origin?.kind !== "forked") return null;
+    const { sourceSetId, forkedAt } = origin;
     const source = await ctx.db.get(sourceSetId);
     if (!source) return { sourceDeleted: true, sourceUpdated: false };
     const sourceUpdatedAt = source.updatedAt ?? source._creationTime;
@@ -354,14 +352,14 @@ export const fork = mutation({
     }
 
     const fieldDefs = getFieldDefinitions(sourceSet);
-    const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
+    const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
     await ctx.db.insert("userSets", {
       userId: identity.tokenIdentifier,
       setId: newSetId,
       role: "owner",
       srsEnabled: true,
-      defaultFrontFields: sorted.length > 0 ? [sorted[0]!.name] : [],
-      defaultBackFields: sorted.slice(1).map((fd) => fd.name),
+      defaultFrontFields,
+      defaultBackFields,
       createdAt: now,
     });
 

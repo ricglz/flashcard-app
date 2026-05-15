@@ -112,6 +112,17 @@ export function getStudyableFieldNames(
   return getDisplayableFields(fieldDefinitions).map((field) => field.name);
 }
 
+export function getDefaultFieldLayout(fieldDefinitions: readonly FieldDefinition[]): {
+  defaultFrontFields: string[];
+  defaultBackFields: string[];
+} {
+  const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
+  return {
+    defaultFrontFields: sorted.length > 0 ? [sorted[0]!.name] : [],
+    defaultBackFields: sorted.slice(1).map((fd) => fd.name),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Card Ratings
 // ---------------------------------------------------------------------------

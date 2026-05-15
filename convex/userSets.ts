@@ -7,6 +7,7 @@ import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./domain/result";
 import { validateStudySessionSetup } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
+import { getDefaultFieldLayout } from "../src/lib/types";
 
 // ---------------------------------------------------------------------------
 // Access control helpers — used by other Convex function files
@@ -282,9 +283,7 @@ export const backfillExistingSets = internalMutation({
       if (existing) continue;
 
       const fieldDefs = getFieldDefinitions(set);
-      const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
-      const defaultFrontFields = sorted.length > 0 ? [sorted[0]!.name] : [];
-      const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
+      const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
 
       await ctx.db.insert("userSets", {
         userId: set.ownerId,

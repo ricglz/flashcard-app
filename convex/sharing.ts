@@ -3,6 +3,7 @@ import { mutation } from "./_generated/server";
 import { enrollCardsForSetHelper } from "./userSets";
 import { fail, unauthenticated, notFound, conflict, forbidden } from "./domain/result";
 import { getFieldDefinitions } from "./lib/typed";
+import { getDefaultFieldLayout } from "../src/lib/types";
 
 export const addToLibrary = mutation({
   args: { setId: v.id("flashcardSets") },
@@ -25,9 +26,7 @@ export const addToLibrary = mutation({
     if (existing) return fail(conflict("Set already in library"));
 
     const fieldDefs = getFieldDefinitions(set);
-    const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
-    const defaultFrontFields = sorted.length > 0 ? [sorted[0]!.name] : [];
-    const defaultBackFields = sorted.slice(1).map((fd) => fd.name);
+    const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
 
     const userSetId = await ctx.db.insert("userSets", {
       userId: identity.tokenIdentifier,
