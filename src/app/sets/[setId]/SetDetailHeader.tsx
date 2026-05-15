@@ -6,14 +6,18 @@ type Props = {
   setId: string;
   isMember: boolean;
   isOwner: boolean;
+  hasLlmKey: boolean;
   onBack: () => void;
+  onAiGenerate: () => void;
 };
 
 export default function SetDetailHeader({
   setId,
   isMember,
   isOwner,
+  hasLlmKey,
   onBack,
+  onAiGenerate,
 }: Props) {
   return (
     <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -24,6 +28,14 @@ export default function SetDetailHeader({
         &larr; Back
       </button>
       <div className="flex gap-2">
+        {isOwner && hasLlmKey && (
+          <button
+            onClick={onAiGenerate}
+            className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
+          >
+            AI Generate
+          </button>
+        )}
         {isMember && (
           <Link
             href={`/study/${setId}`}

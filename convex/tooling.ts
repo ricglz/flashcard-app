@@ -481,3 +481,81 @@ export const createGeneratedSetForTool = internalMutation({
     return { setId, cardCount: normalized.cards.length, srsEnabled: normalized.addToSrs };
   },
 });
+
+export const appendGeneratedCardsForTool = internalMutation({
+  args: {
+    userId: v.string(),
+    targetSetId: v.id("flashcardSets"),
+    fieldDefinitions: v.array(fieldDefinitionValidator),
+    cards: v.array(generatedCardValidator),
+  },
+  handler: async (ctx, args) => {
+    const targetSet = await ctx.db.get(args.targetSetId);
+    if (!targetSet) return fail(notFound("Target set not found."));
+
+    const ownerLink = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId_and_setId", (q) =>
+        q.eq("userId", args.userId).eq("setId", args.targetSetId),
+      )
+      .first();
+    if (!ownerLink || ownerLink.role !== "owner") {
+      return fail(invalidInput("You must own the target set."));
+    }
+
+    const targetFingerprint = schemaFingerprint(getFieldDefinitions(targetSet));
+    const payloadFingerprint = schemaFingerprint(
+      args.fieldDefinitions as FieldDefinition[],
+    );
+    if (targetFingerprint !== payloadFingerprint) {
+      return fail(invalidInput("Field definitions don't match the target set."));
+    }
+
+    if (args.cards.length === 0) {
+      return fail(invalidInput("At least one card is required."));
+    }
+    if (args.cards.length > 100) {
+      return fail(invalidInput("Appending is limited to 100 cards at a time."));
+    }
+
+    const existingCards = await ctx.db
+      .query("flashcards")
+      .withIndex("by_setId", (q) => q.eq("setId", args.targetSetId))
+      .take(10000);
+    const maxOrder = existingCards.reduce((max, c) => Math.max(max, c.order), -1);
+
+    const fieldNames = (args.fieldDefinitions as FieldDefinition[]).map(
+      (f) => f.name,
+    );
+    for (let i = 0; i < args.cards.length; i++) {
+      const card = args.cards[i]!;
+      const validated = validateCardFields(fieldNames, card.fields);
+      if (!validated.ok) return fail(invalidInput(validated.error.message));
+      await ctx.db.insert("flashcards", {
+        setId: args.targetSetId,
+        fields: validated.value,
+        order: maxOrder + 1 + i,
+        origin: "ai_generated",
+      });
+    }
+
+    const patchData: Record<string, unknown> = {
+      cardCount: targetSet.cardCount + args.cards.length,
+      updatedAt: Date.now(),
+    };
+    if (targetSet.origin.kind !== "ai_generated") {
+      patchData.origin = { kind: "mixed" };
+    }
+    await ctx.db.patch(args.targetSetId, patchData);
+
+    if (ownerLink.srsEnabled) {
+      await enrollCardsForSetHelper(ctx, args.userId, args.targetSetId);
+    }
+
+    return {
+      setId: args.targetSetId,
+      cardCount: args.cards.length,
+      srsEnabled: ownerLink.srsEnabled,
+    };
+  },
+});

@@ -200,6 +200,43 @@ export const confirmGeneratedSet = action({
   },
 });
 
+export const confirmAppendCards = action({
+  args: {
+    targetSetId: v.id("flashcardSets"),
+    fieldDefinitions: v.array(v.object({
+      name: v.string(),
+      role: v.union(v.literal("primary"), v.literal("pronunciation"), v.literal("definition"), v.literal("note")),
+      metadata: v.record(v.string(), v.any()),
+      order: v.number(),
+    })),
+    cards: v.array(v.object({
+      fields: v.record(v.string(), v.string()),
+      sourceCardIds: v.optional(v.array(v.id("flashcards"))),
+      rationale: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args): Promise<ConfirmResult> => {
+    const auth = await resolveAuthAndConfig(ctx);
+    if (!auth.ok) return auth;
+
+    type AppendResult =
+      | { readonly ok: true; readonly value: never }
+      | { readonly ok: false; readonly error: CommonFailure }
+      | { setId: string; cardCount: number; srsEnabled: boolean };
+    const result: AppendResult = await ctx.runMutation(internal.tooling.appendGeneratedCardsForTool, {
+      userId: auth.userId,
+      targetSetId: args.targetSetId,
+      fieldDefinitions: args.fieldDefinitions,
+      cards: args.cards,
+    });
+
+    if ("ok" in result && result.ok === false) {
+      return { ok: false, error: result.error.message };
+    }
+    return result as ConfirmResult;
+  },
+});
+
 type ChatResult = { ok: false; error: string } | { ok: true; content: string };
 
 export const sendChatMessage = action({

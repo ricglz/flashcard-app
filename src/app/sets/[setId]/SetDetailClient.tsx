@@ -12,6 +12,7 @@ import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import CardsTable from "./CardsTable";
 import SetDetailHeader from "./SetDetailHeader";
 import VisitorActions from "./VisitorActions";
+import AiAppendFlow from "./AiAppendFlow";
 
 type Props = {
   setId: string;
@@ -32,6 +33,7 @@ export default function SetDetailClient({
   const forkSet = useMutation(api.flashcardSets.fork);
   const [isForking, setIsForking] = useState(false);
   const [forkError, setForkError] = useState<string | null>(null);
+  const [showAiAppend, setShowAiAppend] = useState(false);
 
   const isForked = set.origin.kind === "forked";
   const forkSyncStatus = useQuery(
@@ -71,7 +73,9 @@ export default function SetDetailClient({
         setId={setId}
         isMember={isMember}
         isOwner={isOwner}
+        hasLlmKey={settings?.hasLlmKey ?? false}
         onBack={() => router.back()}
+        onAiGenerate={() => setShowAiAppend(true)}
       />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
@@ -169,6 +173,16 @@ export default function SetDetailClient({
             {forkError && (
               <p className="text-sm text-danger mt-2">{forkError}</p>
             )}
+          </div>
+        )}
+
+        {showAiAppend && (
+          <div className="mb-6">
+            <AiAppendFlow
+              setId={set._id}
+              fieldDefinitions={set.fieldDefinitions}
+              onClose={() => setShowAiAppend(false)}
+            />
           </div>
         )}
 

@@ -12,6 +12,7 @@ type GeneratePreviewProps = {
   onCardsChange: (cards: GeneratedCard[]) => void;
   onBack: () => void;
   onConfirm: () => void;
+  confirmLabel?: string;
 };
 
 export default function GeneratePreview({
@@ -20,6 +21,7 @@ export default function GeneratePreview({
   onCardsChange,
   onBack,
   onConfirm,
+  confirmLabel,
 }: GeneratePreviewProps) {
   return (
     <div>
@@ -39,7 +41,7 @@ export default function GeneratePreview({
             disabled={selectedCount === 0}
             className="px-4 py-1.5 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
           >
-            Create Set ({selectedCount} cards)
+            {confirmLabel ?? `Create Set (${selectedCount} cards)`}
           </button>
         </div>
       </div>

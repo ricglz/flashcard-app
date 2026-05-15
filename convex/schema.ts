@@ -67,7 +67,8 @@ export const setOriginValidator = v.union(
     kind: v.literal("forked"),
     sourceSetId: v.id("flashcardSets"),
     forkedAt: v.number(),
-  })
+  }),
+  v.object({ kind: v.literal("mixed") })
 );
 
 export const cliScopeValidator = v.union(
@@ -102,6 +103,11 @@ export default defineSchema({
     setId: v.id("flashcardSets"),
     fields: v.record(v.string(), v.string()),
     order: v.number(),
+    origin: v.optional(v.union(
+      v.literal("manual"),
+      v.literal("csv_import"),
+      v.literal("ai_generated"),
+    )),
   }).index("by_setId", ["setId"]),
 
   studySessions: defineTable({
