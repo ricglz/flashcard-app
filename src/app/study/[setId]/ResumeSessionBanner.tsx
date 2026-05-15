@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Doc } from "../../../../convex/_generated/dataModel";
+import type { FunctionReturnType } from "convex/server";
+import { api } from "../../../../convex/_generated/api";
 
 type Props = {
   setId: string;
-  activeSession: Doc<"studySessions">;
+  activeSession: NonNullable<FunctionReturnType<typeof api.studySessions.getActiveSession>>;
 };
 
 export default function ResumeSessionBanner({ setId, activeSession }: Props) {

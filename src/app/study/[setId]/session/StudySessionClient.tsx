@@ -7,19 +7,15 @@ import { api } from "../../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
-import { Id, Doc } from "../../../../../convex/_generated/dataModel";
+import { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
-import { CardRating } from "@/lib/types";
+import { CardRating, ActiveStudySession } from "@/lib/types";
 import SessionHeader from "./SessionHeader";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import Link from "next/link";
-
-type ActiveSession = Omit<Doc<"studySessions">, "status"> & {
-  status: "in_progress";
-};
 
 type Props = {
   setId: string;
@@ -39,7 +35,7 @@ export default function StudySessionClient({
   const router = useRouter();
   const isOnline = useOnlineStatus();
 
-  const session = usePreloadedQuery(preloadedSession) as ActiveSession;
+  const session = usePreloadedQuery(preloadedSession) as ActiveStudySession;
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useOfflineMutation(api.studySessions.recordResult);

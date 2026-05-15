@@ -201,3 +201,13 @@ export type TypedFlashcardSet = Omit<Doc<"flashcardSets">, "fieldDefinitions"> &
 export type TypedCardResult = Omit<Doc<"cardResults">, "rating"> & {
   rating: CardRating;
 };
+
+/** Flashcard set guaranteed to have public visibility (from listPublic/searchPublic). */
+export type PublicFlashcardSet = Omit<Doc<"flashcardSets">, "visibility"> & {
+  visibility: "public";
+};
+
+/** Study session guaranteed to be in progress (from getActiveSession). */
+export type ActiveStudySession = Omit<Doc<"studySessions">, "status"> & {
+  status: "in_progress";
+};

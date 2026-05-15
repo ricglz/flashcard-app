@@ -8,7 +8,7 @@ import {
   validateSetFields as validateSetFieldsResult,
   type SetFieldsValidationFailure,
 } from "./domain/fieldDefinitions";
-import type { FieldDefinition } from "../src/lib/types";
+import type { FieldDefinition, PublicFlashcardSet } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
@@ -208,14 +208,15 @@ export const listPublic = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { page: [], isDone: true, continueCursor: "" };
-    return await ctx.db
+    if (!identity) return { page: [] as PublicFlashcardSet[], isDone: true, continueCursor: "" };
+    const result = await ctx.db
       .query("flashcardSets")
       .withIndex("by_visibility_and_createdAt", (q) =>
         q.eq("visibility", "public")
       )
       .order("desc")
       .paginate(args.paginationOpts);
+    return { ...result, page: result.page as PublicFlashcardSet[] };
   },
 });
 
@@ -226,14 +227,14 @@ export const searchPublic = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return [] as PublicFlashcardSet[];
     const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
     return await ctx.db
       .query("flashcardSets")
       .withSearchIndex("search_name", (q) =>
         q.search("name", args.searchTerm).eq("visibility", "public")
       )
-      .take(limit);
+      .take(limit) as PublicFlashcardSet[];
   },
 });
 

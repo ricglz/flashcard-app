@@ -6,7 +6,7 @@ import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetup, type StudySessionSetupFailure } from "./domain/studySessionSetup";
 import { fail, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
-import type { CardRating } from "../src/lib/types";
+import type { CardRating, ActiveStudySession } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 
 export const RATING_SCORES: Record<CardRating, number> = {
@@ -31,7 +31,7 @@ export function computeOverallScore(
 
 export const getActiveSession = query({
   args: { setId: v.id("flashcardSets") },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<ActiveStudySession | null> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     const session = await ctx.db
@@ -44,7 +44,7 @@ export const getActiveSession = query({
       )
       .first();
     if (!session) return null;
-    return session;
+    return session as ActiveStudySession;
   },
 });
 
