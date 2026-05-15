@@ -6,6 +6,7 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
 import GeneratePreview from "@/app/generate/GeneratePreview";
+import AiAppendConfig from "./AiAppendConfig";
 
 type Phase = "config" | "generating" | "preview" | "confirming";
 type GeneratedCard = {
@@ -26,31 +27,32 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
   const confirmAppend = useAction(api.ai.confirmAppendCards);
 
   const [phase, setPhase] = useState<Phase>("config");
-  const [prompt, setPrompt] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [targetCount, setTargetCount] = useState(10);
-  const [model, setModel] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  const handleGenerate = async (config: {
+    prompt: string;
+    instructions: string;
+    targetCount: number;
+    model: string;
+  }) => {
+    if (!config.prompt) return;
     setPhase("generating");
     setError(null);
     try {
       const result = await generateFromPrompt({
-        prompt: prompt.trim(),
+        prompt: config.prompt,
         fieldDefinitions: fieldDefinitions.map((fd) => ({
           name: fd.name,
           role: fd.role,
           metadata: { ...fd.metadata },
           order: fd.order,
         })),
-        targetCardCount: targetCount,
+        targetCardCount: config.targetCount,
         name: "append",
-        ...(model ? { model } : {}),
+        ...(config.model ? { model: config.model } : {}),
         addToSrs: false,
-        ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+        ...(config.instructions ? { instructions: config.instructions } : {}),
       });
       if (!result.ok) {
         setError(result.error);
@@ -64,7 +66,8 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
       }
       const { cards } = result.payload;
       setCards(
-        cards.map((c) => ({          fields: { ...c.fields },
+        cards.map((c) => ({
+          fields: { ...c.fields },
           rationale: c.rationale,
           selected: true,
         })),
@@ -125,72 +128,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         </div>
       )}
 
-      {phase === "config" && (
-        <div className="space-y-3">
-          <div>
-            <label htmlFor="ai-prompt" className="block text-sm font-medium mb-1">
-              Prompt
-            </label>
-            <textarea
-              id="ai-prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder="Describe the cards you want to generate..."
-              className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-            />
-          </div>
-          <div>
-            <label htmlFor="ai-instructions" className="block text-sm font-medium mb-1">
-              Additional instructions (optional)
-            </label>
-            <textarea
-              id="ai-instructions"
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              rows={2}
-              placeholder="Any specific guidelines for card format, difficulty, etc."
-              className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-            />
-          </div>
-          <div className="flex items-center gap-4">
-            <div>
-              <label htmlFor="ai-count" className="block text-sm font-medium mb-1">
-                Target count
-              </label>
-              <input
-                id="ai-count"
-                type="number"
-                min={1}
-                max={50}
-                value={targetCount}
-                onChange={(e) => setTargetCount(Number(e.target.value) || 10)}
-                className="w-24 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-              />
-            </div>
-            <div>
-              <label htmlFor="ai-model" className="block text-sm font-medium mb-1">
-                Model (optional)
-              </label>
-              <input
-                id="ai-model"
-                type="text"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder="Default"
-                className="w-40 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-              />
-            </div>
-          </div>
-          <button
-            onClick={handleGenerate}
-            disabled={!prompt.trim()}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm disabled:opacity-50"
-          >
-            Generate
-          </button>
-        </div>
-      )}
+      {phase === "config" && <AiAppendConfig onGenerate={handleGenerate} />}
 
       {(phase === "generating" || phase === "confirming") && (
         <div className="flex flex-col items-center py-8 gap-4">
