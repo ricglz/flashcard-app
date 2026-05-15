@@ -70,9 +70,9 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] h-[32rem] max-h-[calc(100vh-2rem)] bg-background border border-edge rounded-xl shadow-xl flex flex-col">
+    <div className="fixed bottom-4 right-4 z-50 w-96 lg:w-[28rem] max-w-[calc(100vw-2rem)] h-[32rem] lg:h-[36rem] max-h-[calc(100vh-2rem)] bg-background border border-edge rounded-xl shadow-xl flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b border-edge">
-        <h3 className="font-semibold text-sm">Study Assistant</h3>
+        <h3 className="font-semibold text-sm lg:text-base">Study Assistant</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMessages([])}
@@ -108,14 +108,14 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
-          <p className="text-center text-muted text-sm py-8">
+          <p className="text-center text-muted text-sm lg:text-base py-8">
             Ask a question about this card or your study material.
           </p>
         )}
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`text-sm ${msg.role === "user" ? "text-right" : ""}`}
+            className={`text-sm lg:text-base ${msg.role === "user" ? "text-right" : ""}`}
           >
             <div
               className={`inline-block max-w-[85%] px-3 py-2 rounded-lg whitespace-pre-wrap ${
@@ -129,7 +129,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
           </div>
         ))}
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-muted">
+          <div className="flex items-center gap-2 text-sm lg:text-base text-muted">
             <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
             Thinking...
           </div>
@@ -137,15 +137,15 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
       </div>
 
       <div className="p-3 border-t border-edge">
-        <div className="flex gap-2">
-          <input
-            type="text"
+        <div className="flex gap-2 items-end">
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`; }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
             placeholder="Ask about this card..."
             disabled={loading}
-            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+            rows={1}
+            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm lg:text-base resize-none focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           />
           <button
             onClick={() => void handleSend()}
