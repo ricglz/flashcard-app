@@ -30,6 +30,8 @@ export default function WeakSpotsClient() {
   const [selectedSetId, setSelectedSetId] = useState<string | undefined>();
   const router = useRouter();
 
+  const settings = useQuery(api.userSettings.get);
+  const hasLlmKey = settings?.hasLlmKey ?? false;
   const userSets = useOfflineQuery(api.flashcardSets.list);
   const srsEnabledSets = useMemo(
     () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],
@@ -95,6 +97,14 @@ export default function WeakSpotsClient() {
               <option key={s._id} value={s._id}>{s.name}</option>
             ))}
           </select>
+          {hasLlmKey && totalWeakCards > 0 && (
+            <Link
+              href={`/generate?methodology=${methodology}${selectedSetId ? `&setId=${selectedSetId}` : ""}`}
+              className="px-3 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors whitespace-nowrap"
+            >
+              Generate Remedial Cards
+            </Link>
+          )}
         </div>
 
         {weakCards === undefined && (

@@ -4,10 +4,10 @@ import { useState, useMemo } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import type { Methodology } from "@/lib/types";
+import { METHODOLOGIES, type Methodology } from "@/lib/types";
 import GenerateConfigForm from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
 
@@ -21,6 +21,7 @@ type GeneratedCard = {
 
 export default function GenerateClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const userSets = useOfflineQuery(api.flashcardSets.list);
   const generateCards = useAction(api.ai.generateRemedialCards);
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
@@ -29,9 +30,14 @@ export default function GenerateClient() {
     () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],
     [userSets],
   );
+
+  const initialMethodology = METHODOLOGIES.includes(searchParams.get("methodology") as Methodology)
+    ? (searchParams.get("methodology") as Methodology)
+    : "balanced";
+
   const [step, setStep] = useState<Step>("config");
-  const [methodology, setMethodology] = useState<Methodology>("balanced");
-  const [selectedSetId, setSelectedSetId] = useState<string>("");
+  const [methodology, setMethodology] = useState<Methodology>(initialMethodology);
+  const [selectedSetId, setSelectedSetId] = useState<string>(searchParams.get("setId") ?? "");
   const [targetCount, setTargetCount] = useState(20);
   const [setName, setSetName] = useState("Remedial Cards");
   const [model, setModel] = useState("");
