@@ -30,7 +30,7 @@ export default function ManualPath({
   };
 
   const removeField = (index: number) => {
-    const name = state.fieldDefinitions[index].name;
+    const name = state.fieldDefinitions[index]!.name;
     const updatedDefs = state.fieldDefinitions
       .filter((_, i) => i !== index)
       .map((f, i) => ({ ...f, order: i }));

@@ -24,7 +24,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
     setIsCreating(true);
     setError(null);
     try {
-      const preset = LANGUAGE_PRESETS[selectedPreset];
+      const preset = LANGUAGE_PRESETS[selectedPreset]!;
       const result = await createSet({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -93,7 +93,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
                     : "border-edge hover:bg-surface-hover"
                 }`}
               >
-                {LANGUAGE_PRESETS[key].label}
+                {LANGUAGE_PRESETS[key]!.label}
               </button>
             ))}
           </div>

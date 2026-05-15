@@ -60,7 +60,7 @@ export default function StudyConfigClient({
       setTtsOnlyFields(userSet.defaultTtsOnlyFields ?? []);
     } else {
       const sorted = [...fieldDefs].sort((a, b) => a.order - b.order);
-      setFrontFields([sorted[0].name]);
+      setFrontFields([sorted[0]!.name]);
       setBackFields(sorted.slice(1).map((f) => f.name));
     }
     setInitialized(true);

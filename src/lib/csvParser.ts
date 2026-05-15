@@ -110,12 +110,12 @@ export function parseCsv(csvText: string): ParsedCsvResult {
   for (let index = 0; index < result.data.length; index++) {
     const row = result.data[index];
     const rowNumber = index + 2;
-    const hasAnyValue = Object.values(row).some((v) => (v ?? "").trim() !== "");
+    const hasAnyValue = Object.values(row!).some((v) => (v ?? "").trim() !== "");
     if (!hasAnyValue) {
       warnings.push({ _tag: "EmptyRow", row: rowNumber, message: `Row ${rowNumber}: empty row skipped` });
       continue;
     }
-    const validation = validateCardFields(headers, row);
+    const validation = validateCardFields(headers, row!);
     if (!validation.ok) {
       warnings.push({ _tag: "InvalidRow", row: rowNumber, message: `Row ${rowNumber}: ${validation.error.message}` });
       continue;

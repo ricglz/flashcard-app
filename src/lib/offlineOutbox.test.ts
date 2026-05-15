@@ -91,11 +91,11 @@ describe("outbox drain ordering", () => {
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(3);
-    expect(entries[0].mutationName).toBe("mutation.a");
-    expect(entries[1].mutationName).toBe("mutation.b");
-    expect(entries[2].mutationName).toBe("mutation.c");
-    expect(entries[0].id).toBeLessThan(entries[1].id);
-    expect(entries[1].id).toBeLessThan(entries[2].id);
+    expect(entries[0]!.mutationName).toBe("mutation.a");
+    expect(entries[1]!.mutationName).toBe("mutation.b");
+    expect(entries[2]!.mutationName).toBe("mutation.c");
+    expect(entries[0]!.id).toBeLessThan(entries[1]!.id);
+    expect(entries[1]!.id).toBeLessThan(entries[2]!.id);
   });
 
   it("excludes failed entries with retries >= 3", async () => {
@@ -114,7 +114,7 @@ describe("outbox drain ordering", () => {
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(1);
-    expect(entries[0].status).toBe("pending");
+    expect(entries[0]!.status).toBe("pending");
   });
 });
 
@@ -125,7 +125,7 @@ describe("duplicate replay", () => {
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(2);
-    expect(entries[0].id).not.toBe(entries[1].id);
+    expect(entries[0]!.id).not.toBe(entries[1]!.id);
   });
 
   it("keeps second entry after first is removed", async () => {
@@ -137,7 +137,7 @@ describe("duplicate replay", () => {
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(1);
-    expect((entries[0].args as { n: number }).n).toBe(2);
+    expect((entries[0]!.args as { n: number }).n).toBe(2);
   });
 });
 
@@ -149,8 +149,8 @@ describe("failure recovery", () => {
     await outboxModule.markFailed(result.id, 1, "permanentFailure");
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(1);
-    expect(entries[0].status).toBe("pending");
-    expect(entries[0].retries).toBe(1);
+    expect(entries[0]!.status).toBe("pending");
+    expect(entries[0]!.retries).toBe(1);
   });
 
   it("excludes entry from pending when retries >= 3", async () => {
@@ -173,7 +173,7 @@ describe("failure recovery", () => {
 
     const pending = await outboxModule.getPendingEntries();
     expect(pending).toHaveLength(1);
-    expect(pending[0].status).toBe("auth_required");
+    expect(pending[0]!.status).toBe("auth_required");
 
     const count = await outboxModule.getPendingCount();
     expect(count).toBe(0);
@@ -186,7 +186,7 @@ describe("failure recovery", () => {
     await outboxModule.markSyncing(result.id);
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(1);
-    expect(entries[0].status).toBe("syncing");
+    expect(entries[0]!.status).toBe("syncing");
   });
 });
 

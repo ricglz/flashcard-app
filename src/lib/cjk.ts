@@ -16,17 +16,17 @@ export function segmentCjkText(text: string): TextSegment[] {
   if (chars.length === 0) return [];
 
   const segments: TextSegment[] = [];
-  let currentIsCjk = isCjkChar(chars[0]);
-  let currentText = chars[0];
+  let currentIsCjk = isCjkChar(chars[0]!);
+  let currentText: string = chars[0]!;
 
   for (let i = 1; i < chars.length; i++) {
-    const charIsCjk = isCjkChar(chars[i]);
+    const charIsCjk = isCjkChar(chars[i]!);
     if (charIsCjk === currentIsCjk) {
-      currentText += chars[i];
+      currentText += chars[i]!;
     } else {
       segments.push({ text: currentText, isCjk: currentIsCjk });
       currentIsCjk = charIsCjk;
-      currentText = chars[i];
+      currentText = chars[i]!;
     }
   }
   segments.push({ text: currentText, isCjk: currentIsCjk });

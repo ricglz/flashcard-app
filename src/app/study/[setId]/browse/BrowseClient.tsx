@@ -17,7 +17,7 @@ function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+    [result[i], result[j]] = [result[j]!, result[i]!];
   }
   return result;
 }
@@ -150,7 +150,7 @@ export default function BrowseClient({
   };
 
   const handleDismiss = () => {
-    setDismissed(new Set([...dismissed, currentCardId]));
+    setDismissed(new Set([...dismissed, currentCardId!]));
     setRevealed(false);
     if (safeIndex >= activeCardIds.length - 2) {
       setCurrentIndex(Math.max(0, safeIndex - 1));

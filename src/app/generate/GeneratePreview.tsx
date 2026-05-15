@@ -56,7 +56,7 @@ export default function GeneratePreview({
                 checked={card.selected}
                 onChange={(e) => {
                   const updated = [...cards];
-                  updated[idx] = { ...updated[idx], selected: e.target.checked };
+                  updated[idx] = { ...updated[idx]!, selected: e.target.checked };
                   onCardsChange(updated);
                 }}
                 className="mt-1"
@@ -71,8 +71,8 @@ export default function GeneratePreview({
                       onChange={(e) => {
                         const updated = [...cards];
                         updated[idx] = {
-                          ...updated[idx],
-                          fields: { ...updated[idx].fields, [key]: e.target.value },
+                          ...updated[idx]!,
+                          fields: { ...updated[idx]!.fields, [key]: e.target.value },
                         };
                         onCardsChange(updated);
                       }}

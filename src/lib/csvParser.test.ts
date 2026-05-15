@@ -39,73 +39,73 @@ describe("parseCsv", () => {
   it("trims whitespace from headers", () => {
     const csv = " Character , Meaning \nA,B";
     const result = parseCsv(csv);
-    expect(result.fieldDefinitions[0].name).toBe("Character");
-    expect(result.fieldDefinitions[1].name).toBe("Meaning");
+    expect(result.fieldDefinitions[0]!.name).toBe("Character");
+    expect(result.fieldDefinitions[1]!.name).toBe("Meaning");
   });
 });
 
 describe("role inference via parseCsv", () => {
   it("infers pronunciation role for Pinyin column", () => {
     const result = parseCsv("Pinyin\ntest");
-    expect(result.fieldDefinitions[0].role).toBe("pronunciation");
+    expect(result.fieldDefinitions[0]!.role).toBe("pronunciation");
   });
 
   it("infers pronunciation for Reading column", () => {
     const result = parseCsv("Reading\ntest");
-    expect(result.fieldDefinitions[0].role).toBe("pronunciation");
+    expect(result.fieldDefinitions[0]!.role).toBe("pronunciation");
   });
 
   it("infers definition role for Meaning column", () => {
     const result = parseCsv("Meaning\ntest");
-    expect(result.fieldDefinitions[0].role).toBe("definition");
+    expect(result.fieldDefinitions[0]!.role).toBe("definition");
   });
 
   it("infers definition for English column", () => {
     const result = parseCsv("English\ntest");
-    expect(result.fieldDefinitions[0].role).toBe("definition");
+    expect(result.fieldDefinitions[0]!.role).toBe("definition");
   });
 
   it("infers note role for Note column", () => {
     const result = parseCsv("Note\ntest");
-    expect(result.fieldDefinitions[0].role).toBe("note");
+    expect(result.fieldDefinitions[0]!.role).toBe("note");
   });
 
   it("defaults to primary for unknown column names", () => {
     const result = parseCsv("Character\ntest");
-    expect(result.fieldDefinitions[0].role).toBe("primary");
+    expect(result.fieldDefinitions[0]!.role).toBe("primary");
   });
 });
 
 describe("metadata inference via parseCsv", () => {
   it("sets zh-CN TTS for Character column", () => {
     const result = parseCsv("Character\ntest");
-    expect(result.fieldDefinitions[0].metadata).toEqual({
+    expect(result.fieldDefinitions[0]!.metadata).toEqual({
       tts: { lang: "zh-CN" },
     });
   });
 
   it("sets no TTS for Pinyin column (romanization, not native script)", () => {
     const result = parseCsv("Pinyin\ntest");
-    expect(result.fieldDefinitions[0].metadata).toEqual({});
+    expect(result.fieldDefinitions[0]!.metadata).toEqual({});
   });
 
   it("sets es TTS for Spanish column", () => {
     const result = parseCsv("Spanish\ntest");
-    expect(result.fieldDefinitions[0].metadata).toEqual({
+    expect(result.fieldDefinitions[0]!.metadata).toEqual({
       tts: { lang: "es" },
     });
   });
 
   it("sets ja TTS for Kanji column", () => {
     const result = parseCsv("Kanji\ntest");
-    expect(result.fieldDefinitions[0].metadata).toEqual({
+    expect(result.fieldDefinitions[0]!.metadata).toEqual({
       tts: { lang: "ja" },
     });
   });
 
   it("sets no TTS for unrecognized columns", () => {
     const result = parseCsv("Meaning\ntest");
-    expect(result.fieldDefinitions[0].metadata).toEqual({});
+    expect(result.fieldDefinitions[0]!.metadata).toEqual({});
   });
 });
 
