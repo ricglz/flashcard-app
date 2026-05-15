@@ -4,6 +4,13 @@ import { internal } from "./_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import type { Id } from "./_generated/dataModel";
 import type { ApiErrorResponse } from "../src/lib/aiToolingSchemas";
+import {
+  SetsListRequestSchema,
+  WeakCardsRequestSchema,
+  GeneratedSetPayloadSchema,
+} from "../src/lib/aiToolingSchemas";
+import * as Schema from "effect/Schema";
+import * as ParseResult from "effect/ParseResult";
 
 const http = httpRouter();
 
@@ -28,6 +35,16 @@ type GeneratedSetHttpBody = {
   }>;
   addToSrs: boolean;
 };
+
+function validateBody<A, I>(schema: Schema.Schema<A, I>, body: unknown): Response | null {
+  const result = Schema.decodeUnknownEither(schema)(body);
+  if (result._tag === "Left") {
+    const issues = ParseResult.ArrayFormatter.formatErrorSync(result.left);
+    const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    return errorResponse("bad_request", message, 400);
+  }
+  return null;
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body, null, 2), {
@@ -95,6 +112,8 @@ http.route({
     if (!auth.ok) return auth.response;
     try {
       const body = await readJson(req);
+      const validationError = validateBody(SetsListRequestSchema, body);
+      if (validationError) return validationError;
       const include = body.include && typeof body.include === "object" ? body.include as {
         srsSummary?: boolean;
         schemaFingerprint?: boolean;
@@ -119,6 +138,8 @@ http.route({
     if (!auth.ok) return auth.response;
     try {
       const body = await readJson(req);
+      const validationError = validateBody(WeakCardsRequestSchema, body);
+      if (validationError) return validationError;
       const result = await ctx.runQuery(internal.tooling.getWeakCardsForTool, {
         userId: auth.auth.userId,
         ...body,
@@ -138,10 +159,12 @@ http.route({
     if (!auth.ok) return auth.response;
     try {
       const body = await readJson(req);
-      if (body.addToSrs === true && !auth.auth.scopes.includes("srs:enroll")) {
+      const validationError = validateBody(GeneratedSetPayloadSchema, body);
+      if (validationError) return validationError;
+      const payload = body as GeneratedSetHttpBody;
+      if (payload.addToSrs && !auth.auth.scopes.includes("srs:enroll")) {
         return errorResponse("Forbidden", "CLI token is missing required scope: srs:enroll", 403);
       }
-      const payload = body as GeneratedSetHttpBody;
       const result = await ctx.runQuery(internal.tooling.validateGeneratedSetForTool, {
         ...payload,
         userId: auth.auth.userId,
@@ -161,10 +184,12 @@ http.route({
     if (!auth.ok) return auth.response;
     try {
       const body = await readJson(req);
-      if (body.addToSrs === true && !auth.auth.scopes.includes("srs:enroll")) {
+      const validationError = validateBody(GeneratedSetPayloadSchema, body);
+      if (validationError) return validationError;
+      const payload = body as GeneratedSetHttpBody;
+      if (payload.addToSrs && !auth.auth.scopes.includes("srs:enroll")) {
         return errorResponse("Forbidden", "CLI token is missing required scope: srs:enroll", 403);
       }
-      const payload = body as GeneratedSetHttpBody;
       const result = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
         ...payload,
         userId: auth.auth.userId,
