@@ -160,7 +160,12 @@ export const update = mutation({
     }
 
     const wasSrsEnabled = link.srsEnabled;
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      srsEnabled?: boolean;
+      defaultFrontFields?: string[];
+      defaultBackFields?: string[];
+      defaultTtsOnlyFields?: string[];
+    } = {};
     if (args.srsEnabled !== undefined) patch.srsEnabled = args.srsEnabled;
     if (args.defaultFrontFields !== undefined)
       patch.defaultFrontFields = args.defaultFrontFields;
