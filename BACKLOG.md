@@ -10,37 +10,18 @@
 ## Code Quality — Typed Domain Validation Candidates
 
 ### Shared Utilities
-- [ ] Extract `getDefaultFieldLayout(fieldDefs)` helper — the `sorted[0]!.name` / `sorted.slice(1)` pattern for default front/back fields is repeated in 5+ files
-- [ ] Extract shared `CardPreviewList` component — card select/edit/deselect UI is duplicated between `GeneratePreview.tsx` and `AiPath.tsx`
+- [ ] Extract shared AI generation helper in `convex/ai.ts` — `generateRemedialCards` and `generateFromPrompt` share ~30 lines of identical auth/LLM/parse/validate logic
 
 ### Type-Safety — ESLint & Casts
-- [ ] Ban `as unknown` via `no-restricted-syntax` ESLint rule — only 2 usages exist: `sw.ts` (replaceable with `declare const self`) and `asId()` helper
-- [ ] Add `@typescript-eslint/no-unnecessary-condition` rule — requires type-checked linting (`parserOptions.projectService`), slows lint but catches redundant conditions
-- [ ] Eliminate unsafe origin casts in `flashcardSets.ts:235-237` — after checking `origin?.kind !== "forked"`, code still casts to an inline object type. Add a type guard so TS narrows automatically
-- [ ] Validate HTTP request bodies in `convex/http.ts:98,144` — currently cast without runtime validation. Use Effect Schema or hand-rolled validators
 - [ ] Type the `userSets.update` patch object (`convex/userSets.ts:161`) — currently `Record<string, unknown>`, should use a schema-derived partial type
-
-### Enum Single Source of Truth
-- [ ] Unify `CARD_RATINGS` / `ratingValidator` / `CardRatingSchema` — defined separately in `src/lib/types.ts`, `convex/schema.ts`, and `src/lib/aiToolingSchemas.ts`. Same duplication exists for `FIELD_ROLES` and `METHODOLOGIES`
 
 ### AI Response Typing
 - [ ] Type the AI generation payload (`convex/ai.ts:26,82`) — `Record<string, unknown>` after JSON.parse. Validate with Effect Schema into a typed `GeneratedSetPayload` instead of unsafe casting
-
-### AI Action Dedup
-- [ ] Extract shared AI generation helper in `convex/ai.ts` — `generateRemedialCards` and `generateFromPrompt` share ~30 lines of identical auth/LLM/parse/validate logic
 
 ### Settings UI
 - [ ] Couple provider + API key in AI settings UI — currently two flat independent fields; should be a single grouped element where selecting a provider reveals the key field, and clearing the provider clears the key
 - [ ] Split `userSettings.update` into per-category mutations (`updateSrsSettings`, `updateAiConfig`) — each takes the full state for its category (no optional fields), enforcing coupling via types instead of runtime validation. UI loads current values as defaults, sends complete state on save. Removes need for `validateAiConfig` runtime check and the generic partial-patch pattern.
 - [ ] Document `useQuery` vs `useOfflineQuery` convention — currently inconsistent across components with no clear rule for when to use which
-
-### Consistency — Patterns & Dedup
-- [ ] Extract `deleteAllByIndex()` helper — the batched while-loop deletion pattern (`.take(500)` + delete loop) is repeated 3x in `flashcardSets.ts` and `userSets.ts`
-- [ ] Standardize batch size constant — some queries use `.take(500)`, others `.take(1000)`, with no shared constant or documented rationale
-- [ ] Remove redundant status check in `studySessions.ts:45` — query already filters `.eq("status", "in_progress")`, then re-checks in the if-condition. Narrow the return type with `status: "in_progress" as const` so TS prevents this
-
-### LANGUAGE_PRESETS Typing
-- [ ] Type `LANGUAGE_PRESETS` with explicit keys instead of `Record<string, LanguagePreset>` — eliminates need for `!` assertions on every access
 
 ### Study Session Setup / Results
 - [ ] Add typed results for resume/abandon/complete flows so offline replay and duplicate actions are explicit.
@@ -78,7 +59,6 @@
 - [ ] Add offline outbox async tests — only `normalizeSyncFailure()` is tested; `addToOutbox()`, `markSyncing()`, and event dispatch are untested
 
 ### Schema Indexes
-- [ ] Add composite index on `cardAnnotations` for `(userId, setId, flagged)` — queries filter on this combination but no matching index exists
 - [ ] Consider `by_userId_and_status` index on `studySessions` — current index is `by_setId_and_userId_and_status` but some queries filter by `(userId, status)` alone
 
 ## Marketplace & Multi-User
