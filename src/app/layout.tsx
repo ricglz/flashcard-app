@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
-import AssistantPanel from "@/components/AssistantPanel";
 import RegisterSW from "@/components/RegisterSW";
 import "./globals.css";
 
@@ -52,7 +51,6 @@ export default function RootLayout({
         <ClerkProvider>
           <ConvexClientProvider>
             {children}
-            <AssistantPanel />
           </ConvexClientProvider>
         </ClerkProvider>
         <RegisterSW />

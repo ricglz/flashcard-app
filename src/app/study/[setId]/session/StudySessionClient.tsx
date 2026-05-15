@@ -12,6 +12,7 @@ import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
+import AssistantPanel from "@/components/AssistantPanel";
 import { CardRating, ActiveStudySession } from "@/lib/types";
 import SessionHeader from "./SessionHeader";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
@@ -194,6 +195,14 @@ export default function StudySessionClient({
           </div>
         )}
       </main>
+
+      <AssistantPanel
+        context={{
+          setId: session.setId,
+          setName: set.name,
+          cardFields: currentCard.fields,
+        }}
+      />
     </div>
   );
 }

@@ -3,22 +3,21 @@
 import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import { asId } from "@/lib/convexHelpers";
+import { useAvailableModels } from "@/lib/useAvailableModels";
+import type { StudyContext } from "./AssistantPanel";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-export default function AssistantPanelInner() {
+export default function AssistantPanelInner({ context }: { context: StudyContext }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [selectedSetId, setSelectedSetId] = useState<string>("");
   const [model, setModel] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const sendMessage = useAction(api.ai.sendChatMessage);
-  const userSets = useOfflineQuery(api.flashcardSets.list);
+  const { models: availableModels } = useAvailableModels(open);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -38,7 +37,10 @@ export default function AssistantPanelInner() {
         message: text,
         history: messages,
         ...(model ? { model } : {}),
-        ...(selectedSetId ? { context: { setId: asId<"flashcardSets">(selectedSetId) } } : {}),
+        context: {
+          setId: context.setId,
+          cardFields: context.cardFields,
+        },
       });
       if (result.ok) {
         setMessages((prev) => [...prev, { role: "assistant", content: result.content }]);
@@ -88,30 +90,26 @@ export default function AssistantPanelInner() {
         </div>
       </div>
 
-      <div className="px-3 py-2 border-b border-edge flex gap-2">
+      <div className="px-3 py-2 border-b border-edge flex gap-2 items-center">
+        <span className="text-xs text-muted truncate flex-1">
+          {context.setName}
+        </span>
         <select
-          value={selectedSetId}
-          onChange={(e) => setSelectedSetId(e.target.value)}
-          className="flex-1 px-2 py-1 border border-edge rounded bg-transparent text-xs"
-        >
-          <option value="">No set context</option>
-          {userSets?.map((s) => (
-            <option key={s._id} value={s._id}>{s.name}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Model"
           value={model}
           onChange={(e) => setModel(e.target.value)}
-          className="w-24 px-2 py-1 border border-edge rounded bg-transparent text-xs"
-        />
+          className="w-36 px-2 py-1 border border-edge rounded bg-transparent text-xs"
+        >
+          <option value="">Default model</option>
+          {availableModels.map((m) => (
+            <option key={m.id} value={m.id}>{m.name}</option>
+          ))}
+        </select>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
           <p className="text-center text-muted text-sm py-8">
-            Ask a question about your study material.
+            Ask a question about this card or your study material.
           </p>
         )}
         {messages.map((msg, idx) => (
@@ -145,7 +143,7 @@ export default function AssistantPanelInner() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
-            placeholder="Ask about your cards..."
+            placeholder="Ask about this card..."
             disabled={loading}
             className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           />
