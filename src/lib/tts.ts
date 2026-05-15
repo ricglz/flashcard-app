@@ -14,11 +14,24 @@ export type TtsStatus =
   | "timeout"
   | "error";
 
+export type TtsFailureKind =
+  | "unsupported_browser"
+  | "permission_blocked"
+  | "language_unavailable"
+  | "voice_unavailable"
+  | "audio_hardware"
+  | "network"
+  | "synthesis_unavailable"
+  | "synthesis_failed"
+  | "timeout"
+  | "unknown";
+
 export type TtsEvent = {
   status: TtsStatus;
   text?: string;
   lang?: string;
   message?: string;
+  kind?: TtsFailureKind;
   voiceName?: string;
   voiceLang?: string;
 };
@@ -33,6 +46,7 @@ export type TtsResult =
   | {
       ok: false;
       status: "unsupported" | "timeout" | "error";
+      kind: TtsFailureKind;
       message: string;
       voiceName?: string;
       voiceLang?: string;
@@ -110,7 +124,7 @@ export function preloadTtsVoices(): void {
 }
 
 export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
-  const prefix = lang.split("-")[0];
+  const prefix = lang.split("-")[0]!;
   let score = 0;
 
   if (voice.lang === lang) score += 100;
@@ -132,7 +146,7 @@ export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
 export function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined {
   const voices = cachedVoices.length > 0 ? cachedVoices : readVoices();
   const normalizedLang = lang.toLowerCase();
-  const prefix = normalizedLang.split("-")[0];
+  const prefix = normalizedLang.split("-")[0]!;
   const candidates = voices.filter(
     (voice) => {
       const voiceLang = voice.lang.toLowerCase();
@@ -143,27 +157,27 @@ export function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined 
   return candidates.sort((a, b) => voiceScore(b, lang) - voiceScore(a, lang))[0];
 }
 
-export function friendlySpeechError(error: string | undefined, lang: string): string {
+export function friendlySpeechError(error: string | undefined, lang: string): { kind: TtsFailureKind; message: string } {
   switch (error) {
     case "not-allowed":
-      return "Your browser blocked audio. Tap the speaker button again.";
+      return { kind: "permission_blocked", message: "Your browser blocked audio. Tap the speaker button again." };
     case "language-unavailable":
-      return `No voice is available for ${lang} on this device.`;
+      return { kind: "language_unavailable", message: `No voice is available for ${lang} on this device.` };
     case "voice-unavailable":
-      return "The selected voice is unavailable. Trying again may use the browser default.";
+      return { kind: "voice_unavailable", message: "The selected voice is unavailable. Trying again may use the browser default." };
     case "audio-hardware":
-      return "Your device could not play audio. Check volume, Bluetooth, and silent mode.";
+      return { kind: "audio_hardware", message: "Your device could not play audio. Check volume, Bluetooth, and silent mode." };
     case "network":
-      return "A network voice could not be loaded. Try again or install an offline voice.";
+      return { kind: "network", message: "A network voice could not be loaded. Try again or install an offline voice." };
     case "synthesis-unavailable":
-      return "Text-to-speech is unavailable in this browser.";
+      return { kind: "synthesis_unavailable", message: "Text-to-speech is unavailable in this browser." };
     case "synthesis-failed":
-      return "Text-to-speech failed. Try again or use another browser.";
+      return { kind: "synthesis_failed", message: "Text-to-speech failed. Try again or use another browser." };
     case "canceled":
     case "interrupted":
-      return "Speech was interrupted.";
+      return { kind: "unknown", message: "Speech was interrupted." };
     default:
-      return "Couldn’t play audio. Check volume, silent mode, or browser permissions.";
+      return { kind: "unknown", message: "Couldn’t play audio. Check volume, silent mode, or browser permissions." };
   }
 }
 
@@ -186,8 +200,9 @@ export function speak(
 
   if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
     const message = "Text-to-speech is not supported in this browser.";
-    options.onEvent?.({ status: "unsupported", text, lang, message });
-    return Promise.resolve({ ok: false, status: "unsupported", message });
+    const kind: TtsFailureKind = "unsupported_browser";
+    options.onEvent?.({ status: "unsupported", text, lang, message, kind });
+    return Promise.resolve({ ok: false, status: "unsupported", kind, message });
   }
 
   if (!trimmedText) {
@@ -218,17 +233,20 @@ export function speak(
     const timeout = window.setTimeout(() => {
       if (started || settled) return;
       const message = timeoutMessage();
+      const kind: TtsFailureKind = "timeout";
       options.onEvent?.({
         status: "timeout",
         text: trimmedText,
         lang,
         message,
+        kind,
         voiceName: voice?.name,
         voiceLang: voice?.lang,
       });
       finish({
         ok: false,
         status: "timeout",
+        kind,
         message,
         voiceName: voice?.name,
         voiceLang: voice?.lang,
@@ -263,7 +281,7 @@ export function speak(
     };
 
     utterance.onerror = (event) => {
-      const message = friendlySpeechError(event.error, lang);
+      const { kind, message } = friendlySpeechError(event.error, lang);
       const status = event.error === "canceled" || event.error === "interrupted"
         ? "cancelled"
         : "error";
@@ -273,6 +291,7 @@ export function speak(
         text: trimmedText,
         lang,
         message,
+        kind,
         voiceName: voice?.name,
         voiceLang: voice?.lang,
       });
@@ -288,6 +307,7 @@ export function speak(
         finish({
           ok: false,
           status: "error",
+          kind,
           message,
           voiceName: voice?.name,
           voiceLang: voice?.lang,
@@ -307,8 +327,8 @@ export function speak(
       synth.speak(utterance);
     } catch {
       const message = "Couldn’t start text-to-speech in this browser.";
-      options.onEvent?.({ status: "error", text: trimmedText, lang, message });
-      finish({ ok: false, status: "error", message });
+      options.onEvent?.({ status: "error", text: trimmedText, lang, message, kind: "unknown" });
+      finish({ ok: false, status: "error", kind: "unknown", message });
       return;
     }
 
@@ -333,8 +353,8 @@ export function speakSequence(
 
   if (!synth || typeof SpeechSynthesisUtterance === "undefined") {
     const message = "Text-to-speech is not supported in this browser.";
-    options.onEvent?.({ status: "unsupported", message });
-    return Promise.resolve({ ok: false, status: "unsupported", message });
+    options.onEvent?.({ status: "unsupported", message, kind: "unsupported_browser" });
+    return Promise.resolve({ ok: false, status: "unsupported", kind: "unsupported_browser" as const, message });
   }
 
   if (speakableItems.length === 0) {
@@ -363,12 +383,14 @@ export function speakSequence(
       options.onEvent?.({
         status: "timeout",
         message,
+        kind: "timeout",
         voiceName: lastVoice?.name,
         voiceLang: lastVoice?.lang,
       });
       finish({
         ok: false,
         status: "timeout",
+        kind: "timeout",
         message,
         voiceName: lastVoice?.name,
         voiceLang: lastVoice?.lang,
@@ -418,7 +440,7 @@ export function speakSequence(
 
       utterance.onerror = (event) => {
         remaining -= 1;
-        const message = friendlySpeechError(event.error, item.lang);
+        const { kind, message } = friendlySpeechError(event.error, item.lang);
         const status = event.error === "canceled" || event.error === "interrupted"
           ? "cancelled"
           : "error";
@@ -428,6 +450,7 @@ export function speakSequence(
           text: item.text,
           lang: item.lang,
           message,
+          kind,
           voiceName: voice?.name,
           voiceLang: voice?.lang,
         });
@@ -436,6 +459,7 @@ export function speakSequence(
           finish({
             ok: false,
             status: "error",
+            kind,
             message,
             voiceName: voice?.name,
             voiceLang: voice?.lang,
@@ -462,8 +486,8 @@ export function speakSequence(
         synth.speak(utterance);
       } catch {
         const message = "Couldn’t start text-to-speech in this browser.";
-        options.onEvent?.({ status: "error", text: item.text, lang: item.lang, message });
-        finish({ ok: false, status: "error", message });
+        options.onEvent?.({ status: "error", text: item.text, lang: item.lang, message, kind: "unknown" });
+        finish({ ok: false, status: "error", kind: "unknown", message });
         return;
       }
     }
@@ -478,7 +502,7 @@ export async function getAvailableVoices(
 ): Promise<SpeechSynthesisVoice[]> {
   if (!isTtsSupported()) return [];
   const voices = await ensureVoices();
-  const prefix = lang.split("-")[0];
+  const prefix = lang.split("-")[0]!;
   return voices.filter(
     (voice) => voice.lang === lang || voice.lang.startsWith(prefix),
   );

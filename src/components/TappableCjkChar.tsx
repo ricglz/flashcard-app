@@ -3,6 +3,22 @@
 import { useRef, useState } from "react";
 import { speak, TtsEvent, TtsStatus } from "@/lib/tts";
 
+function statusClasses(status: TtsStatus): string {
+  switch (status) {
+    case "preparing":
+    case "queued":
+      return "rounded bg-accent/10 animate-pulse";
+    case "speaking":
+      return "rounded bg-accent/20 animate-pulse";
+    case "error":
+    case "timeout":
+    case "unsupported":
+      return "rounded bg-red-100 dark:bg-red-900/30";
+    default:
+      return "";
+  }
+}
+
 export default function TappableCjkChar({
   char,
   lang,
@@ -24,23 +40,21 @@ export default function TappableCjkChar({
       onEvent: (event) => {
         setStatus(event.status);
         onTtsEvent?.(event);
-        if (event.status === "ended" || event.status === "cancelled") {
-          resetTimeoutRef.current = setTimeout(() => setStatus("idle"), 300);
+        const isTerminal = event.status === "ended" || event.status === "cancelled";
+        const isError = event.status === "error" || event.status === "timeout" || event.status === "unsupported";
+        if (isTerminal || isError) {
+          resetTimeoutRef.current = setTimeout(() => setStatus("idle"), isError ? 1000 : 300);
         }
       },
     });
   };
-
-  const isSpeaking = status === "speaking";
 
   return (
     <button
       type="button"
       onClick={handleClick}
       aria-label={`Play ${char}`}
-      className={`inline cursor-pointer border-0 bg-transparent p-0 font-inherit text-inherit transition-colors duration-150 ${
-        isSpeaking ? "rounded bg-accent/20" : ""
-      }`}
+      className={`inline cursor-pointer border-0 bg-transparent p-0 font-inherit text-inherit transition-colors duration-150 ${statusClasses(status)}`}
     >
       {char}
     </button>

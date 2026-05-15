@@ -129,40 +129,55 @@ describe("friendlySpeechError", () => {
   it("maps known browser speech errors to user-facing messages", async () => {
     const { friendlySpeechError } = await importTts();
 
-    expect(friendlySpeechError("not-allowed", "zh-CN")).toBe(
-      "Your browser blocked audio. Tap the speaker button again.",
-    );
-    expect(friendlySpeechError("language-unavailable", "zh-CN")).toBe(
-      "No voice is available for zh-CN on this device.",
-    );
-    expect(friendlySpeechError("voice-unavailable", "zh-CN")).toBe(
-      "The selected voice is unavailable. Trying again may use the browser default.",
-    );
-    expect(friendlySpeechError("audio-hardware", "zh-CN")).toBe(
-      "Your device could not play audio. Check volume, Bluetooth, and silent mode.",
-    );
-    expect(friendlySpeechError("network", "zh-CN")).toBe(
-      "A network voice could not be loaded. Try again or install an offline voice.",
-    );
-    expect(friendlySpeechError("synthesis-unavailable", "zh-CN")).toBe(
-      "Text-to-speech is unavailable in this browser.",
-    );
-    expect(friendlySpeechError("synthesis-failed", "zh-CN")).toBe(
-      "Text-to-speech failed. Try again or use another browser.",
-    );
-    expect(friendlySpeechError("canceled", "zh-CN")).toBe("Speech was interrupted.");
-    expect(friendlySpeechError("interrupted", "zh-CN")).toBe("Speech was interrupted.");
+    expect(friendlySpeechError("not-allowed", "zh-CN")).toEqual({
+      kind: "permission_blocked",
+      message: "Your browser blocked audio. Tap the speaker button again.",
+    });
+    expect(friendlySpeechError("language-unavailable", "zh-CN")).toEqual({
+      kind: "language_unavailable",
+      message: "No voice is available for zh-CN on this device.",
+    });
+    expect(friendlySpeechError("voice-unavailable", "zh-CN")).toEqual({
+      kind: "voice_unavailable",
+      message: "The selected voice is unavailable. Trying again may use the browser default.",
+    });
+    expect(friendlySpeechError("audio-hardware", "zh-CN")).toEqual({
+      kind: "audio_hardware",
+      message: "Your device could not play audio. Check volume, Bluetooth, and silent mode.",
+    });
+    expect(friendlySpeechError("network", "zh-CN")).toEqual({
+      kind: "network",
+      message: "A network voice could not be loaded. Try again or install an offline voice.",
+    });
+    expect(friendlySpeechError("synthesis-unavailable", "zh-CN")).toEqual({
+      kind: "synthesis_unavailable",
+      message: "Text-to-speech is unavailable in this browser.",
+    });
+    expect(friendlySpeechError("synthesis-failed", "zh-CN")).toEqual({
+      kind: "synthesis_failed",
+      message: "Text-to-speech failed. Try again or use another browser.",
+    });
+    expect(friendlySpeechError("canceled", "zh-CN")).toEqual({
+      kind: "unknown",
+      message: "Speech was interrupted.",
+    });
+    expect(friendlySpeechError("interrupted", "zh-CN")).toEqual({
+      kind: "unknown",
+      message: "Speech was interrupted.",
+    });
   });
 
   it("returns the generic fallback message for unknown or missing errors", async () => {
     const { friendlySpeechError } = await importTts();
 
-    expect(friendlySpeechError("bad-error", "zh-CN")).toBe(
-      "Couldn’t play audio. Check volume, silent mode, or browser permissions.",
-    );
-    expect(friendlySpeechError(undefined, "zh-CN")).toBe(
-      "Couldn’t play audio. Check volume, silent mode, or browser permissions.",
-    );
+    expect(friendlySpeechError("bad-error", "zh-CN")).toEqual({
+      kind: "unknown",
+      message: "Couldn’t play audio. Check volume, silent mode, or browser permissions.",
+    });
+    expect(friendlySpeechError(undefined, "zh-CN")).toEqual({
+      kind: "unknown",
+      message: "Couldn’t play audio. Check volume, silent mode, or browser permissions.",
+    });
   });
 });
 
@@ -270,6 +285,7 @@ describe("timeout behavior", () => {
     await expect(resultPromise).resolves.toEqual({
       ok: false,
       status: "timeout",
+      kind: "timeout",
       message: timeoutMessage(),
       voiceName: "English Voice",
       voiceLang: "en-US",
@@ -279,6 +295,7 @@ describe("timeout behavior", () => {
       text: "hello",
       lang: "en-US",
       message: timeoutMessage(),
+      kind: "timeout",
       voiceName: "English Voice",
       voiceLang: "en-US",
     });
@@ -291,9 +308,9 @@ describe("timeout behavior", () => {
     const onEvent = vi.fn();
 
     const resultPromise = speak("hello", "en-US", { onEvent, startTimeoutMs: 10 });
-    synth.spoken[0].onstart?.call(synth.spoken[0], {} as SpeechSynthesisEvent);
+    synth.spoken[0]!.onstart?.call(synth.spoken[0]!, {} as SpeechSynthesisEvent);
     await vi.advanceTimersByTimeAsync(10);
-    synth.spoken[0].onend?.call(synth.spoken[0], {} as SpeechSynthesisEvent);
+    synth.spoken[0]!.onend?.call(synth.spoken[0]!, {} as SpeechSynthesisEvent);
 
     await expect(resultPromise).resolves.toEqual({ ok: true, status: "ended" });
     expect(onEvent).not.toHaveBeenCalledWith(
@@ -310,7 +327,7 @@ describe("speech flow", () => {
     const onEvent = vi.fn();
 
     const resultPromise = speak(" hello ", "en-US", { rate: 1.2, onEvent });
-    const utterance = synth.spoken[0];
+    const utterance = synth.spoken[0]!;
     expect(synth.cancel).toHaveBeenCalledOnce();
     expect(utterance.text).toBe("hello");
     expect(utterance.lang).toBe("en-US");
@@ -341,7 +358,7 @@ describe("speech flow", () => {
       const onEvent = vi.fn();
 
       const resultPromise = speak("hello", "en-US", { onEvent });
-      synth.spoken[0].onerror?.call(synth.spoken[0], { error } as SpeechSynthesisErrorEvent);
+      synth.spoken[0]!.onerror?.call(synth.spoken[0]!, { error } as SpeechSynthesisErrorEvent);
 
       await expect(resultPromise).resolves.toEqual({ ok: true, status: "cancelled" });
       expect(onEvent).toHaveBeenCalledWith(
@@ -356,15 +373,18 @@ describe("speech flow", () => {
     const onEvent = vi.fn();
 
     const resultPromise = speak("hello", "en-US", { onEvent });
-    synth.spoken[0].onerror?.call(synth.spoken[0], {
+    synth.spoken[0]!.onerror?.call(synth.spoken[0]!, {
       error: "not-allowed",
     } as SpeechSynthesisErrorEvent);
 
-    await expect(resultPromise).resolves.toEqual({
-      ok: false,
-      status: "error",
-      message: "Your browser blocked audio. Tap the speaker button again.",
-    });
+    await expect(resultPromise).resolves.toEqual(
+      expect.objectContaining({
+        ok: false,
+        status: "error",
+        kind: "permission_blocked",
+        message: "Your browser blocked audio. Tap the speaker button again.",
+      }),
+    );
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "error",
