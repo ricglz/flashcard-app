@@ -11,7 +11,7 @@ export type LanguagePreset = {
   fieldDefinitions: FieldDefinition[];
 };
 
-export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
+export const LANGUAGE_PRESETS = {
   chinese: {
     label: "Chinese (Mandarin)",
     fieldDefinitions: [
@@ -92,6 +92,7 @@ export const LANGUAGE_PRESETS: Record<string, LanguagePreset> = {
       },
     ],
   },
-};
+} satisfies Record<string, LanguagePreset>;
 
-export const PRESET_KEYS = Object.keys(LANGUAGE_PRESETS);
+export type PresetKey = keyof typeof LANGUAGE_PRESETS;
+export const PRESET_KEYS = Object.keys(LANGUAGE_PRESETS) as PresetKey[];

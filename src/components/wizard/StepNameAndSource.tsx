@@ -1,4 +1,4 @@
-import { LANGUAGE_PRESETS, PRESET_KEYS } from "@/lib/presets";
+import { LANGUAGE_PRESETS, PRESET_KEYS, type PresetKey } from "@/lib/presets";
 import { WizardAction, WizardState } from "./wizardState";
 import SourceCard from "./SourceCard";
 
@@ -10,8 +10,8 @@ type Props = {
 
 export default function StepNameAndSource({ state, dispatch, hasLlmKey }: Props) {
   const handlePresetSelect = (key: string) => {
-    const preset = LANGUAGE_PRESETS[key];
-    if (preset) {
+    if (key in LANGUAGE_PRESETS) {
+      const preset = LANGUAGE_PRESETS[key as PresetKey];
       dispatch({ type: "SET_FIELD_DEFINITIONS", payload: preset.fieldDefinitions });
     }
   };
@@ -85,7 +85,7 @@ export default function StepNameAndSource({ state, dispatch, hasLlmKey }: Props)
             <option value="">No preset — define fields in next step</option>
             {PRESET_KEYS.map((key) => (
               <option key={key} value={key}>
-                {LANGUAGE_PRESETS[key]!.label}
+                {LANGUAGE_PRESETS[key].label}
               </option>
             ))}
           </select>

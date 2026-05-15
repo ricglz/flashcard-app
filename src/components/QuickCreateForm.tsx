@@ -4,7 +4,7 @@ import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { LANGUAGE_PRESETS, PRESET_KEYS } from "@/lib/presets";
+import { LANGUAGE_PRESETS, PRESET_KEYS, type PresetKey } from "@/lib/presets";
 
 type Props = {
   onClose: () => void;
@@ -15,7 +15,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
   const createSet = useMutation(api.flashcardSets.create);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedPreset, setSelectedPreset] = useState("custom");
+  const [selectedPreset, setSelectedPreset] = useState<PresetKey>("custom");
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +24,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
     setIsCreating(true);
     setError(null);
     try {
-      const preset = LANGUAGE_PRESETS[selectedPreset]!;
+      const preset = LANGUAGE_PRESETS[selectedPreset];
       const result = await createSet({
         name: name.trim(),
         description: description.trim() || undefined,
@@ -93,7 +93,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
                     : "border-edge hover:bg-surface-hover"
                 }`}
               >
-                {LANGUAGE_PRESETS[key]!.label}
+                {LANGUAGE_PRESETS[key].label}
               </button>
             ))}
           </div>
