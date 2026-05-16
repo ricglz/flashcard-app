@@ -7,27 +7,35 @@ import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import type { CardRating } from "@/lib/types";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 import AssistantPanel from "@/components/AssistantPanel";
 import { asId } from "@/lib/convexHelpers";
-import { useTtsControls } from "@/hooks/useTtsControls";
-import { useCardAnnotations } from "@/hooks/useCardAnnotations";
+import { useTtsControlsPreloaded } from "@/hooks/useTtsControls";
+import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
+  preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getAll>;
 };
 
-export default function SrsReviewClient({ preloadedQueue }: Props) {
+export default function SrsReviewClient({
+  preloadedQueue,
+  preloadedStats,
+  preloadedSettings,
+  preloadedAnnotations,
+}: Props) {
   const router = useRouter();
   const queue = usePreloadedQuery(preloadedQueue);
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
-  const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
-  const tts = useTtsControls();
-  const { annotationMap, toggleFlag, setNote } = useCardAnnotations();
+  const stats = useOfflinePreloadedQuery(preloadedStats);
+  const tts = useTtsControlsPreloaded(preloadedSettings);
+  const { annotationMap, toggleFlag, setNote } = useCardAnnotationsAllPreloaded(preloadedAnnotations);
 
   const stableQueue = useRef(queue);
   if (queue.length > 0) stableQueue.current = queue;
