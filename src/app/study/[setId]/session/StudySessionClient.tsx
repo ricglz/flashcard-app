@@ -5,7 +5,6 @@ import { useState, useCallback } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -14,9 +13,11 @@ import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import AssistantPanel from "@/components/AssistantPanel";
+import StudyLayout from "@/components/StudyLayout";
 import type { CardRating, ActiveStudySession } from "@/lib/types";
-import SessionHeader from "./SessionHeader";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import { useTtsControls } from "@/hooks/useTtsControls";
+import { useCardAnnotations } from "@/hooks/useCardAnnotations";
 import Link from "next/link";
 
 type Props = {
@@ -42,35 +43,15 @@ export default function StudySessionClient({
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
-  const settings = useOfflineQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
-  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: asId<"flashcardSets">(setId) });
-  const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
-  const setNoteMutation = useMutation(api.cardAnnotations.setNote);
+  const tts = useTtsControls();
+  const { annotationMap, toggleFlag, setNote } = useCardAnnotations(asId<"flashcardSets">(setId));
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
   const [localIndexOffset, setLocalIndexOffset] = useState(0);
-
-  const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
-
-  const annotationMap = new Map(
-    (annotations ?? []).map((a) => [a.cardId, { flagged: a.flagged, note: a.note }])
-  );
-
-  const handleTtsSpeedChange = useCallback(
-    (speed: number) => {
-      setLocalTtsSpeed(speed);
-      void updateSettings({ ttsPlaybackSpeed: speed });
-    },
-    [updateSettings]
-  );
 
   const effectiveIndex = session.currentIndex + localIndexOffset;
 
-  // Reset offset when server catches up (after outbox drains)
   if (session.currentIndex > 0 && localIndexOffset > 0) {
     const serverAdvanced = session.currentIndex >= effectiveIndex;
     if (serverAdvanced) {
@@ -117,7 +98,7 @@ export default function StudySessionClient({
       recordResult,
       router,
       setId,
-    ]
+    ],
   );
 
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
@@ -150,60 +131,55 @@ export default function StudySessionClient({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <SessionHeader
-        setId={setId}
-        effectiveIndex={effectiveIndex}
-        cardCount={session.cardOrder.length}
-        effectiveTtsSpeed={effectiveTtsSpeed}
-        ttsEnabled={ttsEnabled}
-        onTtsSpeedChange={handleTtsSpeedChange}
-        onToggleTts={() => setTtsEnabled((v) => !v)}
-        onAbandon={() => {
+    <StudyLayout
+      progress={{ current: effectiveIndex, total: session.cardOrder.length }}
+      tts={tts}
+      actionButton={{
+        label: "Abandon",
+        onClick: () => {
           if (confirm("Abandon this session?")) {
             void abandonSession({ sessionId });
             router.push(`/study/${setId}`);
           }
-        }}
-      />
-
-      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
-        <StudyCard
-          key={currentCardId}
-          card={currentCard}
-          fieldDefinitions={fieldDefs}
-          frontFields={session.frontFields}
-          backFields={session.backFields}
-          ttsOnlyFields={session.ttsOnlyFields}
-          onRevealed={() => setRevealed(true)}
-          autoPlayTts={ttsEnabled}
-          ttsRate={effectiveTtsSpeed}
-          annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
-          onToggleFlag={() => {
-            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
-          }}
-          onSetNote={(note: string) => {
-            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
+        },
+      }}
+      assistant={
+        <AssistantPanel
+          context={{
+            setId: session.setId,
+            setName: set.name,
+            cardFields: currentCard.fields,
           }}
         />
-
-        {revealed && (
-          <div className="mt-8">
-            <p className="text-center text-sm text-muted mb-3">
-              How did you do?
-            </p>
-            <CardRatingButtons onRate={handleRate} disabled={isSubmitting} />
-          </div>
-        )}
-      </main>
-
-      <AssistantPanel
-        context={{
-          setId: session.setId,
-          setName: set.name,
-          cardFields: currentCard.fields,
+      }
+    >
+      <StudyCard
+        key={currentCardId}
+        card={currentCard}
+        fieldDefinitions={fieldDefs}
+        frontFields={session.frontFields}
+        backFields={session.backFields}
+        ttsOnlyFields={session.ttsOnlyFields}
+        onRevealed={() => setRevealed(true)}
+        autoPlayTts={tts.ttsEnabled}
+        ttsRate={tts.speed}
+        annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
+        onToggleFlag={() => {
+          if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
+        }}
+        onSetNote={(note: string) => {
+          if (currentCardId) void setNote({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
         }}
       />
-    </div>
+
+      {revealed && (
+        <div className="mt-8">
+          <p className="text-center text-sm text-muted mb-3">
+            How did you do?
+          </p>
+          <CardRatingButtons onRate={handleRate} disabled={isSubmitting} />
+        </div>
+      )}
+    </StudyLayout>
   );
 }
