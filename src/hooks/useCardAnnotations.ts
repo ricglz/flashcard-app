@@ -2,21 +2,15 @@
 
 import { useMemo } from "react";
 import { useMutation } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 
-export function useCardAnnotations(setId?: Id<"flashcardSets">) {
-  const allAnnotations = useOfflineQuery(
-    api.cardAnnotations.getAll,
-    setId ? "skip" : undefined,
-  );
-  const setAnnotations = useOfflineQuery(
-    api.cardAnnotations.getForSet,
-    setId ? { setId } : "skip",
-  );
+type Annotation = { cardId: Id<"flashcards">; flagged: boolean; note?: string };
 
-  const annotations = setId ? setAnnotations : allAnnotations;
+function useCardAnnotationsInternal(annotations: Annotation[] | undefined) {
   const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
   const setNote = useMutation(api.cardAnnotations.setNote);
 
@@ -32,4 +26,32 @@ export function useCardAnnotations(setId?: Id<"flashcardSets">) {
   );
 
   return { annotationMap, toggleFlag, setNote };
+}
+
+export function useCardAnnotations(setId?: Id<"flashcardSets">) {
+  const allAnnotations = useOfflineQuery(
+    api.cardAnnotations.getAll,
+    setId ? "skip" : undefined,
+  );
+  const setAnnotations = useOfflineQuery(
+    api.cardAnnotations.getForSet,
+    setId ? { setId } : "skip",
+  );
+
+  const annotations = setId ? setAnnotations : allAnnotations;
+  return useCardAnnotationsInternal(annotations);
+}
+
+export function useCardAnnotationsForSetPreloaded(
+  preloaded: Preloaded<typeof api.cardAnnotations.getForSet>,
+) {
+  const annotations = useOfflinePreloadedQuery(preloaded);
+  return useCardAnnotationsInternal(annotations);
+}
+
+export function useCardAnnotationsAllPreloaded(
+  preloaded: Preloaded<typeof api.cardAnnotations.getAll>,
+) {
+  const annotations = useOfflinePreloadedQuery(preloaded);
+  return useCardAnnotationsInternal(annotations);
 }
