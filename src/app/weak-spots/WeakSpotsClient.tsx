@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, usePreloadedQuery } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
@@ -25,14 +26,20 @@ const REASON_LABELS: Record<string, string> = {
   recently_due_again: "Due Again",
 };
 
-export default function WeakSpotsClient() {
+export default function WeakSpotsClient({
+  preloadedSets,
+  preloadedSettings,
+}: {
+  preloadedSets: Preloaded<typeof api.flashcardSets.list>;
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+}) {
   const [methodology, setMethodology] = useState<Methodology>("balanced");
   const [selectedSetId, setSelectedSetId] = useState<string | undefined>();
   const router = useRouter();
 
-  const settings = useQuery(api.userSettings.get);
+  const settings = usePreloadedQuery(preloadedSettings);
   const hasLlmKey = settings?.hasLlmKey ?? false;
-  const userSets = useOfflineQuery(api.flashcardSets.list);
+  const userSets = useOfflinePreloadedQuery(preloadedSets);
   const srsEnabledSets = useMemo(
     () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],
     [userSets]
