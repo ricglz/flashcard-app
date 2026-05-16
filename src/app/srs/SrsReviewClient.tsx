@@ -13,6 +13,8 @@ import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 import AssistantPanel from "@/components/AssistantPanel";
 import { asId } from "@/lib/convexHelpers";
+import { useTtsControls } from "@/hooks/useTtsControls";
+import { useCardAnnotations } from "@/hooks/useCardAnnotations";
 
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
@@ -24,20 +26,15 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
-  const settings = useOfflineQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
-  const annotations = useOfflineQuery(api.cardAnnotations.getAll);
-  const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
-  const setCardNote = useMutation(api.cardAnnotations.setNote);
+  const tts = useTtsControls();
+  const { annotationMap, toggleFlag, setNote } = useCardAnnotations();
 
-  // Snapshot the queue so auth drops don't wipe it
   const stableQueue = useRef(queue);
   if (queue.length > 0) stableQueue.current = queue;
   const effectiveQueue = queue.length > 0 ? queue : stableQueue.current;
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [ratingCounts, setRatingCounts] = useState<Record<CardRating, number>>({
     wrong: 0,
@@ -48,28 +45,12 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
-  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
   const initialQueueSize = useRef(effectiveQueue.length);
-
-  const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
-
-  const annotationMap = new Map(
-    (annotations ?? []).map((a) => [a.cardId, { flagged: a.flagged, note: a.note, setId: a.setId }])
-  );
-
-  const handleTtsSpeedChange = useCallback(
-    (speed: number) => {
-      setLocalTtsSpeed(speed);
-      void updateSettings({ ttsPlaybackSpeed: speed });
-    },
-    [updateSettings]
-  );
 
   const visibleQueue = effectiveQueue.filter((item) => !reviewedIds.has(item._id));
   const totalCards = visibleQueue.length + reviewedCount;
   const currentItem = visibleQueue.length > 0 ? visibleQueue[0] : null;
 
-  // Queue dropped to 0 without the user reviewing all cards — auth likely failed
   const isSessionComplete =
     visibleQueue.length === 0 && reviewedCount >= initialQueueSize.current;
 
@@ -98,7 +79,7 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
         setIsSubmitting(false);
       }
     },
-    [currentItem, isSubmitting, recordReview]
+    [currentItem, isSubmitting, recordReview],
   );
 
   async function handleLoadMore() {
@@ -142,40 +123,36 @@ export default function SrsReviewClient({ preloadedQueue }: Props) {
   const currentAnnotation = annotationMap.get(asId<"flashcards">(currentItem.card._id));
 
   return (
-    <>
-      <SrsReviewActive
-        currentItem={currentItem}
-        reviewedCount={reviewedCount}
-        totalCards={totalCards}
-        revealed={revealed}
-        isSubmitting={isSubmitting}
-        ttsEnabled={ttsEnabled}
-        ttsRate={effectiveTtsSpeed}
-        ttsSpeed={effectiveTtsSpeed}
-        onTtsSpeedChange={handleTtsSpeedChange}
-        onReveal={() => setRevealed(true)}
-        onRate={handleRate}
-        onToggleTts={() => setTtsEnabled((v) => !v)}
-        annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
-        onToggleFlag={() => {
-          void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
-        }}
-        onSetNote={(note: string) => {
-          void setCardNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
-        }}
-        onEndSession={() => {
-          if (confirm("End review session? Your progress is saved.")) {
-            router.push("/");
-          }
-        }}
-      />
-      <AssistantPanel
-        context={{
-          setId: asId<"flashcardSets">(currentItem.setId),
-          setName: currentItem.setName,
-          cardFields: currentItem.card.fields,
-        }}
-      />
-    </>
+    <SrsReviewActive
+      currentItem={currentItem}
+      reviewedCount={reviewedCount}
+      totalCards={totalCards}
+      revealed={revealed}
+      isSubmitting={isSubmitting}
+      tts={tts}
+      onReveal={() => setRevealed(true)}
+      onRate={handleRate}
+      annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
+      onToggleFlag={() => {
+        void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
+      }}
+      onSetNote={(note: string) => {
+        void setNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
+      }}
+      onEndSession={() => {
+        if (confirm("End review session? Your progress is saved.")) {
+          router.push("/");
+        }
+      }}
+      assistant={
+        <AssistantPanel
+          context={{
+            setId: asId<"flashcardSets">(currentItem.setId),
+            setName: currentItem.setName,
+            cardFields: currentItem.card.fields,
+          }}
+        />
+      }
+    />
   );
 }

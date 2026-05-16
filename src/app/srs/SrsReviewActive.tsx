@@ -1,12 +1,10 @@
+import type { ReactNode } from "react";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
-import SrsReviewHeader from "./SrsReviewHeader";
-import type {
-  CardRating} from "@/lib/types";
-import {
-  SRS_RATING_LABELS,
-  type FieldDefinition,
-} from "@/lib/types";
+import StudyLayout from "@/components/StudyLayout";
+import type { useTtsControls } from "@/hooks/useTtsControls";
+import type { CardRating, FieldDefinition } from "@/lib/types";
+import { SRS_RATING_LABELS } from "@/lib/types";
 
 export default function SrsReviewActive({
   currentItem,
@@ -14,17 +12,14 @@ export default function SrsReviewActive({
   totalCards,
   revealed,
   isSubmitting,
-  ttsEnabled,
-  ttsRate,
-  ttsSpeed,
+  tts,
   onReveal,
   onRate,
-  onToggleTts,
-  onTtsSpeedChange,
   onEndSession,
   annotation,
   onToggleFlag,
   onSetNote,
+  assistant,
 }: {
   currentItem: {
     _id: string;
@@ -40,68 +35,49 @@ export default function SrsReviewActive({
   totalCards: number;
   revealed: boolean;
   isSubmitting: boolean;
-  ttsEnabled: boolean;
-  ttsRate: number | undefined;
-  ttsSpeed: number;
+  tts: ReturnType<typeof useTtsControls>;
   onReveal: () => void;
   onRate: (rating: CardRating) => void;
-  onToggleTts: () => void;
-  onTtsSpeedChange: (speed: number) => void;
   onEndSession: () => void;
   annotation?: { flagged: boolean; note?: string };
   onToggleFlag?: () => void;
   onSetNote?: (note: string) => void;
+  assistant?: ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <SrsReviewHeader
-        reviewedCount={reviewedCount}
-        totalCards={totalCards}
-        ttsSpeed={ttsSpeed}
-        onTtsSpeedChange={onTtsSpeedChange}
-        ttsEnabled={ttsEnabled}
-        onToggleTts={onToggleTts}
-        onEndSession={onEndSession}
+    <StudyLayout
+      progress={{ current: reviewedCount, total: totalCards }}
+      tts={tts}
+      actionButton={{ label: "End Session", onClick: onEndSession }}
+      assistant={assistant}
+    >
+      <StudyCard
+        key={currentItem._id}
+        card={currentItem.card}
+        fieldDefinitions={currentItem.fieldDefinitions}
+        frontFields={currentItem.frontFields}
+        backFields={currentItem.backFields}
+        ttsOnlyFields={currentItem.ttsOnlyFields}
+        onRevealed={onReveal}
+        autoPlayTts={tts.ttsEnabled}
+        ttsRate={tts.speed}
+        annotation={annotation}
+        onToggleFlag={onToggleFlag}
+        onSetNote={onSetNote}
       />
 
-      <div className="h-1 bg-raised">
-        <div
-          className="h-full bg-accent transition-all"
-          style={{
-            width: `${(reviewedCount / totalCards) * 100}%`,
-          }}
-        />
-      </div>
-
-      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
-        <StudyCard
-          key={currentItem._id}
-          card={currentItem.card}
-          fieldDefinitions={currentItem.fieldDefinitions}
-          frontFields={currentItem.frontFields}
-          backFields={currentItem.backFields}
-          ttsOnlyFields={currentItem.ttsOnlyFields}
-          onRevealed={onReveal}
-          autoPlayTts={ttsEnabled}
-          ttsRate={ttsRate}
-          annotation={annotation}
-          onToggleFlag={onToggleFlag}
-          onSetNote={onSetNote}
-        />
-
-        {revealed && (
-          <div className="mt-8">
-            <p className="text-center text-sm text-muted mb-3">
-              How well did you recall this?
-            </p>
-            <CardRatingButtons
-              onRate={onRate}
-              disabled={isSubmitting}
-              labels={SRS_RATING_LABELS}
-            />
-          </div>
-        )}
-      </main>
-    </div>
+      {revealed && (
+        <div className="mt-8">
+          <p className="text-center text-sm text-muted mb-3">
+            How well did you recall this?
+          </p>
+          <CardRatingButtons
+            onRate={onRate}
+            disabled={isSubmitting}
+            labels={SRS_RATING_LABELS}
+          />
+        </div>
+      )}
+    </StudyLayout>
   );
 }
