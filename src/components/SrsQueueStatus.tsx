@@ -3,13 +3,22 @@
 import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import type { SrsConfig } from "./SrsSettingsPanel";
 import SrsSettingsPanel from "./SrsSettingsPanel";
 import SrsQueueEmpty from "./SrsQueueEmpty";
 import SrsQueueComplete from "./SrsQueueComplete";
 import SrsQueueActive from "./SrsQueueActive";
+
+type QueueStats = NonNullable<
+  ReturnType<typeof useOfflineQuery<typeof api.srsReviewQueue.getQueueStats>>
+>;
+type Settings = ReturnType<
+  typeof useOfflineQuery<typeof api.userSettings.get>
+>;
 
 function formatResetTime(dayResetUtcHour: number): string {
   const d = new Date();
@@ -20,9 +29,13 @@ function formatResetTime(dayResetUtcHour: number): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export default function SrsQueueStatus() {
-  const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
-  const settings = useOfflineQuery(api.userSettings.get);
+function SrsQueueStatusInner({
+  stats,
+  settings,
+}: {
+  stats: QueueStats;
+  settings: Settings;
+}) {
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
   const updateTtsSpeed = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
@@ -31,9 +44,6 @@ export default function SrsQueueStatus() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
-
-  if (stats === undefined) return null;
-  if (stats === null) return null;
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
     setIsSaving(true);
@@ -126,4 +136,24 @@ export default function SrsQueueStatus() {
       settingsPanel={settingsPanel}
     />
   );
+}
+
+export default function SrsQueueStatus() {
+  const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
+  const settings = useOfflineQuery(api.userSettings.get);
+  if (!stats) return null;
+  return <SrsQueueStatusInner stats={stats} settings={settings} />;
+}
+
+export function PreloadedSrsQueueStatus({
+  preloadedStats,
+  preloadedSettings,
+}: {
+  preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+}) {
+  const stats = useOfflinePreloadedQuery(preloadedStats);
+  const settings = useOfflinePreloadedQuery(preloadedSettings);
+  if (!stats) return null;
+  return <SrsQueueStatusInner stats={stats} settings={settings} />;
 }
