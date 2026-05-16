@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { FunctionReturnType } from "convex/server";
 import { isFailureResult } from "@/lib/appResult";
 import type { SrsConfig } from "@/components/SrsSettingsPanel";
 import SrsSettingsPanel from "@/components/SrsSettingsPanel";
-import type { useOfflineQuery } from "@/lib/useOfflineQuery";
 
-type Settings = NonNullable<ReturnType<typeof useOfflineQuery<typeof api.userSettings.get>>>;
+type Settings = NonNullable<FunctionReturnType<typeof api.userSettings.get>>;
 
 export default function SrsSettingsSectionInner({ settings }: { settings: Settings }) {
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
