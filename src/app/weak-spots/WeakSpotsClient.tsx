@@ -28,17 +28,17 @@ const REASON_LABELS: Record<string, string> = {
 
 export default function WeakSpotsClient({
   preloadedSets,
-  preloadedSettings,
+  preloadedHasLlmKey,
 }: {
   preloadedSets: Preloaded<typeof api.flashcardSets.list>;
-  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
 }) {
   const [methodology, setMethodology] = useState<Methodology>("balanced");
   const [selectedSetId, setSelectedSetId] = useState<string | undefined>();
   const router = useRouter();
 
-  const settings = usePreloadedQuery(preloadedSettings);
-  const hasLlmKey = settings?.hasLlmKey ?? false;
+  const llmKeyStatus = usePreloadedQuery(preloadedHasLlmKey);
+  const hasLlmKey = llmKeyStatus?.hasLlmKey ?? false;
   const userSets = useOfflinePreloadedQuery(preloadedSets);
   const srsEnabledSets = useMemo(
     () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],

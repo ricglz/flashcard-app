@@ -8,15 +8,15 @@ export default async function WeakSpotsPage() {
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const [preloadedSets, preloadedSettings] = await Promise.all([
+  const [preloadedSets, preloadedHasLlmKey] = await Promise.all([
     preloadQuery(api.flashcardSets.list, {}, { token }),
-    preloadQuery(api.userSettings.get, {}, { token }),
+    preloadQuery(api.userSettings.hasLlmKey, {}, { token }),
   ]);
 
   return (
     <WeakSpotsClient
       preloadedSets={preloadedSets}
-      preloadedSettings={preloadedSettings}
+      preloadedHasLlmKey={preloadedHasLlmKey}
     />
   );
 }

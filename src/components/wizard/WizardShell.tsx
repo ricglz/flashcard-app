@@ -21,14 +21,14 @@ import StepReview from "./StepReview";
 const STEP_LABELS = ["Name & Source", "Add Cards", "Configure Fields", "Review"];
 
 export default function WizardShell({
-  preloadedSettings,
+  preloadedHasLlmKey,
 }: {
-  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
 }) {
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
-  const settings = usePreloadedQuery(preloadedSettings);
-  const hasLlmKey = settings?.hasLlmKey ?? false;
+  const llmKeyStatus = usePreloadedQuery(preloadedHasLlmKey);
+  const hasLlmKey = llmKeyStatus?.hasLlmKey ?? false;
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdSetId, setCreatedSetId] = useState<string | null>(null);

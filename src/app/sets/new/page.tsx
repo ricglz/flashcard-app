@@ -9,8 +9,8 @@ export default async function NewSetPage() {
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const preloadedSettings = await preloadQuery(
-    api.userSettings.get,
+  const preloadedHasLlmKey = await preloadQuery(
+    api.userSettings.hasLlmKey,
     {},
     { token },
   );
@@ -25,7 +25,7 @@ export default async function NewSetPage() {
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <h1 className="text-2xl font-bold mb-6">Create New Flashcard Set</h1>
-        <WizardShell preloadedSettings={preloadedSettings} />
+        <WizardShell preloadedHasLlmKey={preloadedHasLlmKey} />
       </main>
     </div>
   );

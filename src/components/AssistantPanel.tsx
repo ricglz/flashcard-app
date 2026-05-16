@@ -12,7 +12,7 @@ export type StudyContext = {
 };
 
 export default function AssistantPanel({ context }: { context: StudyContext }) {
-  const settings = useQuery(api.userSettings.get);
-  if (!settings?.hasLlmKey) return null;
+  const llmKeyStatus = useQuery(api.userSettings.hasLlmKey);
+  if (!llmKeyStatus?.hasLlmKey) return null;
   return <AssistantPanelInner context={context} />;
 }
