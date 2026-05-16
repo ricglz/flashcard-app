@@ -12,6 +12,7 @@ import { useConvex, type ConvexReactClient } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { FunctionReference } from "convex/server";
 import { useOnlineStatus } from "./useOnlineStatus";
+import { toast } from "sonner";
 import {
   getPendingEntries,
   markSyncing,
@@ -100,6 +101,7 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
 
       setIsSyncing(true);
 
+      let success = false;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
       for (let attempt = 0; attempt < MAX_ATTEMPTS && !cancelled; attempt++) {
         if (attempt > 0) {
@@ -107,12 +109,15 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
           if (cancelled) break;
         }
-        const success = await flushEntries(client);
+        success = await flushEntries(client);
         if (success) break;
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
       if (!cancelled) {
+        if (!success) {
+          toast.error("Failed to sync some changes. They'll retry next time you're online.");
+        }
         setIsSyncing(false);
         await refreshCount();
       }
