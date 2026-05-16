@@ -3,9 +3,9 @@
 import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
-import { usePreloadedQuery, useMutation, useQuery } from "convex/react";
+import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SrsSetConfig from "@/components/SrsSetConfig";
@@ -19,28 +19,26 @@ type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedForkSyncStatus: Preloaded<typeof api.flashcardSets.getForkSyncStatus> | null;
 };
 
 export default function SetDetailClient({
   setId,
   preloadedSet,
   preloadedCards,
+  preloadedSettings,
+  preloadedForkSyncStatus,
 }: Props) {
   const { set, viewer } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const router = useRouter();
-  const settings = useOfflineQuery(api.userSettings.get);
+  const settings = useOfflinePreloadedQuery(preloadedSettings);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
   const [isForking, setIsForking] = useState(false);
   const [forkError, setForkError] = useState<string | null>(null);
   const [showAiAppend, setShowAiAppend] = useState(false);
-
-  const isForked = set.origin.kind === "forked";
-  const forkSyncStatus = useQuery(
-    api.flashcardSets.getForkSyncStatus,
-    isForked ? { setId: set._id } : "skip"
-  );
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
@@ -128,16 +126,8 @@ export default function SetDetailClient({
           </p>
         )}
 
-        {forkSyncStatus?.sourceDeleted && (
-          <div className="mb-4 p-3 border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
-            The original set has been deleted.
-          </div>
-        )}
-
-        {forkSyncStatus?.sourceUpdated && !forkSyncStatus.sourceDeleted && (
-          <div className="mb-4 p-3 border border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-            The original set has been updated since you forked it.
-          </div>
+        {preloadedForkSyncStatus && (
+          <ForkSyncBanner preloaded={preloadedForkSyncStatus} />
         )}
 
         {viewer.role === "visitor" && (
@@ -197,4 +187,31 @@ export default function SetDetailClient({
       </main>
     </div>
   );
+}
+
+function ForkSyncBanner({
+  preloaded,
+}: {
+  preloaded: Preloaded<typeof api.flashcardSets.getForkSyncStatus>;
+}) {
+  const status = usePreloadedQuery(preloaded);
+  if (!status) return null;
+
+  if (status.sourceDeleted) {
+    return (
+      <div className="mb-4 p-3 border border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
+        The original set has been deleted.
+      </div>
+    );
+  }
+
+  if (status.sourceUpdated) {
+    return (
+      <div className="mb-4 p-3 border border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+        The original set has been updated since you forked it.
+      </div>
+    );
+  }
+
+  return null;
 }
