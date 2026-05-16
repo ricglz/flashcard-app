@@ -24,10 +24,12 @@ export default async function StudySessionPage({
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const [preloadedSession, preloadedSet, preloadedCards] = await Promise.all([
+  const [preloadedSession, preloadedSet, preloadedCards, preloadedSettings, preloadedAnnotations] = await Promise.all([
     preloadQuery(api.studySessions.get, { id: typedSessionId }, { token }),
     preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
     preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+    preloadQuery(api.userSettings.get, {}, { token }),
+    preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
   ]);
 
   const session = preloadedQueryResult(preloadedSession);
@@ -51,6 +53,8 @@ export default async function StudySessionPage({
       preloadedSession={preloadedSession}
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
+      preloadedSettings={preloadedSettings}
+      preloadedAnnotations={preloadedAnnotations}
     />
   );
 }
