@@ -18,29 +18,20 @@ export default async function StudyConfigPage({
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const preloadedSet = await preloadQuery(
-    api.flashcardSets.get,
-    { id: flashcardSetId },
-    { token }
-  );
+  const [preloadedSet, preloadedCards, preloadedActiveSession] =
+    await Promise.all([
+      preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+      preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+      preloadQuery(
+        api.studySessions.getActiveSession,
+        { setId: flashcardSetId },
+        { token },
+      ),
+    ]);
 
   const result = preloadedQueryResult(preloadedSet);
   if (!result) redirect("/");
   if (result.viewer.role === "visitor") redirect(`/sets/${setId}`);
-
-  const [preloadedCards, preloadedActiveSession] =
-    await Promise.all([
-      preloadQuery(
-        api.flashcards.list,
-        { setId: flashcardSetId },
-        { token }
-      ),
-      preloadQuery(
-        api.studySessions.getActiveSession,
-        { setId: flashcardSetId },
-        { token }
-      ),
-    ]);
 
   const initialMode = modeParam === "browse" ? "browse" : "study";
 
