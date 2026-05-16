@@ -8,10 +8,13 @@ import { getFunctionName } from "convex/server";
 import { putCachedQuery, getCachedQuery } from "./offlineDb";
 
 export function buildCacheKey(
-  query: FunctionReference<"query">,
+  queryOrName: FunctionReference<"query"> | string,
   args: unknown
 ): string {
-  const name = getFunctionName(query);
+  const name =
+    typeof queryOrName === "string"
+      ? queryOrName
+      : getFunctionName(queryOrName);
   if (args === undefined || args === null) return name;
   const sortedArgs = JSON.stringify(args, Object.keys(args as object).sort());
   return `${name}:${sortedArgs}`;
