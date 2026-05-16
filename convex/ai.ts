@@ -10,6 +10,7 @@ import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message } from "multi-llm-ts";
 import { Schema, ParseResult } from "effect";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
+import { StudyAssistantPlugin } from "./lib/studyAssistantPlugin";
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: "gpt-4o",
@@ -269,7 +270,7 @@ export const sendChatMessage = action({
     if (!auth.ok) return auth;
     const { userId, keyInfo } = auth;
 
-    let systemPrompt = keyInfo.customChatPrompt || "You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful.";
+    let systemPrompt = keyInfo.customChatPrompt || "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful.";
 
     if (args.context?.setId) {
       const setList = await ctx.runQuery(internal.tooling.listSetsForTool, {
@@ -292,6 +293,7 @@ export const sendChatMessage = action({
 
     const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
     const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
+    llm.addPlugin(new StudyAssistantPlugin(ctx, userId));
 
     const thread = [
       new Message("system", systemPrompt),
