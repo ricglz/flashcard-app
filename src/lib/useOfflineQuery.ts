@@ -7,7 +7,7 @@ import type { FunctionReference } from "convex/server";
 import { getFunctionName } from "convex/server";
 import { putCachedQuery, getCachedQuery } from "./offlineDb";
 
-function buildCacheKey(
+export function buildCacheKey(
   query: FunctionReference<"query">,
   args: unknown
 ): string {
