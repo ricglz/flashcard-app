@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
-import SpeakerIcon from "@/components/SpeakerIcon";
-import TtsSpeedControl from "@/components/TtsSpeedControl";
+import BrowseHeader from "./BrowseHeader";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import { shuffleArray } from "@/lib/shuffle";
 
@@ -135,7 +135,8 @@ export default function BrowseClient({
     }
   };
 
-  const handleNext = () => {    if (safeIndex < activeCardIds.length - 1) {
+  const handleNext = () => {
+    if (safeIndex < activeCardIds.length - 1) {
       setCurrentIndex(safeIndex + 1);
       setRevealed(false);
     }
@@ -152,31 +153,16 @@ export default function BrowseClient({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link
-          href={`/study/${setId}?mode=browse`}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          &larr; Back
-        </Link>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted">
-            {safeIndex + 1} / {activeCardIds.length}
-            {dismissed.size > 0 && (
-              <span className="ml-2">({dismissed.size} dismissed)</span>
-            )}
-          </span>
-          <TtsSpeedControl speed={effectiveTtsSpeed} onSpeedChange={handleTtsSpeedChange} />
-          <button
-            onClick={() => setTtsEnabled((v) => !v)}
-            className="text-sm text-muted hover:text-foreground transition-colors"
-            title={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
-            aria-label={ttsEnabled ? "Mute TTS" : "Unmute TTS"}
-          >
-            <SpeakerIcon muted={!ttsEnabled} />
-          </button>
-        </div>
-      </header>
+      <BrowseHeader
+        setId={setId}
+        currentIndex={safeIndex}
+        totalCards={activeCardIds.length}
+        dismissedCount={dismissed.size}
+        ttsSpeed={effectiveTtsSpeed}
+        onTtsSpeedChange={handleTtsSpeedChange}
+        ttsEnabled={ttsEnabled}
+        onToggleTts={() => setTtsEnabled((v) => !v)}
+      />
 
       {/* Progress bar */}
       <div className="h-1 bg-raised">
