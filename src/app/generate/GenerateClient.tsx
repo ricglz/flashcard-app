@@ -2,8 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useAction } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
@@ -19,10 +20,14 @@ type GeneratedCard = {
   selected: boolean;
 };
 
-export default function GenerateClient() {
+export default function GenerateClient({
+  preloadedSets,
+}: {
+  preloadedSets: Preloaded<typeof api.flashcardSets.list>;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userSets = useOfflineQuery(api.flashcardSets.list);
+  const userSets = useOfflinePreloadedQuery(preloadedSets);
   const generateCards = useAction(api.ai.generateRemedialCards);
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
 
