@@ -2,7 +2,8 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useReducer, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePreloadedQuery } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
@@ -19,10 +20,14 @@ import StepReview from "./StepReview";
 
 const STEP_LABELS = ["Name & Source", "Add Cards", "Configure Fields", "Review"];
 
-export default function WizardShell() {
+export default function WizardShell({
+  preloadedSettings,
+}: {
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+}) {
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
-  const settings = useQuery(api.userSettings.get);
+  const settings = usePreloadedQuery(preloadedSettings);
   const hasLlmKey = settings?.hasLlmKey ?? false;
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
