@@ -97,7 +97,8 @@ export default defineSchema({
   })
     .index("by_ownerId", ["ownerId"])
     .index("by_visibility_and_createdAt", ["visibility", "createdAt"])
-    .searchIndex("search_name", { searchField: "name", filterFields: ["visibility"] }),
+    .searchIndex("search_name", { searchField: "name", filterFields: ["visibility"] })
+    .searchIndex("search_description", { searchField: "description", filterFields: ["visibility"] }),
 
   flashcards: defineTable({
     setId: v.id("flashcardSets"),

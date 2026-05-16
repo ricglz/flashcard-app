@@ -241,6 +241,42 @@ export const searchPublic = query({
   },
 });
 
+export const searchPublicCombined = query({
+  args: {
+    searchTerm: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [] as PublicFlashcardSet[];
+    const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
+    const [byName, byDesc] = await Promise.all([
+      ctx.db
+        .query("flashcardSets")
+        .withSearchIndex("search_name", (q) =>
+          q.search("name", args.searchTerm).eq("visibility", "public")
+        )
+        .take(limit),
+      ctx.db
+        .query("flashcardSets")
+        .withSearchIndex("search_description", (q) =>
+          q.search("description", args.searchTerm).eq("visibility", "public")
+        )
+        .take(limit),
+    ]);
+    const seen = new Set<string>();
+    const merged: PublicFlashcardSet[] = [];
+    for (const set of [...byName, ...byDesc]) {
+      const id = set._id as string;
+      if (!seen.has(id)) {
+        seen.add(id);
+        merged.push(set as PublicFlashcardSet);
+      }
+    }
+    return merged.slice(0, limit);
+  },
+});
+
 export const updateVisibility = mutation({
   args: {
     id: v.id("flashcardSets"),

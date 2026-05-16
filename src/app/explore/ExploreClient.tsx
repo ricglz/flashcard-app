@@ -7,12 +7,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { SetCard } from "./SetCard";
+import FilterBar, {
+  collectLanguages,
+  detectLanguage,
+  matchesCardCountRange,
+  type CardCountRange,
+} from "./FilterBar";
 
 type SortOption = "newest" | "name" | "cards";
 
 export default function ExploreClient() {
   const [searchInput, setSearchInput] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [cardCountRange, setCardCountRange] = useState<CardCountRange>("any");
+  const [languageTag, setLanguageTag] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchInput, 300);
   const isSearching = debouncedSearch.length > 0;
 
@@ -23,13 +31,13 @@ export default function ExploreClient() {
   );
 
   const searchResults = useQuery(
-    api.flashcardSets.searchPublic,
+    api.flashcardSets.searchPublicCombined,
     isSearching ? { searchTerm: debouncedSearch } : "skip"
   );
 
   const router = useRouter();
 
-  const displayResults = useMemo(() => {
+  const allResults = useMemo(() => {
     if (isSearching) return searchResults ?? [];
     const sorted = [...browseResults];
     switch (sortBy) {
@@ -42,6 +50,19 @@ export default function ExploreClient() {
     }
     return sorted;
   }, [isSearching, searchResults, browseResults, sortBy]);
+
+  const availableLanguages = useMemo(
+    () => collectLanguages(allResults),
+    [allResults],
+  );
+
+  const displayResults = useMemo(() => {
+    return allResults.filter((set) => {
+      if (!matchesCardCountRange(set.cardCount, cardCountRange)) return false;
+      if (languageTag !== null && detectLanguage(set.fieldDefinitions) !== languageTag) return false;
+      return true;
+    });
+  }, [allResults, cardCountRange, languageTag]);
 
   const isLoading = isSearching
     ? searchResults === undefined
@@ -65,7 +86,7 @@ export default function ExploreClient() {
       </header>
 
       <main className="max-w-5xl mx-auto p-4 sm:p-6">
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-4">
           <input
             type="text"
             placeholder="Search public sets..."
@@ -85,6 +106,14 @@ export default function ExploreClient() {
             </select>
           )}
         </div>
+
+        <FilterBar
+          cardCountRange={cardCountRange}
+          onCardCountRangeChange={setCardCountRange}
+          languageTag={languageTag}
+          onLanguageTagChange={setLanguageTag}
+          availableLanguages={availableLanguages}
+        />
 
         {isLoading && (
           <div className="flex justify-center py-12">
