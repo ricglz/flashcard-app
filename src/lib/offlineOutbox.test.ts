@@ -49,7 +49,6 @@ vi.mock("./offlineDb", () => ({
 }));
 
 const dispatchSpy = vi.fn(() => true);
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard for edge-runtime test environment
 if (typeof window !== "undefined") {
   window.dispatchEvent = dispatchSpy;
 } else {
