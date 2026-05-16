@@ -33,7 +33,7 @@ export default function SrsSettingsPanel({
   const editResetHour =
     localResetHour ?? String(utcHourToLocal(settings.dayResetUtcHour));
   const editTtsSpeed = localTtsSpeed ?? settings.ttsPlaybackSpeed;
-  const editDailyGoal = localDailyGoal ?? String(settings.dailyGoal ?? 0);
+  const editDailyGoal = localDailyGoal ?? String(settings.dailyGoal);
 
   async function handleSave() {
     const parsedMax = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
