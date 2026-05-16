@@ -1,20 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import StreakBadge from "@/components/StreakBadge";
-import DailyGoalRing from "@/components/DailyGoalRing";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { PreloadedStreakBadge } from "@/components/StreakBadge";
+import { PreloadedDailyGoalRing } from "@/components/DailyGoalRing";
 import DailyActivityChart from "@/components/DailyActivityChart";
 import AccuracyChart from "@/components/AccuracyChart";
 import CardStatusBreakdown from "@/components/CardStatusBreakdown";
 import SetMasteryList from "@/components/SetMasteryList";
 
-export default function ProgressClient() {
+type Props = {
+  preloadedBreakdown: Preloaded<typeof api.progress.getCardStatusBreakdown>;
+  preloadedMastery: Preloaded<typeof api.progress.getPerSetMastery>;
+  preloadedStreak: Preloaded<typeof api.progress.getStreakStats>;
+  preloadedGoal: Preloaded<typeof api.progress.getDailyGoalProgress>;
+};
+
+export default function ProgressClient({
+  preloadedBreakdown,
+  preloadedMastery,
+  preloadedStreak,
+  preloadedGoal,
+}: Props) {
   const [days, setDays] = useState<7 | 30>(7);
   const history = useOfflineQuery(api.progress.getDailyHistory, { days });
-  const breakdown = useOfflineQuery(api.progress.getCardStatusBreakdown);
-  const mastery = useOfflineQuery(api.progress.getPerSetMastery);
+  const breakdown = useOfflinePreloadedQuery(preloadedBreakdown);
+  const mastery = useOfflinePreloadedQuery(preloadedMastery);
 
   const maxCards =
     history && history.length > 0
@@ -28,8 +42,8 @@ export default function ProgressClient() {
   return (
     <div className="space-y-8">
       <div className="p-4 border border-edge rounded-lg flex items-center justify-between">
-        <StreakBadge />
-        <DailyGoalRing />
+        <PreloadedStreakBadge preloaded={preloadedStreak} />
+        <PreloadedDailyGoalRing preloaded={preloadedGoal} />
       </div>
 
       {history === undefined ? (
