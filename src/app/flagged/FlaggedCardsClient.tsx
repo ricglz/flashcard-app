@@ -1,7 +1,9 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { usePreloadedQuery } from "convex/react";
 import { asId } from "@/lib/convexHelpers";
 import {
   FIELD_ROLES,
@@ -12,17 +14,13 @@ import {
 import TtsButton from "@/components/TtsButton";
 import Link from "next/link";
 
-export default function FlaggedCardsClient() {
-  const flaggedCards = useQuery(api.cardAnnotations.getFlagged);
+export default function FlaggedCardsClient({
+  preloaded,
+}: {
+  preloaded: Preloaded<typeof api.cardAnnotations.getFlagged>;
+}) {
+  const flaggedCards = usePreloadedQuery(preloaded);
   const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
-
-  if (flaggedCards === undefined) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-      </div>
-    );
-  }
 
   if (flaggedCards.length === 0) {
     return (
