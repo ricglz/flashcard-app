@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -10,20 +10,23 @@ export function useAvailableModels(enabled = true) {
   const getModels = useAction(api.ai.getAvailableModels);
   const [models, setModels] = useState<LlmModel[]>([]);
   const [loading, setLoading] = useState(false);
+  const hasFetched = useRef(false);
+
+  const fetchModels = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await getModels({});
+      if (result.ok) setModels(result.models);
+    } finally {
+      setLoading(false);
+    }
+  }, [getModels]);
 
   useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    setLoading(true);
-    getModels({}).then((result) => {
-      if (cancelled) return;
-      if (result.ok) setModels(result.models);
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [enabled, getModels]);
+    if (!enabled || hasFetched.current) return;
+    hasFetched.current = true;
+    void fetchModels();
+  }, [enabled, fetchModels]);
 
-  return { models, loading };
+  return { models, loading, refetch: fetchModels };
 }
