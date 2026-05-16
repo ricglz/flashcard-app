@@ -18,7 +18,6 @@
 
 ### TTS / External Integration Boundary
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
-- [ ] Type `friendlySpeechError` parameter as a proper `SpeechSynthesisErrorCode` union instead of `string | undefined` — the Web Speech API spec defines a fixed set of error codes
 
 ## Marketplace & Multi-User
 
@@ -37,7 +36,7 @@
 
 ### Study Assistant Tool Calling
 - [ ] Expand tool set beyond `list_sets` and `get_weak_cards` if usage shows demand (e.g., study stats, mastery levels, annotations)
-- [ ] Add tool calling UI indicators in AssistantPanel (e.g., "Looking up your sets..." while tools execute)
+- [ ] Add tool calling UI indicators in AssistantPanel (e.g., "Looking up your sets..." while tools execute) — see [research doc](docs/research/tool-calling-streaming.md)
 
 ## Code Quality — Error Handling
 
