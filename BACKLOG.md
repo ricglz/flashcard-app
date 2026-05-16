@@ -9,10 +9,6 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
-### Component Props Hygiene
-- [ ] Refactor `SrsReviewActive` — 18 individual props should be grouped into typed objects (e.g., `studyContext`, `ttsConfig`, `annotationHandlers`)
-- [ ] Add ESLint rule `max-props` (or equivalent) to prevent components from accumulating excessive flat prop interfaces
-
 ### SRS Queue / Scheduling
 - [ ] Validate review actions before scheduling:
   - SRS card belongs to user,
@@ -28,7 +24,6 @@
 ## Marketplace & Multi-User
 
 ### Marketplace / Browse
-- [ ] Search and filter (by language/field metadata, card count, popularity)
 - [ ] Sort options (most forked, most users)
 - [ ] User public profile page — deferred until proper username management exists (no PII in DB)
 
@@ -42,7 +37,8 @@
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
 
 ### Study Assistant Tool Calling
-- [ ] Add tool calling to the study assistant — let the LLM query cards, check SRS stats, suggest related content. multi-llm-ts supports tools via `addPlugin()` with `PluginTool` definitions.
+- [ ] Expand tool set beyond `list_sets` and `get_weak_cards` if usage shows demand (e.g., study stats, mastery levels, annotations)
+- [ ] Add tool calling UI indicators in AssistantPanel (e.g., "Looking up your sets..." while tools execute)
 
 ## Code Quality — Error Handling
 
@@ -97,7 +93,6 @@
 ### Observability
 - [ ] Error tracking / reporting (client-side and Convex function errors)
 - [ ] Operational telemetry (usage metrics across all users, function latency, error rates)
-- [ ] User-facing error boundaries with helpful messaging
 
 ### Platform
 - [ ] Pronunciation validation (speech-to-text comparison against expected pinyin)
