@@ -12,8 +12,8 @@ import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
 import StudyLayout from "@/components/StudyLayout";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
-import { useTtsControls } from "@/hooks/useTtsControls";
-import { useCardAnnotations } from "@/hooks/useCardAnnotations";
+import { useTtsControlsPreloaded } from "@/hooks/useTtsControls";
+import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { shuffleArray } from "@/lib/shuffle";
 
 type Props = {
@@ -25,6 +25,8 @@ type Props = {
   cardLimit: number | null;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
 };
 
 export default function BrowseClient({
@@ -36,11 +38,13 @@ export default function BrowseClient({
   cardLimit,
   preloadedSet,
   preloadedCards,
+  preloadedSettings,
+  preloadedAnnotations,
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
-  const tts = useTtsControls();
-  const { annotationMap, toggleFlag, setNote } = useCardAnnotations(asId<"flashcardSets">(setId));
+  const tts = useTtsControlsPreloaded(preloadedSettings);
+  const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());

@@ -24,21 +24,17 @@ export default async function BrowsePage({
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const preloadedSet = await preloadQuery(
-    api.flashcardSets.get,
-    { id: flashcardSetId },
-    { token }
-  );
+  const [preloadedSet, preloadedCards, preloadedSettings, preloadedAnnotations] =
+    await Promise.all([
+      preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+      preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+      preloadQuery(api.userSettings.get, {}, { token }),
+      preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
+    ]);
 
   if (!preloadedQueryResult(preloadedSet)) {
     redirect("/");
   }
-
-  const preloadedCards = await preloadQuery(
-    api.flashcards.list,
-    { setId: flashcardSetId },
-    { token }
-  );
 
   const frontFields = sp.frontFields?.split(",") ?? [];
   const backFields = sp.backFields?.split(",") ?? [];
@@ -60,6 +56,8 @@ export default async function BrowsePage({
       cardLimit={cardLimit}
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
+      preloadedSettings={preloadedSettings}
+      preloadedAnnotations={preloadedAnnotations}
     />
   );
 }
