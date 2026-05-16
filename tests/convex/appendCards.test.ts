@@ -3,7 +3,6 @@ import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
-import type { Id } from "../../convex/_generated/dataModel";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
