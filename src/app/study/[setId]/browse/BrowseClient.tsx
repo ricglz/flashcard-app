@@ -2,17 +2,18 @@
 
 import { useState, useMemo } from "react";
 import type { Preloaded } from "convex/react";
-import { usePreloadedQuery, useMutation } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import { usePreloadedQuery } from "convex/react";
+import type { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
-import BrowseHeader from "./BrowseHeader";
+import StudyLayout from "@/components/StudyLayout";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import { useTtsControls } from "@/hooks/useTtsControls";
+import { useCardAnnotations } from "@/hooks/useCardAnnotations";
 import { shuffleArray } from "@/lib/shuffle";
 
 type Props = {
@@ -38,30 +39,13 @@ export default function BrowseClient({
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
-  const settings = useOfflineQuery(api.userSettings.get);
-  const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
-  const annotations = useOfflineQuery(api.cardAnnotations.getForSet, { setId: asId<"flashcardSets">(setId) });
-  const toggleFlagMutation = useMutation(api.cardAnnotations.toggleFlag);
-  const setNoteMutation = useMutation(api.cardAnnotations.setNote);
+  const tts = useTtsControls();
+  const { annotationMap, toggleFlag, setNote } = useCardAnnotations(asId<"flashcardSets">(setId));
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
   const [revealed, setRevealed] = useState(false);
-  const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
 
-  const effectiveTtsSpeed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
-
-  const annotationMap = new Map(
-    (annotations ?? []).map((a) => [a.cardId, { flagged: a.flagged, note: a.note }])
-  );
-
-  const handleTtsSpeedChange = (speed: number) => {
-    setLocalTtsSpeed(speed);
-    void updateSettings({ ttsPlaybackSpeed: speed });
-  };
-
-  // Compute card order once when cards first load, then filter dismissed
   const [cardOrder, setCardOrder] = useState<Id<"flashcards">[] | null>(null);
 
   if (cardOrder === null) {
@@ -115,7 +99,6 @@ export default function BrowseClient({
     );
   }
 
-  // Clamp index to valid range
   const safeIndex = Math.min(currentIndex, activeCardIds.length - 1);
   const currentCardId = activeCardIds[safeIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
@@ -152,66 +135,47 @@ export default function BrowseClient({
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <BrowseHeader
-        setId={setId}
-        currentIndex={safeIndex}
-        totalCards={activeCardIds.length}
-        dismissedCount={dismissed.size}
-        ttsSpeed={effectiveTtsSpeed}
-        onTtsSpeedChange={handleTtsSpeedChange}
-        ttsEnabled={ttsEnabled}
-        onToggleTts={() => setTtsEnabled((v) => !v)}
-      />
-
-      {/* Progress bar */}
-      <div className="h-1 bg-raised">
-        <div
-          className="h-full bg-accent transition-all"
-          style={{
-            width: `${((safeIndex + 1) / activeCardIds.length) * 100}%`,
+    <StudyLayout
+      progress={{ current: safeIndex, total: activeCardIds.length, dismissed: dismissed.size }}
+      tts={tts}
+      assistant={
+        <AssistantPanel
+          context={{
+            setId: asId<"flashcardSets">(setId),
+            setName: set.name,
+            cardFields: currentCard.fields,
           }}
         />
-      </div>
-
-      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
-        <StudyCard
-          key={currentCardId}
-          card={currentCard}
-          fieldDefinitions={fieldDefs}
-          frontFields={validFrontFields}
-          backFields={validBackFields}
-          ttsOnlyFields={validTtsOnlyFields}
-          onRevealed={() => setRevealed(true)}
-          autoPlayTts={ttsEnabled}
-          ttsRate={effectiveTtsSpeed}
-          annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
-          onToggleFlag={() => {
-            if (currentCardId) void toggleFlagMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
-          }}
-          onSetNote={(note: string) => {
-            if (currentCardId) void setNoteMutation({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
-          }}
-        />
-
-        {revealed && (
-          <BrowseNavigation
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onDismiss={handleDismiss}
-            canPrev={safeIndex > 0}
-            canNext={safeIndex < activeCardIds.length - 1}
-          />
-        )}
-      </main>
-
-      <AssistantPanel
-        context={{
-          setId: asId<"flashcardSets">(setId),
-          setName: set.name,
-          cardFields: currentCard.fields,
+      }
+    >
+      <StudyCard
+        key={currentCardId}
+        card={currentCard}
+        fieldDefinitions={fieldDefs}
+        frontFields={validFrontFields}
+        backFields={validBackFields}
+        ttsOnlyFields={validTtsOnlyFields}
+        onRevealed={() => setRevealed(true)}
+        autoPlayTts={tts.ttsEnabled}
+        ttsRate={tts.speed}
+        annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
+        onToggleFlag={() => {
+          if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
+        }}
+        onSetNote={(note: string) => {
+          if (currentCardId) void setNote({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
         }}
       />
-    </div>
+
+      {revealed && (
+        <BrowseNavigation
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onDismiss={handleDismiss}
+          canPrev={safeIndex > 0}
+          canNext={safeIndex < activeCardIds.length - 1}
+        />
+      )}
+    </StudyLayout>
   );
 }
