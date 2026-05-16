@@ -1,5 +1,5 @@
 import { getTtsConfig } from "@/lib/types";
-import { WizardState } from "./wizardState";
+import type { WizardState } from "./wizardState";
 
 type Props = {
   state: WizardState;

@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type {
+  TtsEvent,
+  TtsStatus} from "@/lib/tts";
 import {
   isTtsSupported,
-  speak,
-  TtsEvent,
-  TtsStatus,
+  speak
 } from "@/lib/tts";
 import TtsButtonIcon from "./TtsButtonIcon";
 

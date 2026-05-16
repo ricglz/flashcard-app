@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { speak, TtsEvent, TtsStatus } from "@/lib/tts";
+import type { TtsEvent, TtsStatus } from "@/lib/tts";
+import { speak } from "@/lib/tts";
 
 function statusClasses(status: TtsStatus): string {
   switch (status) {
@@ -14,7 +15,9 @@ function statusClasses(status: TtsStatus): string {
     case "timeout":
     case "unsupported":
       return "rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
-    default:
+    case "idle":
+    case "ended":
+    case "cancelled":
       return "";
   }
 }

@@ -2,18 +2,19 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useState, useCallback } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import { useOnlineStatus } from "@/lib/useOnlineStatus";
-import { Id } from "../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import AssistantPanel from "@/components/AssistantPanel";
-import { CardRating, ActiveStudySession } from "@/lib/types";
+import type { CardRating, ActiveStudySession } from "@/lib/types";
 import SessionHeader from "./SessionHeader";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import Link from "next/link";

@@ -1,8 +1,9 @@
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import SrsReviewHeader from "./SrsReviewHeader";
+import type {
+  CardRating} from "@/lib/types";
 import {
-  CardRating,
   SRS_RATING_LABELS,
   type FieldDefinition,
 } from "@/lib/types";

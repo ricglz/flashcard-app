@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { parseCsv, ParsedCsvResult } from "@/lib/csvParser";
+import type { ParsedCsvResult } from "@/lib/csvParser";
+import { parseCsv } from "@/lib/csvParser";
 
 type Props = {
   onImport: (result: ParsedCsvResult) => void;

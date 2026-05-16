@@ -2,7 +2,8 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
 import CardForm from "@/components/CardForm";

@@ -116,7 +116,7 @@ export const create = mutation({
       userId: identity.tokenIdentifier,
       publicId,
       tokenHash,
-      label: args.label?.trim() || "Local AI assistant CLI",
+      label: args.label?.trim() ?? "Local AI assistant CLI",
       scopes,
       createdAt: now,
       expiresAt: now + INACTIVITY_TTL_MS,

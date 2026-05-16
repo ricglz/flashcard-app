@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 
 type Props = {
   fieldDefinitions: FieldDefinition[];

@@ -9,7 +9,7 @@ export default function AiSettingsSection() {
   const settings = useQuery(api.userSettings.get);
   const updateAiConfig = useMutation(api.userSettings.updateAiConfig);
 
-  const [llmProvider, setLlmProvider] = useState("");
+  const [llmProvider, setLlmProvider] = useState<string | null>(null);
   const [llmApiKey, setLlmApiKey] = useState("");
   const [chatPrompt, setChatPrompt] = useState("");
   const [chatPromptInitialized, setChatPromptInitialized] = useState(false);
@@ -22,7 +22,7 @@ export default function AiSettingsSection() {
     setChatPromptInitialized(true);
   }
 
-  const effectiveProvider = llmProvider || settings?.llmProvider || "";
+  const effectiveProvider = llmProvider ?? settings?.llmProvider ?? "";
 
   return (
     <section className="border border-edge rounded-xl p-5 space-y-4 mt-6">
@@ -41,7 +41,7 @@ export default function AiSettingsSection() {
             id="llm-provider"
             value={effectiveProvider}
             onChange={(e) => {
-              setLlmProvider(e.target.value);
+              setLlmProvider(e.target.value || null);
               if (!e.target.value) setLlmApiKey("");
               setLlmSaved(false);
             }}
@@ -88,36 +88,38 @@ export default function AiSettingsSection() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={async () => {
-              setLlmSaving(true);
-              setLlmError(null);
-              setLlmSaved(false);
-              try {
-                const provider = llmProvider || settings?.llmProvider;
-                if (!provider) {
-                  setLlmError("Please select a provider.");
-                  return;
+            onClick={() => {
+              void (async () => {
+                setLlmSaving(true);
+                setLlmError(null);
+                setLlmSaved(false);
+                try {
+                  const provider = llmProvider ?? settings?.llmProvider;
+                  if (!provider) {
+                    setLlmError("Please select a provider.");
+                    return;
+                  }
+                  if (!llmApiKey && !settings?.hasLlmKey) {
+                    setLlmError("Please enter an API key.");
+                    return;
+                  }
+                  const result = await updateAiConfig({
+                    provider,
+                    apiKey: llmApiKey,
+                    customChatPrompt: chatPrompt || undefined,
+                  });
+                  if (isFailureResult(result)) {
+                    setLlmError(result.error.message);
+                    return;
+                  }
+                  setLlmApiKey("");
+                  setLlmSaved(true);
+                } catch (err) {
+                  setLlmError(err instanceof Error ? err.message : "Failed to save");
+                } finally {
+                  setLlmSaving(false);
                 }
-                if (!llmApiKey && !settings?.hasLlmKey) {
-                  setLlmError("Please enter an API key.");
-                  return;
-                }
-                const result = await updateAiConfig({
-                  provider,
-                  apiKey: llmApiKey,
-                  customChatPrompt: chatPrompt || undefined,
-                });
-                if (isFailureResult(result)) {
-                  setLlmError(result.error.message);
-                  return;
-                }
-                setLlmApiKey("");
-                setLlmSaved(true);
-              } catch (err) {
-                setLlmError(err instanceof Error ? err.message : "Failed to save");
-              } finally {
-                setLlmSaving(false);
-              }
+              })();
             }}
             disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === (settings?.customChatPrompt ?? ""))}
             className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm disabled:opacity-50"

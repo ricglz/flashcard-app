@@ -39,6 +39,7 @@ export default function ExploreClient() {
 
   const allResults = useMemo(() => {
     if (isSearching) return searchResults ?? [];
+    if (sortBy === "newest") return [...browseResults];
     const sorted = [...browseResults];
     switch (sortBy) {
       case "name":

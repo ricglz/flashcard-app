@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { FieldDefinition } from "./types";
+import type { FieldDefinition } from "./types";
 import { validateCardFields } from "../../convex/domain/cardFields";
 import { validateFieldDefinitions, normalizeFieldName } from "../../convex/domain/fieldDefinitions";
 

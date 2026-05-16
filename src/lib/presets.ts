@@ -1,4 +1,4 @@
-import { FieldDefinition } from "./types";
+import type { FieldDefinition } from "./types";
 
 /**
  * Language-specific field definition presets.

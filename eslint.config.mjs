@@ -2,21 +2,25 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+const typeAwareRulesOff = {
+  "@typescript-eslint/no-unnecessary-condition": "off",
+  "@typescript-eslint/consistent-type-imports": "off",
+  "@typescript-eslint/switch-exhaustiveness-check": "off",
+  "@typescript-eslint/no-floating-promises": "off",
+  "@typescript-eslint/no-misused-promises": "off",
+  "@typescript-eslint/prefer-nullish-coalescing": "off",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Auto-generated Convex files:
     "convex/_generated/**",
-    // Generated service worker:
     "public/sw.js",
-    // Build scripts:
     "scripts/**",
   ]),
   {
@@ -36,16 +40,29 @@ const eslintConfig = defineConfig([
         destructuredArrayIgnorePattern: "^_",
       }],
       "react/no-multi-comp": ["error", { ignoreStateless: false }],
+      "react/no-unstable-nested-components": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "eqeqeq": ["error", "always"],
       "@typescript-eslint/no-unnecessary-condition": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
+      "@typescript-eslint/consistent-type-imports": ["error", {
+        prefer: "type-imports",
+        fixStyle: "separate-type-imports",
+        disallowTypeAnnotations: false,
+      }],
+      "@typescript-eslint/switch-exhaustiveness-check": ["error", {
+        requireDefaultForNonUnion: true,
+      }],
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": ["error", {
+        checksVoidReturn: { attributes: false },
+      }],
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
       "max-lines-per-function": ["error", {
         max: 175,
         skipBlankLines: true,
         skipComments: true,
       }],
-      // Ban dangerous type assertions
       "no-restricted-syntax": [
         "error",
         {
@@ -68,13 +85,23 @@ const eslintConfig = defineConfig([
   {
     files: ["src/sw.ts"],
     languageOptions: {
-      parserOptions: {
-        projectService: false,
-      },
+      parserOptions: { projectService: false },
     },
-    rules: {
-      "@typescript-eslint/no-unnecessary-condition": "off",
+    rules: typeAwareRulesOff,
+  },
+  {
+    files: ["tests/**"],
+    languageOptions: {
+      parserOptions: { projectService: false },
     },
+    rules: typeAwareRulesOff,
+  },
+  {
+    files: ["*.mjs"],
+    languageOptions: {
+      parserOptions: { projectService: false },
+    },
+    rules: typeAwareRulesOff,
   },
 ]);
 

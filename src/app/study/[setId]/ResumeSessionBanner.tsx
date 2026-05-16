@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { FunctionReturnType } from "convex/server";
-import { api } from "../../../../convex/_generated/api";
+import type { api } from "../../../../convex/_generated/api";
 
 type Props = {
   setId: string;

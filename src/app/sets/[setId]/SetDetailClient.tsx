@@ -2,7 +2,8 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
-import { usePreloadedQuery, useMutation, useQuery, Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import Link from "next/link";

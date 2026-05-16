@@ -1,4 +1,4 @@
-import { TtsStatus } from "@/lib/tts";
+import type { TtsStatus } from "@/lib/tts";
 
 function isProblem(status: TtsStatus): boolean {
   return status === "unsupported" || status === "timeout" || status === "error";

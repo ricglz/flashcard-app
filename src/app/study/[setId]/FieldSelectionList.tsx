@@ -1,4 +1,5 @@
-import { getTtsConfig, FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
+import { getTtsConfig } from "@/lib/types";
 
 type Props = {
   fieldDefs: FieldDefinition[];

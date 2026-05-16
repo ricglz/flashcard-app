@@ -1,6 +1,7 @@
 "use client";
 
-import { CardRating, CARD_RATINGS, CARD_RATING_LABELS } from "@/lib/types";
+import type { CardRating} from "@/lib/types";
+import { CARD_RATINGS, CARD_RATING_LABELS } from "@/lib/types";
 
 type Props = {
   onRate: (rating: CardRating) => void;

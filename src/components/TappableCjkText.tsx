@@ -1,7 +1,7 @@
 "use client";
 
 import { segmentCjkText } from "@/lib/cjk";
-import { TtsEvent } from "@/lib/tts";
+import type { TtsEvent } from "@/lib/tts";
 import TappableCjkChar from "./TappableCjkChar";
 
 export default function TappableCjkText({

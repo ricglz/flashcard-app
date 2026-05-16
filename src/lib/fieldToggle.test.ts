@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { cycleFieldAssignment, FieldAssignments } from "./fieldToggle";
+import type { FieldAssignments } from "./fieldToggle";
+import { cycleFieldAssignment } from "./fieldToggle";
 
 function makeAssignments(
   front: string[],

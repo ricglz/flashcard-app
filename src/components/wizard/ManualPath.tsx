@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 import CardForm from "@/components/CardForm";
-import { WizardAction, WizardState } from "./wizardState";
+import type { WizardAction, WizardState } from "./wizardState";
 
 export default function ManualPath({
   state,

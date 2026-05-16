@@ -1,12 +1,13 @@
 import { describe, it, expect } from "vitest";
+import type {
+  FieldDefinition} from "./types";
 import {
   getTtsConfig,
   CARD_RATINGS,
   CARD_RATING_SCORES,
   CARD_RATING_LABELS,
   FIELD_ROLES,
-  FIELD_ROLE_LABELS,
-  FieldDefinition,
+  FIELD_ROLE_LABELS
 } from "./types";
 
 describe("getTtsConfig", () => {

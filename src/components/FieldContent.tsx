@@ -1,9 +1,9 @@
 "use client";
 
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
 import { hasCjkChars } from "@/lib/cjk";
-import { TtsEvent } from "@/lib/tts";
+import type { TtsEvent } from "@/lib/tts";
 import TtsButton from "./TtsButton";
 import TappableCjkText from "./TappableCjkText";
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import type { ReactNode} from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import SyncProvider from "@/lib/SyncProvider";

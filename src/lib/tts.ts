@@ -176,6 +176,7 @@ export function friendlySpeechError(error: string | undefined, lang: string): { 
     case "canceled":
     case "interrupted":
       return { kind: "unknown", message: "Speech was interrupted." };
+    case undefined:
     default:
       return { kind: "unknown", message: "Couldn’t play audio. Check volume, silent mode, or browser permissions." };
   }

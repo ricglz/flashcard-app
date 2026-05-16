@@ -1,13 +1,14 @@
 import { describe, it, expect } from "vitest";
+import type {
+  WizardState} from "./wizardState";
 import {
   wizardReducer,
   canProceed,
   validateWizardStep,
   hasSourceMethod,
-  initialState,
-  WizardState,
+  initialState
 } from "./wizardState";
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 
 const sampleField: FieldDefinition = {
   name: "Character",

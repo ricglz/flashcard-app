@@ -98,7 +98,7 @@ export const updateAiConfig = mutation({
 
     const patch = {
       llmProvider: args.provider || undefined,
-      llmApiKey: effectiveKey || undefined,
+      llmApiKey: effectiveKey ?? undefined,
       customChatPrompt: args.customChatPrompt,
     };
 

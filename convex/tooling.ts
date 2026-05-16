@@ -354,10 +354,10 @@ function normalizeGeneratedPayload(args: GeneratedSetPayload): GeneratedSetPaylo
   return {
     ...args,
     name: args.name.trim(),
-    description: args.description?.trim() || undefined,
+    description: args.description?.trim() ?? undefined,
     cards: args.cards.map((card) => ({
       ...card,
-      rationale: card.rationale?.trim() || undefined,
+      rationale: card.rationale?.trim() ?? undefined,
     })),
   };
 }

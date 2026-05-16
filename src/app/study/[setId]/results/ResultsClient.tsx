@@ -1,14 +1,16 @@
 "use client";
 
-import { usePreloadedQuery, Preloaded } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery } from "convex/react";
+import type { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
+import type {
+  CardRating,
+  TypedCardResult} from "@/lib/types";
 import {
   CARD_RATING_LABELS,
   CARD_RATING_SCORES,
-  CARD_RATINGS,
-  CardRating,
-  TypedCardResult,
+  CARD_RATINGS
 } from "@/lib/types";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 

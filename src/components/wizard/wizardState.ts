@@ -1,4 +1,4 @@
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 import { validateCardFields } from "../../../convex/domain/cardFields";
 import { validateFieldDefinitions, validateSetName } from "../../../convex/domain/fieldDefinitions";
 

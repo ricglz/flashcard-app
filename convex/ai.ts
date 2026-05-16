@@ -47,7 +47,7 @@ async function generateAndValidateJson(
   ctx: ActionCtx,
   opts: { prompt: string; model: string | undefined; keyInfo: AuthAndConfig["keyInfo"]; userId: string },
 ): Promise<GenerateResult> {
-  const modelName = opts.model || DEFAULT_MODELS[opts.keyInfo.provider] || "gpt-4o";
+  const modelName = opts.model ?? DEFAULT_MODELS[opts.keyInfo.provider] ?? "gpt-4o";
   const llm = igniteModel(opts.keyInfo.provider, modelName, { apiKey: opts.keyInfo.apiKey });
   const thread = [
     new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
@@ -270,7 +270,7 @@ export const sendChatMessage = action({
     if (!auth.ok) return auth;
     const { userId, keyInfo } = auth;
 
-    let systemPrompt = keyInfo.customChatPrompt || "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful.";
+    let systemPrompt = keyInfo.customChatPrompt ?? "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful.";
 
     if (args.context?.setId) {
       const setList = await ctx.runQuery(internal.tooling.listSetsForTool, {
@@ -291,7 +291,7 @@ export const sendChatMessage = action({
       systemPrompt += `\n\nThey are currently looking at this card:\n${entries}`;
     }
 
-    const modelName = args.model || DEFAULT_MODELS[keyInfo.provider] || "gpt-4o";
+    const modelName = args.model ?? DEFAULT_MODELS[keyInfo.provider] ?? "gpt-4o";
     const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
     llm.addPlugin(new StudyAssistantPlugin(ctx, userId));
 

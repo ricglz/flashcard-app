@@ -1,6 +1,7 @@
 import Link from "next/link";
+import type {
+  CardRating} from "@/lib/types";
 import {
-  CardRating,
   SRS_RATING_LABELS,
   CARD_RATING_SCORES,
 } from "@/lib/types";

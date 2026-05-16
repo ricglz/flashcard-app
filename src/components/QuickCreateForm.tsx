@@ -62,7 +62,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
             className="w-full px-3 py-2 border border-edge rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-accent"
             autoFocus
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreate();
+              if (e.key === "Enter") void handleCreate();
             }}
           />
         </div>

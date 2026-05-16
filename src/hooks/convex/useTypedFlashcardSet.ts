@@ -1,5 +1,6 @@
-import { usePreloadedQuery, Preloaded } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery } from "convex/react";
+import type { api } from "../../../convex/_generated/api";
 import type { TypedFlashcardSet, Viewer } from "@/lib/types";
 import type { Doc } from "../../../convex/_generated/dataModel";
 

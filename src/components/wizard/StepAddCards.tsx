@@ -1,4 +1,4 @@
-import { WizardAction, WizardState } from "./wizardState";
+import type { WizardAction, WizardState } from "./wizardState";
 import CsvPath from "./CsvPath";
 import ManualPath from "./ManualPath";
 import AiPath from "./AiPath";

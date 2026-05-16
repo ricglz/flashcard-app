@@ -82,13 +82,13 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handler = () => refreshCount();
+    const handler = () => void refreshCount();
     window.addEventListener("outbox-changed", handler);
     return () => window.removeEventListener("outbox-changed", handler);
   }, [refreshCount]);
 
   useEffect(() => {
-    getPendingCount().then(setPendingCount);
+    void getPendingCount().then(setPendingCount);
   }, []);
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    drain();
+    void drain();
     return () => { cancelled = true; };
   }, [isOnline, isSyncing, client, refreshCount]);
 

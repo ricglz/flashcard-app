@@ -1,5 +1,5 @@
 import { LANGUAGE_PRESETS, PRESET_KEYS, type PresetKey } from "@/lib/presets";
-import { WizardAction, WizardState } from "./wizardState";
+import type { WizardAction, WizardState } from "./wizardState";
 import SourceCard from "./SourceCard";
 
 type Props = {

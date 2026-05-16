@@ -2,10 +2,11 @@
 
 import { isFailureResult } from "@/lib/appResult";
 import { useState, useCallback, useRef } from "react";
-import { usePreloadedQuery, useMutation, Preloaded } from "convex/react";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
-import { CardRating } from "@/lib/types";
+import type { CardRating } from "@/lib/types";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflineMutation } from "@/lib/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";

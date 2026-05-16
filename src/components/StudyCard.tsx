@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
-import { speakSequence, TtsEvent } from "@/lib/tts";
+import type { TtsEvent } from "@/lib/tts";
+import { speakSequence } from "@/lib/tts";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
 
@@ -116,7 +117,7 @@ export default function StudyCard({
           </div>
         )}
 
-        {revealed && (onToggleFlag || onSetNote) && (
+        {revealed && (onToggleFlag ?? onSetNote) && (
           <AnnotationControls
             annotation={annotation}
             onToggleFlag={onToggleFlag}

@@ -32,13 +32,13 @@ export function useOfflineQuery<Query extends FunctionReference<"query">>(
 
   useEffect(() => {
     if (cacheKey) {
-      getCachedQuery<Query["_returnType"]>(cacheKey).then(setCachedData);
+      void getCachedQuery<Query["_returnType"]>(cacheKey).then(setCachedData);
     }
   }, [cacheKey]);
 
   useEffect(() => {
     if (liveData !== undefined && cacheKey) {
-      putCachedQuery(cacheKey, liveData);
+      void putCachedQuery(cacheKey, liveData);
     }
   }, [liveData, cacheKey]);
 

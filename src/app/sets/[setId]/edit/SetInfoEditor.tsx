@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
-import { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition } from "@/lib/types";
 
 export default function SetInfoEditor({
   set,

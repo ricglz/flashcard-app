@@ -32,21 +32,19 @@ const DB_VERSION = 2;
 let dbPromise: Promise<IDBPDatabase<OfflineCacheSchema>> | null = null;
 
 export function getDb() {
-  if (!dbPromise) {
-    dbPromise = openDB<OfflineCacheSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains("queryCache")) {
-          db.createObjectStore("queryCache", { keyPath: "key" });
-        }
-        if (!db.objectStoreNames.contains("outbox")) {
-          db.createObjectStore("outbox", {
-            keyPath: "id",
-            autoIncrement: true,
-          });
-        }
-      },
-    });
-  }
+  dbPromise ??= openDB<OfflineCacheSchema>(DB_NAME, DB_VERSION, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains("queryCache")) {
+        db.createObjectStore("queryCache", { keyPath: "key" });
+      }
+      if (!db.objectStoreNames.contains("outbox")) {
+        db.createObjectStore("outbox", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+      }
+    },
+  });
   return dbPromise;
 }
 

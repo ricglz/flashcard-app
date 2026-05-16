@@ -1,5 +1,5 @@
 import CsvImporter from "@/components/CsvImporter";
-import { WizardAction, WizardState } from "./wizardState";
+import type { WizardAction, WizardState } from "./wizardState";
 
 export default function CsvPath({
   state,

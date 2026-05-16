@@ -1,5 +1,5 @@
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
-import { WizardAction, WizardState } from "./wizardState";
+import type { WizardAction, WizardState } from "./wizardState";
 import CardPreview from "./CardPreview";
 
 type Props = {

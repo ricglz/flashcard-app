@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { isFailureResult } from "@/lib/appResult";
-import SrsSettingsPanel, { SrsConfig } from "@/components/SrsSettingsPanel";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import type { SrsConfig } from "@/components/SrsSettingsPanel";
+import SrsSettingsPanel from "@/components/SrsSettingsPanel";
+import type { useOfflineQuery } from "@/lib/useOfflineQuery";
 
 type Settings = NonNullable<ReturnType<typeof useOfflineQuery<typeof api.userSettings.get>>>;
 
