@@ -157,7 +157,7 @@ export function pickCachedVoice(lang: string): SpeechSynthesisVoice | undefined 
   return candidates.sort((a, b) => voiceScore(b, lang) - voiceScore(a, lang))[0];
 }
 
-export function friendlySpeechError(error: string | undefined, lang: string): { kind: TtsFailureKind; message: string } {
+export function friendlySpeechError(error: SpeechSynthesisErrorCode | undefined, lang: string): { kind: TtsFailureKind; message: string } {
   switch (error) {
     case "not-allowed":
       return { kind: "permission_blocked", message: "Your browser blocked audio. Tap the speaker button again." };

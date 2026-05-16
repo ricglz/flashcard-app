@@ -170,7 +170,7 @@ describe("friendlySpeechError", () => {
   it("returns the generic fallback message for unknown or missing errors", async () => {
     const { friendlySpeechError } = await importTts();
 
-    expect(friendlySpeechError("bad-error", "zh-CN")).toEqual({
+    expect(friendlySpeechError("bad-error" as SpeechSynthesisErrorCode, "zh-CN")).toEqual({
       kind: "unknown",
       message: "Couldn’t play audio. Check volume, silent mode, or browser permissions.",
     });
