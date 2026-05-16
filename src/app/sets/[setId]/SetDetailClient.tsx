@@ -20,7 +20,7 @@ type Props = {
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedSettings: Preloaded<typeof api.userSettings.get>;
-  preloadedForkSyncStatus: Preloaded<typeof api.flashcardSets.getForkSyncStatus> | null;
+  preloadedForkSyncStatus: Preloaded<typeof api.flashcardSets.getForkSyncStatus>;
 };
 
 export default function SetDetailClient({
@@ -126,9 +126,7 @@ export default function SetDetailClient({
           </p>
         )}
 
-        {preloadedForkSyncStatus && (
-          <ForkSyncBanner preloaded={preloadedForkSyncStatus} />
-        )}
+        <ForkSyncBanner preloaded={preloadedForkSyncStatus} />
 
         {viewer.role === "visitor" && (
           <VisitorActions
