@@ -1,11 +1,16 @@
 "use client";
 
-import { api } from "../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import type { Preloaded } from "convex/react";
+import type { api } from "../../../convex/_generated/api";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import SrsSettingsSectionInner from "./SrsSettingsSectionInner";
 
-export default function SrsSettingsSection() {
-  const settings = useOfflineQuery(api.userSettings.get);
+export default function SrsSettingsSection({
+  preloaded,
+}: {
+  preloaded: Preloaded<typeof api.userSettings.get>;
+}) {
+  const settings = useOfflinePreloadedQuery(preloaded);
   if (!settings) return null;
   return <SrsSettingsSectionInner settings={settings} />;
 }

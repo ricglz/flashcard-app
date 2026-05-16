@@ -1,6 +1,8 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import type { Preloaded } from "convex/react";
+import { usePreloadedQuery } from "convex/react";
 import { useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { isFailureResult } from "@/lib/appResult";
@@ -10,8 +12,12 @@ function formatDate(ms: number | undefined) {
   return new Date(ms).toLocaleString();
 }
 
-export default function CliTokenSection() {
-  const status = useQuery(api.cliTokens.getStatus);
+export default function CliTokenSection({
+  preloaded,
+}: {
+  preloaded: Preloaded<typeof api.cliTokens.getStatus>;
+}) {
+  const status = usePreloadedQuery(preloaded);
   const createToken = useMutation(api.cliTokens.create);
   const revokeToken = useMutation(api.cliTokens.revoke);
   const [newToken, setNewToken] = useState<string | null>(null);

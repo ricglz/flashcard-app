@@ -1,12 +1,18 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import { isFailureResult } from "@/lib/appResult";
+import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 
-export default function AiSettingsSection() {
-  const settings = useQuery(api.userSettings.get);
+export default function AiSettingsSection({
+  preloaded,
+}: {
+  preloaded: Preloaded<typeof api.userSettings.get>;
+}) {
+  const settings = useOfflinePreloadedQuery(preloaded);
   const updateAiConfig = useMutation(api.userSettings.updateAiConfig);
 
   const [llmProvider, setLlmProvider] = useState<string | null>(null);
