@@ -20,11 +20,6 @@
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
 - [ ] Type `friendlySpeechError` parameter as a proper `SpeechSynthesisErrorCode` union instead of `string | undefined` — the Web Speech API spec defines a fixed set of error codes
 
-## Code Quality — View Architecture
-
-### Shared Study View Layout
-- [ ] Modularize Browse, SRS Review, and Study Session views into shared layout components — they share header/progress/TTS/card patterns with small differences
-
 ## Marketplace & Multi-User
 
 ### Marketplace / Browse
