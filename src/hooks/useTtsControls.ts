@@ -4,17 +4,18 @@ import { useState, useCallback } from "react";
 import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { FunctionReturnType } from "convex/server";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 
-type Settings = ReturnType<typeof useOfflineQuery<typeof api.userSettings.get>>;
+type TtsConfig = FunctionReturnType<typeof api.userSettings.getTtsConfig>;
 
-function useTtsControlsInternal(settings: Settings) {
+function useTtsControlsInternal(config: TtsConfig | undefined) {
   const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
 
-  const speed = localTtsSpeed ?? settings?.ttsPlaybackSpeed ?? 0.75;
+  const speed = localTtsSpeed ?? config?.ttsPlaybackSpeed ?? 0.75;
 
   const onSpeedChange = useCallback(
     (s: number) => {
@@ -30,13 +31,13 @@ function useTtsControlsInternal(settings: Settings) {
 }
 
 export function useTtsControls() {
-  const settings = useOfflineQuery(api.userSettings.get);
-  return useTtsControlsInternal(settings);
+  const config = useOfflineQuery(api.userSettings.getTtsConfig);
+  return useTtsControlsInternal(config);
 }
 
 export function useTtsControlsPreloaded(
-  preloaded: Preloaded<typeof api.userSettings.get>,
+  preloaded: Preloaded<typeof api.userSettings.getTtsConfig>,
 ) {
-  const settings = useOfflinePreloadedQuery(preloaded);
-  return useTtsControlsInternal(settings);
+  const config = useOfflinePreloadedQuery(preloaded);
+  return useTtsControlsInternal(config);
 }

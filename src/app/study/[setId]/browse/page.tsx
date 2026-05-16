@@ -24,11 +24,11 @@ export default async function BrowsePage({
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const [preloadedSet, preloadedCards, preloadedSettings, preloadedAnnotations] =
+  const [preloadedSet, preloadedCards, preloadedTtsConfig, preloadedAnnotations] =
     await Promise.all([
       preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
       preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
-      preloadQuery(api.userSettings.get, {}, { token }),
+      preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
       preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
     ]);
 
@@ -56,7 +56,7 @@ export default async function BrowsePage({
       cardLimit={cardLimit}
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
-      preloadedSettings={preloadedSettings}
+      preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}
     />
   );

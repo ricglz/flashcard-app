@@ -19,14 +19,14 @@ import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
   preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
-  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getAll>;
 };
 
 export default function SrsReviewClient({
   preloadedQueue,
   preloadedStats,
-  preloadedSettings,
+  preloadedTtsConfig,
   preloadedAnnotations,
 }: Props) {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function SrsReviewClient({
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflinePreloadedQuery(preloadedStats);
-  const tts = useTtsControlsPreloaded(preloadedSettings);
+  const tts = useTtsControlsPreloaded(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsAllPreloaded(preloadedAnnotations);
 
   const stableQueue = useRef(queue);

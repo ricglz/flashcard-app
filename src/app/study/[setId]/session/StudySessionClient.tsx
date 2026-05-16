@@ -26,7 +26,7 @@ type Props = {
   preloadedSession: Preloaded<typeof api.studySessions.get>;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
-  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
 };
 
@@ -36,7 +36,7 @@ export default function StudySessionClient({
   preloadedSession,
   preloadedSet,
   preloadedCards,
-  preloadedSettings,
+  preloadedTtsConfig,
   preloadedAnnotations,
 }: Props) {
   const router = useRouter();
@@ -47,7 +47,7 @@ export default function StudySessionClient({
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
-  const tts = useTtsControlsPreloaded(preloadedSettings);
+  const tts = useTtsControlsPreloaded(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
   const [revealed, setRevealed] = useState(false);

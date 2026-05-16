@@ -19,7 +19,8 @@ type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
-  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
+  preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
   preloadedForkSyncStatus: Preloaded<typeof api.flashcardSets.getForkSyncStatus>;
 };
 
@@ -27,13 +28,15 @@ export default function SetDetailClient({
   setId,
   preloadedSet,
   preloadedCards,
-  preloadedSettings,
+  preloadedTtsConfig,
+  preloadedHasLlmKey,
   preloadedForkSyncStatus,
 }: Props) {
   const { set, viewer } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
   const router = useRouter();
-  const settings = useOfflinePreloadedQuery(preloadedSettings);
+  const ttsConfig = useOfflinePreloadedQuery(preloadedTtsConfig);
+  const llmKeyStatus = usePreloadedQuery(preloadedHasLlmKey);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
   const [isForking, setIsForking] = useState(false);
@@ -72,7 +75,7 @@ export default function SetDetailClient({
         setId={setId}
         isMember={isMember}
         isOwner={isOwner}
-        hasLlmKey={settings?.hasLlmKey ?? false}
+        hasLlmKey={llmKeyStatus?.hasLlmKey ?? false}
         onBack={() => router.back()}
         onAiGenerate={() => setShowAiAppend(true)}
       />
@@ -180,7 +183,7 @@ export default function SetDetailClient({
           cards={cards}
           sortedFieldDefs={sortedFieldDefs}
           isOwner={isOwner}
-          ttsPlaybackSpeed={settings?.ttsPlaybackSpeed}
+          ttsPlaybackSpeed={ttsConfig?.ttsPlaybackSpeed}
         />
       </main>
     </div>

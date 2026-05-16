@@ -15,10 +15,11 @@ export default async function SetDetailPage({
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const [preloadedSet, preloadedCards, preloadedSettings, preloadedForkSyncStatus] = await Promise.all([
+  const [preloadedSet, preloadedCards, preloadedTtsConfig, preloadedHasLlmKey, preloadedForkSyncStatus] = await Promise.all([
     preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
     preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
-    preloadQuery(api.userSettings.get, {}, { token }),
+    preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
+    preloadQuery(api.userSettings.hasLlmKey, {}, { token }),
     preloadQuery(api.flashcardSets.getForkSyncStatus, { setId: flashcardSetId }, { token }),
   ]);
 
@@ -32,7 +33,8 @@ export default async function SetDetailPage({
       setId={setId}
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
-      preloadedSettings={preloadedSettings}
+      preloadedTtsConfig={preloadedTtsConfig}
+      preloadedHasLlmKey={preloadedHasLlmKey}
       preloadedForkSyncStatus={preloadedForkSyncStatus}
     />
   );

@@ -25,7 +25,7 @@ type Props = {
   cardLimit: number | null;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
-  preloadedSettings: Preloaded<typeof api.userSettings.get>;
+  preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
 };
 
@@ -38,12 +38,12 @@ export default function BrowseClient({
   cardLimit,
   preloadedSet,
   preloadedCards,
-  preloadedSettings,
+  preloadedTtsConfig,
   preloadedAnnotations,
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
-  const tts = useTtsControlsPreloaded(preloadedSettings);
+  const tts = useTtsControlsPreloaded(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
   const [currentIndex, setCurrentIndex] = useState(0);

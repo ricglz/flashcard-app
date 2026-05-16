@@ -6,11 +6,11 @@ import SrsReviewClient from "./SrsReviewClient";
 
 export default async function SrsReviewPage() {
   const token = await getAuthToken();
-  const [preloadedQueue, preloadedStats, preloadedSettings, preloadedAnnotations] =
+  const [preloadedQueue, preloadedStats, preloadedTtsConfig, preloadedAnnotations] =
     await Promise.all([
       preloadQuery(api.srsReviewQueue.getHydratedQueue, {}, { token }),
       preloadQuery(api.srsReviewQueue.getQueueStats, {}, { token }),
-      preloadQuery(api.userSettings.get, {}, { token }),
+      preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
       preloadQuery(api.cardAnnotations.getAll, {}, { token }),
     ]);
 
@@ -23,7 +23,7 @@ export default async function SrsReviewPage() {
     <SrsReviewClient
       preloadedQueue={preloadedQueue}
       preloadedStats={preloadedStats}
-      preloadedSettings={preloadedSettings}
+      preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}
     />
   );

@@ -36,6 +36,32 @@ export const get = query({
   },
 });
 
+export const getTtsConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .first();
+    return { ttsPlaybackSpeed: settings?.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed };
+  },
+});
+
+export const hasLlmKey = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .first();
+    return { hasLlmKey: !!settings?.llmApiKey };
+  },
+});
+
 export const updateSrsSettings = mutation({
   args: {
     maxNewCardsPerDay: v.number(),
