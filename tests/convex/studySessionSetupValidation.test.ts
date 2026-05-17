@@ -3,7 +3,8 @@ import {
   validateStudySessionSetup,
   validateStudySessionSetupEffect,
 } from "../../convex/domain/studySessionSetup";
-import { Effect } from "effect";
+import * as Effect from "effect/Effect";
+import * as Either from "effect/Either";
 
 const fieldDefinitions = [
   { name: "Character", role: "primary" as const, metadata: { tts: { lang: "zh-CN" } }, order: 0 },
@@ -151,5 +152,63 @@ describe("validateStudySessionSetupEffect", () => {
     );
 
     expect(result.ttsOnlyFields).toEqual([]);
+  });
+
+  it("carries leaf validator failures in the error channel", () => {
+    const either = Effect.runSync(
+      Effect.either(
+        validateStudySessionSetupEffect({
+          fieldDefinitions,
+          frontFields: ["Character"],
+          backFields: ["Meaning"],
+          cardLimit: 0,
+        })
+      )
+    );
+
+    expect(Either.isLeft(either)).toBe(true);
+    if (Either.isLeft(either)) {
+      expect(either.left).toEqual({
+        _tag: "InvalidCardLimit",
+        message: "cardLimit must be an integer between 1 and 1000",
+        cardLimit: 0,
+      });
+    }
+  });
+
+  it("carries composed failures through Effect.gen", () => {
+    const either = Effect.runSync(
+      Effect.either(
+        validateStudySessionSetupEffect({
+          fieldDefinitions,
+          frontFields: ["Character"],
+          backFields: ["Meaning"],
+          ttsOnlyFields: ["Character"],
+        })
+      )
+    );
+
+    expect(Either.isLeft(either)).toBe(true);
+    if (Either.isLeft(either)) {
+      expect(either.left._tag).toBe("OverlappingTtsOnlyField");
+    }
+  });
+
+  it("carries inline failures for no studyable cards", () => {
+    const either = Effect.runSync(
+      Effect.either(
+        validateStudySessionSetupEffect({
+          fieldDefinitions,
+          frontFields: ["Character"],
+          backFields: ["Meaning"],
+          availableCardCount: 0,
+        })
+      )
+    );
+
+    expect(Either.isLeft(either)).toBe(true);
+    if (Either.isLeft(either)) {
+      expect(either.left._tag).toBe("NoStudyableCards");
+    }
   });
 });

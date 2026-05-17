@@ -1,6 +1,7 @@
-import { Effect, Either } from "effect";
+import * as Effect from "effect/Effect";
 import type { FieldDefinition } from "../../src/lib/types";
-import { fail, type DomainFailure, type DomainResult } from "./result";
+import { toDomainResult } from "./effect";
+import type { DomainFailure, DomainResult } from "./result";
 
 export type InvalidCardLimitFailure = DomainFailure<
   "InvalidCardLimit",
@@ -206,11 +207,5 @@ export function validateStudySessionSetupEffect(
 export function validateStudySessionSetup(
   input: StudySessionSetupInput
 ): DomainResult<ValidatedStudySessionSetup, StudySessionSetupFailure> {
-  const either = Effect.runSync(Effect.either(validateStudySessionSetupEffect(input)));
-
-  if (Either.isLeft(either)) {
-    return fail(either.left);
-  }
-
-  return { ok: true, value: either.right };
+  return toDomainResult(validateStudySessionSetupEffect(input));
 }

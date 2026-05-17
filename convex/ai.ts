@@ -7,7 +7,8 @@ import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message } from "multi-llm-ts";
-import { Schema, ParseResult } from "effect";
+import * as Schema from "effect/Schema";
+import * as ParseResult from "effect/ParseResult";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
 import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
 
@@ -43,6 +44,7 @@ async function generateAndValidateJson(
   ];
   const response = await llm.complete(thread);
   if (!response.content) {
+    console.warn("[ai] LLM returned empty response", { model: modelName });
     return { ok: false, error: "LLM returned empty response." };
   }
   let parsed: unknown;
@@ -53,12 +55,14 @@ async function generateAndValidateJson(
       .trim();
     parsed = JSON.parse(cleaned);
   } catch {
+    console.warn("[ai] LLM response was not valid JSON", { model: modelName, raw: response.content });
     return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
   }
   const decoded = Schema.decodeUnknownEither(GeneratedSetPayloadSchema)(parsed);
   if (decoded._tag === "Left") {
     const issues = ParseResult.ArrayFormatter.formatErrorSync(decoded.left);
     const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    console.warn("[ai] LLM returned invalid payload", { model: modelName, issues: message });
     return { ok: false, error: `LLM returned invalid payload: ${message}`, raw: response.content };
   }
   const payload = decoded.right;
