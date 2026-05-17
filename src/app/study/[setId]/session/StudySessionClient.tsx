@@ -16,7 +16,7 @@ import AssistantPanel from "@/components/AssistantPanel";
 import StudyLayout from "@/components/StudyLayout";
 import type { CardRating, ActiveStudySession } from "@/lib/types";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
-import { useTtsControlsPreloaded } from "@/hooks/useTtsControls";
+import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import Link from "next/link";
 
@@ -47,7 +47,7 @@ export default function StudySessionClient({
   const cards = usePreloadedQuery(preloadedCards);
   const recordResult = useOfflineMutation(api.studySessions.recordResult);
   const abandonSession = useMutation(api.studySessions.abandon);
-  const tts = useTtsControlsPreloaded(preloadedTtsConfig);
+  const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
   const [revealed, setRevealed] = useState(false);

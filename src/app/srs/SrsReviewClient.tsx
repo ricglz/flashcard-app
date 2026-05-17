@@ -13,7 +13,7 @@ import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 import AssistantPanel from "@/components/AssistantPanel";
 import { asId } from "@/lib/convexHelpers";
-import { useTtsControlsPreloaded } from "@/hooks/useTtsControls";
+import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 
 type Props = {
@@ -34,7 +34,7 @@ export default function SrsReviewClient({
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview);
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflinePreloadedQuery(preloadedStats);
-  const tts = useTtsControlsPreloaded(preloadedTtsConfig);
+  const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsAllPreloaded(preloadedAnnotations);
 
   const stableQueue = useRef(queue);

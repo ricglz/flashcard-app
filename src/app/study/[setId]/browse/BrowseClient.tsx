@@ -12,7 +12,7 @@ import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
 import StudyLayout from "@/components/StudyLayout";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
-import { useTtsControlsPreloaded } from "@/hooks/useTtsControls";
+import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { shuffleArray } from "@/lib/shuffle";
 
@@ -43,7 +43,7 @@ export default function BrowseClient({
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
-  const tts = useTtsControlsPreloaded(preloadedTtsConfig);
+  const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
   const [currentIndex, setCurrentIndex] = useState(0);
