@@ -1,9 +1,15 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
+import * as Effect from "effect/Effect";
 import { fieldDefinitionValidator } from "./schema";
-import { assertOwner, enrollCardsForSetHelper } from "./userSets";
+import { assertOwner, assertOwnerEffect, enrollCardsForSetHelper } from "./userSets";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict, type CommonFailure } from "./domain/result";
+import {
+  fromDomainResult,
+  requireAuth,
+  toDomainResultAsync,
+} from "./domain/effect";
 import {
   validateSetFields as validateSetFieldsResult,
   type SetFieldsValidationFailure,
@@ -105,7 +111,7 @@ export const create = mutation({
       createdAt: Date.now(),
     });
 
-    return setId;
+    return ok(setId);
   },
 });
 
@@ -117,26 +123,30 @@ export const update = mutation({
     fieldDefinitions: v.optional(v.array(fieldDefinitionValidator)),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
-    if (!owner.ok) return owner;
-
-    const validation = validateSetFieldsResult(
-      args.name,
-      args.fieldDefinitions as FieldDefinition[] | undefined
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
+        const validation = yield* fromDomainResult(
+          validateSetFieldsResult(
+            args.name,
+            args.fieldDefinitions as FieldDefinition[] | undefined,
+          ),
+        );
+        return validation;
+      }),
     );
-    if (!validation.ok) return validation;
+    if (!validated.ok) return validated;
 
     const patch: {
       name?: string;
       description?: string;
       fieldDefinitions?: FieldDefinition[];
     } = {};
-    if (validation.value.name !== undefined) patch.name = validation.value.name;
+    if (validated.value.name !== undefined) patch.name = validated.value.name;
     if (args.description !== undefined) patch.description = args.description.trim() || undefined;
-    if (validation.value.fieldDefinitions !== undefined) {
-      patch.fieldDefinitions = validation.value.fieldDefinitions;
+    if (validated.value.fieldDefinitions !== undefined) {
+      patch.fieldDefinitions = validated.value.fieldDefinitions;
     }
     await ctx.db.patch(args.id, { ...patch, updatedAt: Date.now() });
     return ok(null);

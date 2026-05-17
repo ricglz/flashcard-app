@@ -1,8 +1,10 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { assertOwner } from "./userSets";
-import { validateCardFields, type CardFieldsValidationFailure } from "./domain/cardFields";
+import * as Effect from "effect/Effect";
+import { assertOwner, assertOwnerEffect } from "./userSets";
+import { validateCardFields, validateCardFieldsEffect, type CardFieldsValidationFailure } from "./domain/cardFields";
 import { fail, ok, unauthenticated, notFound, type CommonFailure } from "./domain/result";
+import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 
 function validateAgainstSet(
   set: { fieldDefinitions: Array<{ name: string }> },
@@ -11,6 +13,16 @@ function validateAgainstSet(
   return validateCardFields(
     set.fieldDefinitions.map((field) => field.name),
     fields
+  );
+}
+
+function validateAgainstSetEffect(
+  set: { fieldDefinitions: Array<{ name: string }> },
+  fields: Record<string, string>,
+) {
+  return validateCardFieldsEffect(
+    set.fieldDefinitions.map((field) => field.name),
+    fields,
   );
 }
 
@@ -33,21 +45,25 @@ export const create = mutation({
     order: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.setId);
-    if (!owner.ok) return owner;
-    const set = await ctx.db.get(args.setId);
-    if (!set) return fail(notFound("Set not found"));
-    const fields = validateAgainstSet(set, args.fields);
-    if (!fields.ok) return fields;
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.setId);
+        const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
+        const fields = yield* validateAgainstSetEffect(set, args.fields);
+        return { set, fields };
+      }),
+    );
+    if (!validated.ok) return validated;
+    const { set, fields } = validated.value;
+
     const id = await ctx.db.insert("flashcards", {
       setId: args.setId,
-      fields: fields.value,
+      fields,
       order: args.order,
     });
     await ctx.db.patch(args.setId, { cardCount: set.cardCount + 1, updatedAt: Date.now() });
-    return id;
+    return ok(id);
   },
 });
 
@@ -62,19 +78,21 @@ export const batchCreate = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.setId);
-    if (!owner.ok) return owner;
-    const set = await ctx.db.get(args.setId);
-    if (!set) return fail(notFound("Set not found"));
-
-    const normalizedCards: Array<{ fields: Record<string, string>; order: number }> = [];
-    for (const card of args.cards) {
-      const fields = validateAgainstSet(set, card.fields);
-      if (!fields.ok) return fields;
-      normalizedCards.push({ fields: fields.value, order: card.order });
-    }
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.setId);
+        const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
+        const normalizedCards: Array<{ fields: Record<string, string>; order: number }> = [];
+        for (const card of args.cards) {
+          const fields = yield* validateAgainstSetEffect(set, card.fields);
+          normalizedCards.push({ fields, order: card.order });
+        }
+        return { set, normalizedCards };
+      }),
+    );
+    if (!validated.ok) return validated;
+    const { set, normalizedCards } = validated.value;
 
     const ids = [];
     for (const card of normalizedCards) {
@@ -88,7 +106,7 @@ export const batchCreate = mutation({
       cardCount: set.cardCount + normalizedCards.length,
       updatedAt: Date.now(),
     });
-    return ids;
+    return ok(ids);
   },
 });
 
@@ -99,21 +117,24 @@ export const update = mutation({
     order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const card = await ctx.db.get(args.id);
-    if (!card) return fail(notFound("Card not found"));
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, card.setId);
-    if (!owner.ok) return owner;
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        const card = yield* requireEntity(ctx.db.get(args.id), "Card not found");
+        yield* assertOwnerEffect(ctx, identity.tokenIdentifier, card.setId);
+        let validatedFields: Record<string, string> | undefined;
+        if (args.fields !== undefined) {
+          const set = yield* requireEntity(ctx.db.get(card.setId), "Set not found");
+          validatedFields = yield* validateAgainstSetEffect(set, args.fields);
+        }
+        return { card, validatedFields };
+      }),
+    );
+    if (!validated.ok) return validated;
+    const { card, validatedFields } = validated.value;
 
     const patch: { fields?: Record<string, string>; order?: number } = {};
-    if (args.fields !== undefined) {
-      const set = await ctx.db.get(card.setId);
-      if (!set) return fail(notFound("Set not found"));
-      const fields = validateAgainstSet(set, args.fields);
-      if (!fields.ok) return fields;
-      patch.fields = fields.value;
-    }
+    if (validatedFields !== undefined) patch.fields = validatedFields;
     if (args.order !== undefined) patch.order = args.order;
     await ctx.db.patch(args.id, patch);
     await ctx.db.patch(card.setId, { updatedAt: Date.now() });
@@ -124,12 +145,17 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("flashcards") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const card = await ctx.db.get(args.id);
-    if (!card) return fail(notFound("Card not found"));
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, card.setId);
-    if (!owner.ok) return owner;
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        const card = yield* requireEntity(ctx.db.get(args.id), "Card not found");
+        yield* assertOwnerEffect(ctx, identity.tokenIdentifier, card.setId);
+        return card;
+      }),
+    );
+    if (!validated.ok) return validated;
+    const card = validated.value;
+
     const set = await ctx.db.get(card.setId);
     await ctx.db.delete(args.id);
     if (set) {

@@ -2,10 +2,18 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import * as Effect from "effect/Effect";
 import { userSetRoleValidator } from "./schema";
 import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./domain/result";
-import { validateStudySessionSetup } from "./domain/studySessionSetup";
+import {
+  fromAsyncDomainResult,
+  fromDomainResult,
+  requireAuth,
+  requireEntity,
+  toDomainResultAsync,
+} from "./domain/effect";
+import { validateStudySessionSetup, validateStudySessionSetupEffect } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
@@ -37,6 +45,22 @@ export async function assertOwner(
   if (!link.ok) return link;
   if (link.value.role !== "owner") return fail(forbidden("Only the set owner can do that."));
   return ok(link.value);
+}
+
+export function assertMemberEffect(
+  ctx: QueryCtx | MutationCtx,
+  userId: string,
+  setId: Id<"flashcardSets">,
+) {
+  return fromAsyncDomainResult(assertMember(ctx, userId, setId));
+}
+
+export function assertOwnerEffect(
+  ctx: QueryCtx | MutationCtx,
+  userId: string,
+  setId: Id<"flashcardSets">,
+) {
+  return fromAsyncDomainResult(assertOwner(ctx, userId, setId));
 }
 
 // ---------------------------------------------------------------------------
@@ -132,32 +156,39 @@ export const update = mutation({
     defaultTtsOnlyFields: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        const link = yield* requireEntity(
+          ctx.db
+            .query("userSets")
+            .withIndex("by_userId_and_setId", (q) =>
+              q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
+            )
+            .first(),
+          "Set not found",
+        );
+        const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
 
-    const link = await ctx.db
-      .query("userSets")
-      .withIndex("by_userId_and_setId", (q) =>
-        q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
-      )
-      .first();
-    if (!link) return fail(notFound("Set not found"));
-
-    const set = await ctx.db.get(args.setId);
-    if (!set) return fail(notFound("Set not found"));
-    if (
-      args.defaultFrontFields !== undefined ||
-      args.defaultBackFields !== undefined ||
-      args.defaultTtsOnlyFields !== undefined
-    ) {
-      const selection = validateStudySessionSetup({
-        fieldDefinitions: getFieldDefinitions(set),
-        frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
-        backFields: args.defaultBackFields ?? link.defaultBackFields,
-        ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields,
-      });
-      if (!selection.ok) return selection;
-    }
+        if (
+          args.defaultFrontFields !== undefined ||
+          args.defaultBackFields !== undefined ||
+          args.defaultTtsOnlyFields !== undefined
+        ) {
+          yield* fromDomainResult(
+            validateStudySessionSetup({
+              fieldDefinitions: getFieldDefinitions(set),
+              frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
+              backFields: args.defaultBackFields ?? link.defaultBackFields,
+              ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields,
+            }),
+          );
+        }
+        return { identity, link };
+      }),
+    );
+    if (!validated.ok) return validated;
+    const { identity, link } = validated.value;
 
     const wasSrsEnabled = link.srsEnabled;
     const patch: {

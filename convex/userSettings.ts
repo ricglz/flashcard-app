@@ -1,12 +1,17 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery } from "./_generated/server";
+import * as Effect from "effect/Effect";
 import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, type CommonFailure } from "./domain/result";
+import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import {
   validateMaxNewCardsPerDay,
+  validateMaxNewCardsPerDayEffect,
   validateDayResetUtcHour,
+  validateDayResetUtcHourEffect,
   validateTtsPlaybackSpeed,
   validateDailyGoal,
+  validateDailyGoalEffect,
   type SrsSettingsFailure,
 } from "./domain/srsSettings";
 
@@ -69,16 +74,17 @@ export const updateSrsSettings = mutation({
     dailyGoal: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const userId = identity.tokenIdentifier;
-
-    const maxResult = validateMaxNewCardsPerDay(args.maxNewCardsPerDay);
-    if (!maxResult.ok) return maxResult;
-    const hourResult = validateDayResetUtcHour(args.dayResetUtcHour);
-    if (!hourResult.ok) return hourResult;
-    const goalResult = validateDailyGoal(args.dailyGoal);
-    if (!goalResult.ok) return goalResult;
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        const max = yield* validateMaxNewCardsPerDayEffect(args.maxNewCardsPerDay);
+        const hour = yield* validateDayResetUtcHourEffect(args.dayResetUtcHour);
+        const goal = yield* validateDailyGoalEffect(args.dailyGoal);
+        return { userId: identity.tokenIdentifier, max, hour, goal };
+      }),
+    );
+    if (!validated.ok) return validated;
+    const { userId, max, hour, goal } = validated.value;
 
     const existing = await ctx.db
       .query("userSettings")
@@ -86,9 +92,9 @@ export const updateSrsSettings = mutation({
       .first();
 
     const patch = {
-      maxNewCardsPerDay: maxResult.value,
-      dayResetUtcHour: hourResult.value,
-      dailyGoal: goalResult.value,
+      maxNewCardsPerDay: max,
+      dayResetUtcHour: hour,
+      dailyGoal: goal,
     };
 
     if (existing) {

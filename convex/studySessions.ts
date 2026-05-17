@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import * as Effect from "effect/Effect";
 import { ratingValidator } from "./schema";
-import { assertMember } from "./userSets";
+import { assertMember, assertMemberEffect } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
-import { validateStudySessionSetup, type StudySessionSetupFailure } from "./domain/studySessionSetup";
+import { validateStudySessionSetup, validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
 import { fail, ok, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
+import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import type { CardRating, ActiveStudySession } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 
@@ -84,12 +86,16 @@ export const start = mutation({
     cardLimit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const set = await ctx.db.get(args.setId);
-    if (!set) return fail(notFound("Set not found"));
-    const member = await assertMember(ctx, identity.tokenIdentifier, args.setId);
-    if (!member.ok) return member;
+    const validated = await toDomainResultAsync(
+      Effect.gen(function* () {
+        const identity = yield* requireAuth(ctx);
+        const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
+        yield* assertMemberEffect(ctx, identity.tokenIdentifier, args.setId);
+        return { identity, set };
+      }),
+    );
+    if (!validated.ok) return validated;
+    const { identity, set } = validated.value;
 
     const existingActive = await ctx.db
       .query("studySessions")
