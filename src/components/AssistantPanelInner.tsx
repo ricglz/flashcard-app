@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAvailableModels } from "@/lib/useAvailableModels";
@@ -19,11 +19,13 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
   const sendMessage = useAction(api.ai.sendChatMessage);
   const { models: availableModels } = useAvailableModels(open);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+  const scrollToBottom = () => {
+    queueMicrotask(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
+  };
 
   const handleSend = async () => {
     const text = input.trim();
@@ -31,6 +33,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
     setInput("");
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
+    scrollToBottom();
     setLoading(true);
     try {
       const result = await sendMessage({
@@ -54,6 +57,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
       ]);
     } finally {
       setLoading(false);
+      scrollToBottom();
     }
   };
 
