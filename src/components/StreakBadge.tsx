@@ -1,13 +1,11 @@
 "use client";
 
 import type { Preloaded } from "convex/react";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import type { FunctionReturnType } from "convex/server";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import { api } from "../../convex/_generated/api";
 
-type StreakStats = NonNullable<
-  ReturnType<typeof useOfflineQuery<typeof api.progress.getStreakStats>>
->;
+type StreakStats = NonNullable<FunctionReturnType<typeof api.progress.getStreakStats>>;
 
 function StreakBadgeInner({ stats }: { stats: StreakStats }) {
   return (
@@ -36,13 +34,7 @@ function StreakBadgeInner({ stats }: { stats: StreakStats }) {
   );
 }
 
-export default function StreakBadge() {
-  const stats = useOfflineQuery(api.progress.getStreakStats);
-  if (!stats) return null;
-  return <StreakBadgeInner stats={stats} />;
-}
-
-export function PreloadedStreakBadge({
+export default function StreakBadge({
   preloaded,
 }: {
   preloaded: Preloaded<typeof api.progress.getStreakStats>;

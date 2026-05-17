@@ -4,8 +4,8 @@ import { isFailureResult } from "@/lib/appResult";
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import type { SrsConfig } from "./SrsSettingsPanel";
 import SrsSettingsPanel from "./SrsSettingsPanel";
@@ -13,12 +13,8 @@ import SrsQueueEmpty from "./SrsQueueEmpty";
 import SrsQueueComplete from "./SrsQueueComplete";
 import SrsQueueActive from "./SrsQueueActive";
 
-type QueueStats = NonNullable<
-  ReturnType<typeof useOfflineQuery<typeof api.srsReviewQueue.getQueueStats>>
->;
-type Settings = ReturnType<
-  typeof useOfflineQuery<typeof api.userSettings.get>
->;
+type QueueStats = NonNullable<FunctionReturnType<typeof api.srsReviewQueue.getQueueStats>>;
+type Settings = FunctionReturnType<typeof api.userSettings.get>;
 
 function formatResetTime(dayResetUtcHour: number): string {
   const d = new Date();
@@ -138,14 +134,7 @@ function SrsQueueStatusInner({
   );
 }
 
-export default function SrsQueueStatus() {
-  const stats = useOfflineQuery(api.srsReviewQueue.getQueueStats);
-  const settings = useOfflineQuery(api.userSettings.get);
-  if (!stats) return null;
-  return <SrsQueueStatusInner stats={stats} settings={settings} />;
-}
-
-export function PreloadedSrsQueueStatus({
+export default function SrsQueueStatus({
   preloadedStats,
   preloadedSettings,
 }: {

@@ -5,7 +5,7 @@ import { SignInButton, UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import type { Preloaded } from "convex/react";
 import type { api } from "../../../convex/_generated/api";
-import { PreloadedFlashcardSetList } from "@/components/FlashcardSetList";
+import FlashcardSetList from "@/components/FlashcardSetList";
 import QuickCreateForm from "@/components/QuickCreateForm";
 import Link from "next/link";
 
@@ -47,7 +47,7 @@ export default function SetsClient({ preloadedSets }: Props) {
       </header>
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <PreloadedFlashcardSetList preloaded={preloadedSets} />
+        <FlashcardSetList preloaded={preloadedSets} />
       </main>
 
       {showQuickCreate && (

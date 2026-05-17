@@ -5,8 +5,8 @@ import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
-import { PreloadedStreakBadge } from "@/components/StreakBadge";
-import { PreloadedDailyGoalRing } from "@/components/DailyGoalRing";
+import StreakBadge from "@/components/StreakBadge";
+import DailyGoalRing from "@/components/DailyGoalRing";
 import DailyActivityChart from "@/components/DailyActivityChart";
 import AccuracyChart from "@/components/AccuracyChart";
 import CardStatusBreakdown from "@/components/CardStatusBreakdown";
@@ -42,8 +42,8 @@ export default function ProgressClient({
   return (
     <div className="space-y-8">
       <div className="p-4 border border-edge rounded-lg flex items-center justify-between">
-        <PreloadedStreakBadge preloaded={preloadedStreak} />
-        <PreloadedDailyGoalRing preloaded={preloadedGoal} />
+        <StreakBadge preloaded={preloadedStreak} />
+        <DailyGoalRing preloaded={preloadedGoal} />
       </div>
 
       {history === undefined ? (

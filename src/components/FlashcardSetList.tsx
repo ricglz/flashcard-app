@@ -2,14 +2,12 @@
 
 import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import Link from "next/link";
 
-type SetList = NonNullable<
-  ReturnType<typeof useOfflineQuery<typeof api.flashcardSets.list>>
->;
+type SetList = NonNullable<FunctionReturnType<typeof api.flashcardSets.list>>;
 
 function FlashcardSetListInner({ sets }: { sets: SetList }) {
   const removeSet = useMutation(api.flashcardSets.remove);
@@ -106,21 +104,7 @@ function FlashcardSetListInner({ sets }: { sets: SetList }) {
   );
 }
 
-export default function FlashcardSetList() {
-  const sets = useOfflineQuery(api.flashcardSets.list);
-
-  if (sets === undefined) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  return <FlashcardSetListInner sets={sets} />;
-}
-
-export function PreloadedFlashcardSetList({
+export default function FlashcardSetList({
   preloaded,
 }: {
   preloaded: Preloaded<typeof api.flashcardSets.list>;

@@ -3,9 +3,9 @@
 import { SignInButton, UserButton } from "@clerk/nextjs";
 import type { Preloaded } from "convex/react";
 import type { api } from "../../convex/_generated/api";
-import { PreloadedSrsQueueStatus } from "@/components/SrsQueueStatus";
-import { PreloadedStreakBadge } from "@/components/StreakBadge";
-import { PreloadedDailyGoalRing } from "@/components/DailyGoalRing";
+import SrsQueueStatus from "@/components/SrsQueueStatus";
+import StreakBadge from "@/components/StreakBadge";
+import DailyGoalRing from "@/components/DailyGoalRing";
 import Link from "next/link";
 
 type Props = {
@@ -40,14 +40,14 @@ export default function HomeClient({
       </header>
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
-        <PreloadedSrsQueueStatus
+        <SrsQueueStatus
           preloadedStats={preloadedStats}
           preloadedSettings={preloadedSettings}
         />
 
         <div className="mb-6 p-4 border border-edge rounded-lg flex items-center justify-between">
-          <PreloadedStreakBadge preloaded={preloadedStreak} />
-          <PreloadedDailyGoalRing preloaded={preloadedGoal} />
+          <StreakBadge preloaded={preloadedStreak} />
+          <DailyGoalRing preloaded={preloadedGoal} />
         </div>
 
         <section className="mb-6">

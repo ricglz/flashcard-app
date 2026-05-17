@@ -1,16 +1,14 @@
 "use client";
 
 import type { Preloaded } from "convex/react";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
+import type { FunctionReturnType } from "convex/server";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import { api } from "../../convex/_generated/api";
 
 const RADIUS = 36;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-type DailyGoalProgress = NonNullable<
-  ReturnType<typeof useOfflineQuery<typeof api.progress.getDailyGoalProgress>>
->;
+type DailyGoalProgress = NonNullable<FunctionReturnType<typeof api.progress.getDailyGoalProgress>>;
 
 function DailyGoalRingInner({ progress }: { progress: DailyGoalProgress }) {
   if (progress.goal === null) {
@@ -71,13 +69,7 @@ function DailyGoalRingInner({ progress }: { progress: DailyGoalProgress }) {
   );
 }
 
-export default function DailyGoalRing() {
-  const progress = useOfflineQuery(api.progress.getDailyGoalProgress);
-  if (!progress) return null;
-  return <DailyGoalRingInner progress={progress} />;
-}
-
-export function PreloadedDailyGoalRing({
+export default function DailyGoalRing({
   preloaded,
 }: {
   preloaded: Preloaded<typeof api.progress.getDailyGoalProgress>;
