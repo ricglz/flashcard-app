@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -554,6 +554,56 @@ export const appendGeneratedCardsForTool = internalMutation({
       setId: args.targetSetId,
       cardCount: args.cards.length,
       srsEnabled: ownerLink.srsEnabled,
+    });
+  },
+});
+
+export const listSetsPublic = query({
+  args: {
+    include: v.optional(setsListIncludeValidator),
+  },
+  handler: async (ctx, args): Promise<SetsListResponse> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const userId = identity.tokenIdentifier;
+    const links = await getUserSetLinks(ctx, userId);
+    const sets = [];
+    for (const link of links) {
+      const set = await ctx.db.get(link.setId);
+      if (!set) continue;
+      const fieldDefinitions = getFieldDefinitions(set);
+      sets.push({
+        setId: set._id,
+        name: set.name,
+        ...(set.description !== undefined ? { description: set.description } : {}),
+        srsEnabled: link.srsEnabled,
+        cardCount: await countCards(ctx, set._id),
+        ...(originSummary(set.origin) ? { origin: originSummary(set.origin) } : {}),
+        ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
+        ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
+        ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, userId, set._id) } : {}),
+      });
+    }
+    return { sets };
+  },
+});
+
+export const getWeakCardsPublic = query({
+  args: {
+    scope: v.optional(weakCardsScopeValidator),
+    methodology: v.optional(weakContextMethodologyValidator),
+    include: v.optional(v.object({
+      recentRatings: v.optional(v.boolean()),
+    })),
+  },
+  handler: async (ctx, args): Promise<WeakCardsResponse> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    return getWeakCardsHelper(ctx, {
+      userId: identity.tokenIdentifier,
+      scope: args.scope,
+      methodology: args.methodology,
+      include: args.include,
     });
   },
 });

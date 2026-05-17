@@ -191,3 +191,21 @@ export const getAiConfig = internalQuery({
 });
 
 export type UserSettingsFailure = CommonFailure | SrsSettingsFailure;
+
+export const getAiConfigForServer = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const settings = await ctx.db
+      .query("userSettings")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+      .first();
+    if (!settings?.llmApiKey || !settings.llmProvider) return null;
+    return {
+      provider: settings.llmProvider,
+      apiKey: settings.llmApiKey,
+      customChatPrompt: settings.customChatPrompt,
+    };
+  },
+});
