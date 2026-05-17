@@ -34,17 +34,7 @@
 ### AI Weak Spot Analysis
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
 
-### Study Assistant Streaming & Tool Calling
-- [ ] Migrate chat from Convex action to Next.js Route Handler + SSE streaming — see [research doc](docs/research/tool-calling-streaming.md)
-  - Install TanStack Query, set up `QueryClientProvider`
-  - Create public query wrappers for `getAiConfig`, `listSetsForTool`, `getWeakCardsForTool`
-  - Build `POST /api/chat` route handler with Clerk auth + SSE streaming
-  - Adapt `StudyAssistantPlugin` for `fetchQuery` (instead of `ctx.runQuery`)
-  - Implement `streamedQuery` + reducer for mixed tool/text events
-  - Rewrite `AssistantPanelInner` to use streaming
-  - Remove `sendChatMessage` Convex action
-  - Tool status UI ("Looking up your sets..." with spinner)
-  - Typewriter text rendering
+### Study Assistant Tool Expansion
 - [ ] Expand tool set beyond `list_sets` and `get_weak_cards` if usage shows demand (e.g., study stats, mastery levels, annotations)
 
 ## Code Quality — Error Handling
