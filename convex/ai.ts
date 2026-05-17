@@ -10,7 +10,6 @@ import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message } from "multi-llm-ts";
 import { Schema, ParseResult } from "effect";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
-import { StudyAssistantPlugin } from "./lib/studyAssistantPlugin";
 
 const DEFAULT_MODELS: Record<string, string> = {
   openai: "gpt-4o",
@@ -247,62 +246,6 @@ export const confirmAppendCards = action({
       return { ok: false, error: result.error.message };
     }
     return { ok: true, setId: result.value.setId as string, cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
-  },
-});
-
-type ChatResult = { ok: false; error: string } | { ok: true; content: string };
-
-export const sendChatMessage = action({
-  args: {
-    message: v.string(),
-    history: v.array(v.object({
-      role: v.union(v.literal("user"), v.literal("assistant")),
-      content: v.string(),
-    })),
-    model: v.optional(v.string()),
-    context: v.optional(v.object({
-      setId: v.optional(v.id("flashcardSets")),
-      cardFields: v.optional(v.record(v.string(), v.string())),
-    })),
-  },
-  handler: async (ctx, args): Promise<ChatResult> => {
-    const auth = await resolveAuthAndConfig(ctx);
-    if (!auth.ok) return auth;
-    const { userId, keyInfo } = auth;
-
-    let systemPrompt = keyInfo.customChatPrompt ?? "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful.";
-
-    if (args.context?.setId) {
-      const setList = await ctx.runQuery(internal.tooling.listSetsForTool, {
-        userId,
-        include: { fieldDefinitions: true },
-      });
-      const matchedSet = setList.sets.find((s) => s.setId === args.context?.setId);
-      if (matchedSet) {
-        const fieldNames = matchedSet.fieldDefinitions?.map((f) => f.name).join(", ");
-        systemPrompt += `\n\nThe user is studying the set "${matchedSet.name}" with fields: ${fieldNames}.`;
-      }
-    }
-
-    if (args.context?.cardFields) {
-      const entries = Object.entries(args.context.cardFields)
-        .map(([field, value]) => `- ${field}: ${value}`)
-        .join("\n");
-      systemPrompt += `\n\nThey are currently looking at this card:\n${entries}`;
-    }
-
-    const modelName = args.model ?? DEFAULT_MODELS[keyInfo.provider] ?? "gpt-4o";
-    const llm = igniteModel(keyInfo.provider, modelName, { apiKey: keyInfo.apiKey });
-    llm.addPlugin(new StudyAssistantPlugin(ctx, userId));
-
-    const thread = [
-      new Message("system", systemPrompt),
-      ...args.history.map((m) => new Message(m.role, m.content)),
-      new Message("user", args.message),
-    ];
-
-    const response = await llm.complete(thread);
-    return { ok: true, content: response.content ?? "" };
   },
 });
 

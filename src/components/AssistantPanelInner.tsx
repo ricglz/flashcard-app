@@ -1,23 +1,42 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useAction } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useAvailableModels } from "@/lib/useAvailableModels";
+import {
+  streamChat,
+  reduceEvent,
+  type ChatMessage,
+  type ChatStreamState,
+  type ToolStatus,
+} from "@/lib/chatStream";
 import type { StudyContext } from "./AssistantPanel";
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+function ToolStatusIndicator({ status }: { status: ToolStatus }) {
+  const labels: Record<string, string> = {
+    list_sets: "Looking up your sets",
+    get_weak_cards: "Analyzing weak cards",
+  };
+  const label = labels[status.name] ?? `Running ${status.name}`;
+  return (
+    <div className="flex items-center gap-2 text-sm lg:text-base text-muted">
+      <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
+      {label}...
+    </div>
+  );
+}
 
 export default function AssistantPanelInner({ context }: { context: StudyContext }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState<ChatStreamState | null>(null);
   const [model, setModel] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const sendMessage = useAction(api.ai.sendChatMessage);
   const { models: availableModels } = useAvailableModels(open);
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const scrollToBottom = () => {
     queueMicrotask(() => {
@@ -27,39 +46,48 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
     });
   };
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || streaming) return;
     setInput("");
+
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
     scrollToBottom();
-    setLoading(true);
+
+    const abort = new AbortController();
+    abortRef.current = abort;
+    let state: ChatStreamState = { text: "", toolStatus: null };
+    setStreaming(state);
+
     try {
-      const result = await sendMessage({
-        message: text,
-        history: messages,
-        ...(model ? { model } : {}),
-        context: {
-          setId: context.setId,
-          cardFields: context.cardFields,
-        },
-      });
-      if (result.ok) {
-        setMessages((prev) => [...prev, { role: "assistant", content: result.content }]);
-      } else {
-        setMessages((prev) => [...prev, { role: "assistant", content: `Error: ${result.error}` }]);
+      const chatContext = { setId: context.setId, cardFields: context.cardFields };
+      for await (const event of streamChat(text, messages, chatContext, model, abort.signal)) {
+        state = reduceEvent(state, event);
+        setStreaming({ ...state });
+        scrollToBottom();
       }
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `Error: ${err instanceof Error ? err.message : "Failed to get response"}` },
-      ]);
-    } finally {
-      setLoading(false);
-      scrollToBottom();
+      if (abort.signal.aborted) return;
+      state = { text: `Error: ${err instanceof Error ? err.message : "Failed to get response"}`, toolStatus: null };
     }
-  };
+
+    if (abort.signal.aborted) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: state.text || "No response" },
+    ]);
+    setStreaming(null);
+    abortRef.current = null;
+    scrollToBottom();
+  }, [input, streaming, messages, model, context.setId, context.cardFields]);
+
+  const handleClear = useCallback(() => {
+    abortRef.current?.abort();
+    setMessages([]);
+    setStreaming(null);
+  }, []);
 
   if (!open) {
     return (
@@ -79,7 +107,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
         <h3 className="font-semibold text-sm lg:text-base">Study Assistant</h3>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setMessages([])}
+            onClick={handleClear}
             className="text-xs text-muted hover:text-foreground"
           >
             Clear
@@ -111,7 +139,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
-        {messages.length === 0 && (
+        {messages.length === 0 && !streaming && (
           <p className="text-center text-muted text-sm lg:text-base py-8">
             Ask a question about this card or your study material.
           </p>
@@ -132,7 +160,16 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
             </div>
           </div>
         ))}
-        {loading && (
+        {streaming && streaming.text && (
+          <div className="text-sm lg:text-base">
+            <div className="inline-block max-w-[85%] px-3 py-2 rounded-lg whitespace-pre-wrap bg-surface-hover">
+              {streaming.text}
+              <span className="inline-block w-0.5 h-4 bg-foreground animate-pulse ml-0.5 align-text-bottom" />
+            </div>
+          </div>
+        )}
+        {streaming?.toolStatus && <ToolStatusIndicator status={streaming.toolStatus} />}
+        {streaming && !streaming.text && !streaming.toolStatus && (
           <div className="flex items-center gap-2 text-sm lg:text-base text-muted">
             <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
             Thinking...
@@ -147,13 +184,13 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
             onChange={(e) => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`; }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
             placeholder="Ask about this card..."
-            disabled={loading}
+            disabled={!!streaming}
             rows={1}
             className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm lg:text-base resize-none focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           />
           <button
             onClick={() => void handleSend()}
-            disabled={loading || !input.trim()}
+            disabled={!!streaming || !input.trim()}
             className="px-3 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50"
           >
             Send
