@@ -46,7 +46,7 @@ describe("forceRefreshQueue", () => {
     const t = convexTest(schema, modules);
     const { as } = await setupSrsSet(t, 5);
 
-    const result = await as.mutation(api.srsReviewQueue.forceRefreshQueue, {});
+    const result = await unwrap(await as.mutation(api.srsReviewQueue.forceRefreshQueue, {}));
 
     expect(result.added).toBeGreaterThan(0);
     const queue = await getQueueItems(t);
@@ -70,7 +70,7 @@ describe("forceRefreshQueue", () => {
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 4, dailyGoal: 0 });
 
-    const first = await as.mutation(api.srsReviewQueue.forceRefreshQueue, {});
+    const first = await unwrap(await as.mutation(api.srsReviewQueue.forceRefreshQueue, {}));
     expect(first.added).toBe(2);
 
     // Review all cards to empty the queue
@@ -82,7 +82,7 @@ describe("forceRefreshQueue", () => {
       });
     }
 
-    const second = await as.mutation(api.srsReviewQueue.forceRefreshQueue, {});
+    const second = await unwrap(await as.mutation(api.srsReviewQueue.forceRefreshQueue, {}));
     expect(second.added).toBe(0);
   });
 
@@ -93,7 +93,7 @@ describe("forceRefreshQueue", () => {
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 3, dayResetUtcHour: 4, dailyGoal: 0 });
 
-    const result = await as.mutation(api.srsReviewQueue.forceRefreshQueue, {});
+    const result = await unwrap(await as.mutation(api.srsReviewQueue.forceRefreshQueue, {}));
     expect(result.added).toBe(3);
   });
 

@@ -273,7 +273,7 @@ describe("recordReview", () => {
       rating: "good",
     });
 
-    expect(result).toEqual({ remaining: 0, outcome: "recorded" });
+    expect(result).toEqual({ ok: true, value: { remaining: 0, outcome: "recorded" } });
 
     const srsCard = await t.run(async (ctx) => await ctx.db.get(srsCardId));
     expect(srsCard).toMatchObject({
@@ -306,7 +306,7 @@ describe("recordReview", () => {
       rating: "easy",
     });
 
-    expect(duplicate).toEqual({ remaining: 0, outcome: "duplicate" });
+    expect(duplicate).toEqual({ ok: true, value: { remaining: 0, outcome: "duplicate" } });
     expect(await getReviewRows(t)).toHaveLength(1);
     expect(await t.run(async (ctx) => await ctx.db.get(srsCardId))).toEqual(reviewedCard);
   });
@@ -346,7 +346,7 @@ describe("recordReview", () => {
       rating: "good",
     });
 
-    expect(duplicate).toEqual({ remaining: 1, outcome: "duplicate" });
+    expect(duplicate).toEqual({ ok: true, value: { remaining: 1, outcome: "duplicate" } });
     expect(await getReviewRows(t)).toHaveLength(1);
   });
 

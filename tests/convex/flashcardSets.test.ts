@@ -3,7 +3,7 @@ import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
-import { validateSetFields } from "../../convex/flashcardSets";
+import { validateSetFields } from "../../convex/domain/fieldDefinitions";
 import { asId } from "../../src/lib/convexHelpers";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 
@@ -16,46 +16,39 @@ const OTHER_USER = {
 };
 
 describe("validateSetFields", () => {
-  it("passes with valid inputs", () => {
-    expect(() =>
-      validateSetFields("My Set", [{ name: "Front" }, { name: "Back" }])
-    ).not.toThrow();
+  it("returns ok for valid inputs", () => {
+    const result = validateSetFields("My Set", [{ name: "Front" }, { name: "Back" }]);
+    expect(result.ok).toBe(true);
   });
 
-  it("throws for empty name", () => {
-    expect(() => validateSetFields("", undefined)).toThrow(
-      "Set name must not be empty"
-    );
+  it("fails for empty name", () => {
+    const result = validateSetFields("", undefined);
+    expect(result).toMatchObject({ ok: false, error: { _tag: "EmptySetName" } });
   });
 
-  it("throws for whitespace-only name", () => {
-    expect(() => validateSetFields("   ", undefined)).toThrow(
-      "Set name must not be empty"
-    );
+  it("fails for whitespace-only name", () => {
+    const result = validateSetFields("   ", undefined);
+    expect(result).toMatchObject({ ok: false, error: { _tag: "EmptySetName" } });
   });
 
-  it("throws for empty fieldDefinitions array", () => {
-    expect(() => validateSetFields(undefined, [])).toThrow(
-      "At least one field definition is required"
-    );
+  it("fails for empty fieldDefinitions array", () => {
+    const result = validateSetFields(undefined, []);
+    expect(result).toMatchObject({ ok: false, error: { _tag: "MissingFieldDefinitions" } });
   });
 
-  it("throws for empty field name", () => {
-    expect(() =>
-      validateSetFields(undefined, [{ name: "" }])
-    ).toThrow("Field names must not be empty");
+  it("fails for empty field name", () => {
+    const result = validateSetFields(undefined, [{ name: "" }]);
+    expect(result).toMatchObject({ ok: false, error: { _tag: "EmptyFieldName" } });
   });
 
-  it("throws for duplicate field names", () => {
-    expect(() =>
-      validateSetFields(undefined, [{ name: "A" }, { name: "A" }])
-    ).toThrow("Field names must be unique");
+  it("fails for duplicate field names", () => {
+    const result = validateSetFields(undefined, [{ name: "A" }, { name: "A" }]);
+    expect(result).toMatchObject({ ok: false, error: { _tag: "DuplicateFieldName" } });
   });
 
-  it("skips checks when args are undefined", () => {
-    expect(() =>
-      validateSetFields(undefined, undefined)
-    ).not.toThrow();
+  it("returns ok when args are undefined", () => {
+    const result = validateSetFields(undefined, undefined);
+    expect(result.ok).toBe(true);
   });
 });
 

@@ -27,16 +27,16 @@ describe("cliTokens", () => {
     const as = t.withIdentity(TEST_USER);
 
     const result = await as.mutation(api.cliTokens.create, {});
-    expect(result).toMatchObject({ token: expect.any(String), publicId: expect.any(String) });
+    expect(result).toMatchObject({ ok: true, value: { token: expect.any(String), publicId: expect.any(String) } });
 
-    if (!("token" in result)) throw new Error("Expected token result");
-    const parsed = parseCliToken(result.token);
+    if (!result.ok) throw new Error("Expected ok result");
+    const parsed = parseCliToken(result.value.token);
     expect(parsed).not.toBeNull();
-    expect(parsed?.publicId).toBe(result.publicId);
+    expect(parsed?.publicId).toBe(result.value.publicId);
 
-    const [prefix, publicId, secret, ...extraParts] = result.token.split("_");
+    const [prefix, publicId, secret, ...extraParts] = result.value.token.split("_");
     expect(prefix).toBe("fcai");
-    expect(publicId).toBe(result.publicId);
+    expect(publicId).toBe(result.value.publicId);
     expect(publicId).not.toContain("_");
     expect(secret).not.toContain("_");
     expect(extraParts).toHaveLength(0);
@@ -47,16 +47,16 @@ describe("cliTokens", () => {
     const as = t.withIdentity(TEST_USER);
 
     const created = await as.mutation(api.cliTokens.create, {});
-    if (!("token" in created)) throw new Error("Expected token result");
+    if (!created.ok) throw new Error("Expected ok result");
 
     const status = await as.query(api.cliTokens.getStatus, {});
     expect(status).toMatchObject({
       enabled: true,
-      publicId: created.publicId,
-      scopes: created.scopes,
+      publicId: created.value.publicId,
+      scopes: created.value.scopes,
     });
-    expect(JSON.stringify(status)).not.toContain(created.token);
-    const parsed = parseCliToken(created.token);
+    expect(JSON.stringify(status)).not.toContain(created.value.token);
+    const parsed = parseCliToken(created.value.token);
     expect(parsed).not.toBeNull();
     expect(JSON.stringify(status)).not.toContain(parsed?.secret);
   });
