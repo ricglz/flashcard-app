@@ -2,7 +2,6 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import type { Id } from "./_generated/dataModel";
 import type { ApiErrorResponse } from "../src/lib/aiToolingSchemas";
 import {
   SetsListRequestSchema,
@@ -16,34 +15,19 @@ const http = httpRouter();
 
 type Scope = "sets:read" | "weak_context:read" | "ai_sets:create" | "srs:enroll";
 
-type GeneratedSetHttpBody = {
-  name: string;
-  description?: string;
-  sourceSetIds: Id<"flashcardSets">[];
-  sourceScope: "single_set" | "srs_enabled_sets" | "custom";
-  weakContextMethodology?: "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
-  fieldDefinitions: Array<{
-    name: string;
-    role: "primary" | "pronunciation" | "definition" | "note";
-    metadata: Record<string, unknown>;
-    order: number;
-  }>;
-  cards: Array<{
-    fields: Record<string, string>;
-    sourceCardIds?: Id<"flashcards">[];
-    rationale?: string;
-  }>;
-  addToSrs: boolean;
-};
-
-function validateBody<A, I>(schema: Schema.Schema<A, I>, body: unknown): Response | null {
-  const result = Schema.decodeUnknownEither(schema)(body);
+async function parseBody<A, I>(
+  req: Request,
+  schema: Schema.Schema<A, I, never>,
+): Promise<{ ok: true; data: A } | { ok: false; response: Response }> {
+  const text = await req.text();
+  const json = text.trim().length === 0 ? "{}" : text;
+  const result = Schema.decodeUnknownEither(Schema.parseJson(schema))(json);
   if (result._tag === "Left") {
     const issues = ParseResult.ArrayFormatter.formatErrorSync(result.left);
     const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
-    return errorResponse("bad_request", message, 400);
+    return { ok: false, response: errorResponse("bad_request", message, 400) };
   }
-  return null;
+  return { ok: true, data: result.right };
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -62,12 +46,6 @@ function bearerToken(req: Request) {
   const header = req.headers.get("authorization") ?? "";
   const match = header.match(/^Bearer\s+(.+)$/i);
   return match?.[1] ?? null;
-}
-
-async function readJson(req: Request) {
-  const text = await req.text();
-  if (text.trim().length === 0) return {};
-  return JSON.parse(text) as Record<string, unknown>;
 }
 
 async function authenticate(
@@ -111,17 +89,11 @@ http.route({
     const auth = await authenticate(ctx, req, ["sets:read"]);
     if (!auth.ok) return auth.response;
     try {
-      const body = await readJson(req);
-      const validationError = validateBody(SetsListRequestSchema, body);
-      if (validationError) return validationError;
-      const include = body.include && typeof body.include === "object" ? body.include as {
-        srsSummary?: boolean;
-        schemaFingerprint?: boolean;
-        fieldDefinitions?: boolean;
-      } : undefined;
+      const body = await parseBody(req, SetsListRequestSchema);
+      if (!body.ok) return body.response;
       const result = await ctx.runQuery(internal.tooling.listSetsForTool, {
         userId: auth.auth.userId,
-        ...(include ? { include } : {}),
+        ...(body.data.include ? { include: body.data.include } : {}),
       });
       return jsonResponse(result);
     } catch (err) {
@@ -137,12 +109,24 @@ http.route({
     const auth = await authenticate(ctx, req, ["weak_context:read"]);
     if (!auth.ok) return auth.response;
     try {
-      const body = await readJson(req);
-      const validationError = validateBody(WeakCardsRequestSchema, body);
-      if (validationError) return validationError;
+      const body = await parseBody(req, WeakCardsRequestSchema);
+      if (!body.ok) return body.response;
+      const { scope, filters, ...rest } = body.data;
       const result = await ctx.runQuery(internal.tooling.getWeakCardsForTool, {
         userId: auth.auth.userId,
-        ...body,
+        ...rest,
+        ...(scope && {
+          scope: scope.kind === "sets"
+            ? { ...scope, setIds: [...scope.setIds] }
+            : scope,
+        }),
+        ...(filters && {
+          filters: {
+            ...filters,
+            ratings: filters.ratings && [...filters.ratings],
+            statuses: filters.statuses && [...filters.statuses],
+          },
+        }),
       });
       return jsonResponse(result);
     } catch (err) {
@@ -158,15 +142,20 @@ http.route({
     const auth = await authenticate(ctx, req, ["ai_sets:create"]);
     if (!auth.ok) return auth.response;
     try {
-      const body = await readJson(req);
-      const validationError = validateBody(GeneratedSetPayloadSchema, body);
-      if (validationError) return validationError;
-      const payload = body as GeneratedSetHttpBody;
-      if (payload.addToSrs && !auth.auth.scopes.includes("srs:enroll")) {
+      const body = await parseBody(req, GeneratedSetPayloadSchema);
+      if (!body.ok) return body.response;
+      if (body.data.addToSrs && !auth.auth.scopes.includes("srs:enroll")) {
         return errorResponse("Forbidden", "CLI token is missing required scope: srs:enroll", 403);
       }
+      const { sourceSetIds, fieldDefinitions, cards, ...rest } = body.data;
       const result = await ctx.runQuery(internal.tooling.validateGeneratedSetForTool, {
-        ...payload,
+        ...rest,
+        sourceSetIds: [...sourceSetIds],
+        fieldDefinitions: [...fieldDefinitions],
+        cards: cards.map(({ sourceCardIds, ...c }) => ({
+          ...c,
+          sourceCardIds: sourceCardIds && [...sourceCardIds],
+        })),
         userId: auth.auth.userId,
       });
       return jsonResponse(result);
@@ -183,15 +172,20 @@ http.route({
     const auth = await authenticate(ctx, req, ["ai_sets:create"]);
     if (!auth.ok) return auth.response;
     try {
-      const body = await readJson(req);
-      const validationError = validateBody(GeneratedSetPayloadSchema, body);
-      if (validationError) return validationError;
-      const payload = body as GeneratedSetHttpBody;
-      if (payload.addToSrs && !auth.auth.scopes.includes("srs:enroll")) {
+      const body = await parseBody(req, GeneratedSetPayloadSchema);
+      if (!body.ok) return body.response;
+      if (body.data.addToSrs && !auth.auth.scopes.includes("srs:enroll")) {
         return errorResponse("Forbidden", "CLI token is missing required scope: srs:enroll", 403);
       }
+      const { sourceSetIds, fieldDefinitions, cards, ...rest } = body.data;
       const result = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
-        ...payload,
+        ...rest,
+        sourceSetIds: [...sourceSetIds],
+        fieldDefinitions: [...fieldDefinitions],
+        cards: cards.map(({ sourceCardIds, ...c }) => ({
+          ...c,
+          sourceCardIds: sourceCardIds && [...sourceCardIds],
+        })),
         userId: auth.auth.userId,
       });
       if (!result.ok) {
