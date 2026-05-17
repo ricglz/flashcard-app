@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
@@ -56,7 +56,7 @@ export default function SetDetailClient({
     setForkError(null);
     try {
       const result = await forkSet({ sourceSetId: set._id });
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         setForkError(result.error.message);
         return;
       }

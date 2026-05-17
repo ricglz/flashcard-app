@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { isFailureResult } from "@/lib/appResult";
+
 import type { SrsConfig } from "@/components/SrsSettingsPanel";
 import SrsSettingsPanel from "@/components/SrsSettingsPanel";
 
@@ -27,11 +27,11 @@ export default function SrsSettingsSectionInner({ settings }: { settings: Settin
         }),
         updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
-      if (isFailureResult(srsResult)) {
+      if (!srsResult.ok) {
         console.error(srsResult.error.message);
         return false;
       }
-      if (isFailureResult(ttsResult)) {
+      if (!ttsResult.ok) {
         console.error(ttsResult.error.message);
         return false;
       }

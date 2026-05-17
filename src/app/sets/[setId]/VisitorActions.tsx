@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
@@ -30,7 +30,7 @@ export default function VisitorActions({
     setAddError(null);
     try {
       const result = await addToLibrary({ setId });
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         setAddError(result.error.message);
         return;
       }

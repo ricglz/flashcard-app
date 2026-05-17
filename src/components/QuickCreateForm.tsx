@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -30,7 +30,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
         description: description.trim() || undefined,
         fieldDefinitions: preset.fieldDefinitions,
       });
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         setError(result.error.message);
         setIsCreating(false);
         return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
@@ -68,7 +68,7 @@ export default function EditSetClient({
               onSave={async (updates) => {
                 setError(null);
                 const result = await updateSet({ id: set._id, ...updates });
-                if (isFailureResult(result)) {
+                if (!result.ok) {
                   setError(result.error.message);
                   return;
                 }
@@ -104,7 +104,7 @@ export default function EditSetClient({
                 <button
                   onClick={async () => {
                     const result = await removeCard({ id: card._id });
-                    if (isFailureResult(result)) setError(result.error.message);
+                    if (!result.ok) setError(result.error.message);
                   }}
                   className="text-danger hover:text-danger-hover text-sm transition-colors"
                 >
@@ -126,7 +126,7 @@ export default function EditSetClient({
                 fields,
                 order: cards.length,
               });
-              if (isFailureResult(result)) setError(result.error.message);
+              if (!result.ok) setError(result.error.message);
             }}
           />
         </div>
@@ -135,7 +135,7 @@ export default function EditSetClient({
 
         <CsvImporter
           onImport={async (result) => {
-            if (isFailureResult(result)) return;
+            if (!result.ok) return;
             const created = await batchCreateCards({
               setId: set._id,
               cards: result.cards.map((fields, i) => ({
@@ -143,7 +143,7 @@ export default function EditSetClient({
                 order: cards.length + i,
               })),
             });
-            if (isFailureResult(created)) setError(created.error.message);
+            if (!created.ok) setError(created.error.message);
           }}
         />
       </main>

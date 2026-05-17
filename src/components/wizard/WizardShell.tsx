@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useReducer, useState } from "react";
 import { useMutation, usePreloadedQuery } from "convex/react";
 import type { Preloaded } from "convex/react";
@@ -61,7 +61,7 @@ export default function WizardShell({
           setId,
           cards: state.cards.map((fields, i) => ({ fields, order: i })),
         });
-        if (isFailureResult(cardResult)) {
+        if (!cardResult.ok) {
           setSubmitError(cardResult.error.message);
           setIsSubmitting(false);
           return;

@@ -61,18 +61,3 @@ export async function unwrapAppResult<T>(
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
 }
-
-export function isFailureResult(
-  value: unknown
-): value is { ok: false; error: { message: string; _tag?: string } } {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "ok" in value &&
-    (value as { ok?: unknown }).ok === false &&
-    "error" in value &&
-    typeof (value as { error?: unknown }).error === "object" &&
-    (value as { error?: unknown }).error !== null &&
-    "message" in ((value as { error: object }).error)
-  );
-}

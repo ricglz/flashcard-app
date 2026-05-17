@@ -4,7 +4,7 @@ import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
-import { isFailureResult } from "@/lib/appResult";
+
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 
 export default function AiSettingsSection({
@@ -114,7 +114,7 @@ export default function AiSettingsSection({
                     apiKey: llmApiKey,
                     customChatPrompt: chatPrompt || undefined,
                   });
-                  if (isFailureResult(result)) {
+                  if (!result.ok) {
                     setLlmError(result.error.message);
                     return;
                   }

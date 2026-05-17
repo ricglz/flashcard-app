@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -69,7 +69,7 @@ export default function SrsSetConfig({
         defaultBackFields: localBack,
         defaultTtsOnlyFields: localTtsOnly,
       });
-      if (isFailureResult(result)) setError(result.error.message);
+      if (!result.ok) setError(result.error.message);
     } finally {
       setIsSaving(false);
     }

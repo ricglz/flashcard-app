@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState, useCallback, useRef } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
@@ -72,7 +72,7 @@ export default function SrsReviewClient({
           srsCardId: currentItem.srsCardId,
           rating,
         });
-        if (isFailureResult(result)) {
+        if (!result.ok) {
           console.error(result.error.message);
           return;
         }
@@ -95,11 +95,11 @@ export default function SrsReviewClient({
     setNoMoreCards(false);
     try {
       const result = await forceRefresh();
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         console.error(result.error.message);
         return;
       }
-      if ((result as { added: number }).added === 0) {
+      if (result.value.added === 0) {
         setNoMoreCards(true);
       }
     } finally {

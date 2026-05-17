@@ -5,7 +5,7 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import { useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
-import { isFailureResult } from "@/lib/appResult";
+
 
 function formatDate(ms: number | undefined) {
   if (ms === undefined) return "Never";
@@ -32,13 +32,11 @@ export default function CliTokenSection({
     setCopyState("idle");
     try {
       const result = await createToken({ label: "Local AI assistant CLI" });
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         setError(result.error.message);
         return;
       }
-      if ("token" in result) {
-        setNewToken(result.token);
-      }
+      setNewToken(result.value.token);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create token");
     } finally {
@@ -53,7 +51,7 @@ export default function CliTokenSection({
     setCopyState("idle");
     try {
       const result = await revokeToken({});
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         setError(result.error.message);
         return;
       }

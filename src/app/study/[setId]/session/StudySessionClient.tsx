@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState, useCallback } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
@@ -83,7 +83,7 @@ export default function StudySessionClient({
 
       try {
         const result = await recordResult({ sessionId, cardId: currentCardId, rating });
-        if (isFailureResult(result)) {
+        if (!result.ok) {
           console.error(result.error.message);
           return;
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
@@ -87,7 +87,7 @@ export default function StudyConfigClient({
         shuffle,
         ...(cardLimit !== null && { cardLimit }),
       });
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         setIsNavigating(false);
         setError(result.error.message);
         return;

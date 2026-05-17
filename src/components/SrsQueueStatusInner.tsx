@@ -1,6 +1,6 @@
 "use client";
 
-import { isFailureResult } from "@/lib/appResult";
+
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -50,11 +50,11 @@ export default function SrsQueueStatusInner({
         }),
         updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
-      if (isFailureResult(srsResult)) {
+      if (!srsResult.ok) {
         console.error(srsResult.error.message);
         return false;
       }
-      if (isFailureResult(ttsResult)) {
+      if (!ttsResult.ok) {
         console.error(ttsResult.error.message);
         return false;
       }
@@ -70,11 +70,11 @@ export default function SrsQueueStatusInner({
     setNoMoreCards(false);
     try {
       const result = await forceRefresh();
-      if (isFailureResult(result)) {
+      if (!result.ok) {
         console.error(result.error.message);
         return;
       }
-      if ((result as { added: number }).added === 0) {
+      if (result.value.added === 0) {
         setNoMoreCards(true);
       }
     } finally {
