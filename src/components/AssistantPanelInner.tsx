@@ -7,23 +7,9 @@ import {
   reduceEvent,
   type ChatMessage,
   type ChatStreamState,
-  type ToolStatus,
 } from "@/lib/chatStream";
 import type { StudyContext } from "./AssistantPanel";
-
-function ToolStatusIndicator({ status }: { status: ToolStatus }) {
-  const labels: Record<string, string> = {
-    list_sets: "Looking up your sets",
-    get_weak_cards: "Analyzing weak cards",
-  };
-  const label = labels[status.name] ?? `Running ${status.name}`;
-  return (
-    <div className="flex items-center gap-2 text-sm lg:text-base text-muted">
-      <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
-      {label}...
-    </div>
-  );
-}
+import ToolStatusIndicator from "./ToolStatusIndicator";
 
 export default function AssistantPanelInner({ context }: { context: StudyContext }) {
   const [open, setOpen] = useState(false);

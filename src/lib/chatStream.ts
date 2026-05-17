@@ -51,16 +51,20 @@ export async function* streamChat(
     return;
   }
 
-  const reader = res.body!.getReader();
+  if (!res.body) {
+    yield { type: "error", message: "Empty response body" };
+    return;
+  }
+
+  const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let chunk = await reader.read();
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  while (!chunk.done) {
+    buffer += decoder.decode(chunk.value, { stream: true });
     const lines = buffer.split("\n");
-    buffer = lines.pop()!;
+    buffer = lines.pop() ?? "";
     for (const line of lines) {
       if (!line.startsWith("data: ")) continue;
       const decoded = Schema.decodeUnknownEither(SseEventJsonSchema)(line.slice(6));
@@ -68,6 +72,7 @@ export async function* streamChat(
         yield decoded.right;
       }
     }
+    chunk = await reader.read();
   }
 }
 
