@@ -19,14 +19,6 @@ import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
-export function validateSetFields(
-  name: string | undefined,
-  fieldDefinitions: FieldDefinition[] | undefined
-) {
-  const result = validateSetFieldsResult(name, fieldDefinitions);
-  if (!result.ok) throw new Error(result.error.message);
-}
-
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -122,35 +114,30 @@ export const update = mutation({
     description: v.optional(v.string()),
     fieldDefinitions: v.optional(v.array(fieldDefinitionValidator)),
   },
-  handler: async (ctx, args) => {
-    const validated = await toDomainResultAsync(
-      Effect.gen(function* () {
-        const identity = yield* requireAuth(ctx);
-        yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
-        const validation = yield* fromDomainResult(
-          validateSetFieldsResult(
-            args.name,
-            args.fieldDefinitions as FieldDefinition[] | undefined,
-          ),
-        );
-        return validation;
-      }),
-    );
-    if (!validated.ok) return validated;
-
-    const patch: {
-      name?: string;
-      description?: string;
-      fieldDefinitions?: FieldDefinition[];
-    } = {};
-    if (validated.value.name !== undefined) patch.name = validated.value.name;
-    if (args.description !== undefined) patch.description = args.description.trim() || undefined;
-    if (validated.value.fieldDefinitions !== undefined) {
-      patch.fieldDefinitions = validated.value.fieldDefinitions;
-    }
-    await ctx.db.patch(args.id, { ...patch, updatedAt: Date.now() });
-    return ok(null);
-  },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
+      const validation = yield* fromDomainResult(
+        validateSetFieldsResult(
+          args.name,
+          args.fieldDefinitions as FieldDefinition[] | undefined,
+        ),
+      );
+      const patch: {
+        name?: string;
+        description?: string;
+        fieldDefinitions?: FieldDefinition[];
+      } = {};
+      if (validation.name !== undefined) patch.name = validation.name;
+      if (args.description !== undefined) patch.description = args.description.trim() || undefined;
+      if (validation.fieldDefinitions !== undefined) {
+        patch.fieldDefinitions = validation.fieldDefinitions;
+      }
+      yield* Effect.promise(() => ctx.db.patch(args.id, { ...patch, updatedAt: Date.now() }));
+      return null;
+    }),
+  ),
 });
 
 export const remove = mutation({

@@ -8,12 +8,11 @@ import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./domain/result";
 import {
   fromAsyncDomainResult,
-  fromDomainResult,
   requireAuth,
   requireEntity,
   toDomainResultAsync,
 } from "./domain/effect";
-import { validateStudySessionSetup, validateStudySessionSetupEffect } from "./domain/studySessionSetup";
+import { validateStudySessionSetupEffect } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
@@ -113,38 +112,43 @@ export const add = mutation({
     defaultFrontFields: v.array(v.string()),
     defaultBackFields: v.array(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const set = await ctx.db.get(args.setId);
-    if (!set) return fail(notFound("Set not found"));
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      yield* requireEntity(ctx.db.get(args.setId), "Set not found");
 
-    const existing = await ctx.db
-      .query("userSets")
-      .withIndex("by_userId_and_setId", (q) =>
-        q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
-      )
-      .first();
-    if (existing) return fail(conflict("Set already in library"));
+      const existing = yield* Effect.promise(() =>
+        ctx.db.query("userSets")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId),
+          )
+          .first(),
+      );
+      if (existing) return yield* Effect.fail(conflict("Set already in library"));
 
-    const srsEnabled = args.srsEnabled ?? true;
-    const userSetId = await ctx.db.insert("userSets", {
-      userId: identity.tokenIdentifier,
-      setId: args.setId,
-      role: args.role,
-      srsEnabled,
-      defaultFrontFields: args.defaultFrontFields,
-      defaultBackFields: args.defaultBackFields,
-      defaultTtsOnlyFields: [],
-      createdAt: Date.now(),
-    });
+      const srsEnabled = args.srsEnabled ?? true;
+      const userSetId = yield* Effect.promise(() =>
+        ctx.db.insert("userSets", {
+          userId: identity.tokenIdentifier,
+          setId: args.setId,
+          role: args.role,
+          srsEnabled,
+          defaultFrontFields: args.defaultFrontFields,
+          defaultBackFields: args.defaultBackFields,
+          defaultTtsOnlyFields: [],
+          createdAt: Date.now(),
+        }),
+      );
 
-    if (srsEnabled) {
-      await enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId);
-    }
+      if (srsEnabled) {
+        yield* Effect.promise(() =>
+          enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId),
+        );
+      }
 
-    return userSetId;
-  },
+      return userSetId;
+    }),
+  ),
 });
 
 export const update = mutation({
@@ -155,63 +159,57 @@ export const update = mutation({
     defaultBackFields: v.optional(v.array(v.string())),
     defaultTtsOnlyFields: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, args) => {
-    const validated = await toDomainResultAsync(
-      Effect.gen(function* () {
-        const identity = yield* requireAuth(ctx);
-        const link = yield* requireEntity(
-          ctx.db
-            .query("userSets")
-            .withIndex("by_userId_and_setId", (q) =>
-              q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
-            )
-            .first(),
-          "Set not found",
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const link = yield* requireEntity(
+        ctx.db.query("userSets")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId),
+          )
+          .first(),
+        "Set not found",
+      );
+      const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
+
+      if (
+        args.defaultFrontFields !== undefined ||
+        args.defaultBackFields !== undefined ||
+        args.defaultTtsOnlyFields !== undefined
+      ) {
+        yield* validateStudySessionSetupEffect({
+          fieldDefinitions: getFieldDefinitions(set),
+          frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
+          backFields: args.defaultBackFields ?? link.defaultBackFields,
+          ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields,
+        });
+      }
+
+      const wasSrsEnabled = link.srsEnabled;
+      const patch: {
+        srsEnabled?: boolean;
+        defaultFrontFields?: string[];
+        defaultBackFields?: string[];
+        defaultTtsOnlyFields?: string[];
+      } = {};
+      if (args.srsEnabled !== undefined) patch.srsEnabled = args.srsEnabled;
+      if (args.defaultFrontFields !== undefined)
+        patch.defaultFrontFields = args.defaultFrontFields;
+      if (args.defaultBackFields !== undefined)
+        patch.defaultBackFields = args.defaultBackFields;
+      if (args.defaultTtsOnlyFields !== undefined)
+        patch.defaultTtsOnlyFields = args.defaultTtsOnlyFields;
+
+      yield* Effect.promise(() => ctx.db.patch(link._id, patch));
+
+      if (args.srsEnabled && !wasSrsEnabled) {
+        yield* Effect.promise(() =>
+          enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId),
         );
-        const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
-
-        if (
-          args.defaultFrontFields !== undefined ||
-          args.defaultBackFields !== undefined ||
-          args.defaultTtsOnlyFields !== undefined
-        ) {
-          yield* fromDomainResult(
-            validateStudySessionSetup({
-              fieldDefinitions: getFieldDefinitions(set),
-              frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
-              backFields: args.defaultBackFields ?? link.defaultBackFields,
-              ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields,
-            }),
-          );
-        }
-        return { identity, link };
-      }),
-    );
-    if (!validated.ok) return validated;
-    const { identity, link } = validated.value;
-
-    const wasSrsEnabled = link.srsEnabled;
-    const patch: {
-      srsEnabled?: boolean;
-      defaultFrontFields?: string[];
-      defaultBackFields?: string[];
-      defaultTtsOnlyFields?: string[];
-    } = {};
-    if (args.srsEnabled !== undefined) patch.srsEnabled = args.srsEnabled;
-    if (args.defaultFrontFields !== undefined)
-      patch.defaultFrontFields = args.defaultFrontFields;
-    if (args.defaultBackFields !== undefined)
-      patch.defaultBackFields = args.defaultBackFields;
-    if (args.defaultTtsOnlyFields !== undefined)
-      patch.defaultTtsOnlyFields = args.defaultTtsOnlyFields;
-
-    await ctx.db.patch(link._id, patch);
-
-    if (args.srsEnabled && !wasSrsEnabled) {
-      await enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId);
-    }
-    return ok(null);
-  },
+      }
+      return null;
+    }),
+  ),
 });
 
 export const remove = mutation({

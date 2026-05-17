@@ -2,10 +2,10 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { ratingValidator } from "./schema";
-import { assertMember, assertMemberEffect } from "./userSets";
+import { assertMemberEffect } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
-import { validateStudySessionSetup, validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
+import { validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
 import { fail, ok, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import type { CardRating, ActiveStudySession } from "../src/lib/types";
@@ -85,70 +85,67 @@ export const start = mutation({
     shuffle: v.boolean(),
     cardLimit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const validated = await toDomainResultAsync(
-      Effect.gen(function* () {
-        const identity = yield* requireAuth(ctx);
-        const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
-        yield* assertMemberEffect(ctx, identity.tokenIdentifier, args.setId);
-        return { identity, set };
-      }),
-    );
-    if (!validated.ok) return validated;
-    const { identity, set } = validated.value;
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
+      yield* assertMemberEffect(ctx, identity.tokenIdentifier, args.setId);
 
-    const existingActive = await ctx.db
-      .query("studySessions")
-      .withIndex("by_setId_and_userId_and_status", (q) =>
-        q
-          .eq("setId", args.setId)
-          .eq("userId", identity.tokenIdentifier)
-          .eq("status", "in_progress")
-      )
-      .first();
-    if (existingActive) return ok(existingActive._id);
+      const existingActive = yield* Effect.promise(() =>
+        ctx.db.query("studySessions")
+          .withIndex("by_setId_and_userId_and_status", (q) =>
+            q
+              .eq("setId", args.setId)
+              .eq("userId", identity.tokenIdentifier)
+              .eq("status", "in_progress"),
+          )
+          .first(),
+      );
+      if (existingActive) return existingActive._id;
 
-    const cards = await ctx.db
-      .query("flashcards")
-      .withIndex("by_setId", (q) => q.eq("setId", args.setId))
-      .take(1000);
+      const cards = yield* Effect.promise(() =>
+        ctx.db.query("flashcards")
+          .withIndex("by_setId", (q) => q.eq("setId", args.setId))
+          .take(1000),
+      );
 
-    const setupResult = validateStudySessionSetup({
-      fieldDefinitions: getFieldDefinitions(set),
-      frontFields: args.frontFields,
-      backFields: args.backFields,
-      ttsOnlyFields: args.ttsOnlyFields,
-      cardLimit: args.cardLimit,
-      availableCardCount: cards.length,
-    });
-    if (!setupResult.ok) return setupResult;
-    const setup = setupResult.value;
+      const setup = yield* validateStudySessionSetupEffect({
+        fieldDefinitions: getFieldDefinitions(set),
+        frontFields: args.frontFields,
+        backFields: args.backFields,
+        ttsOnlyFields: args.ttsOnlyFields,
+        cardLimit: args.cardLimit,
+        availableCardCount: cards.length,
+      });
 
-    let cardOrder = cards
-      .sort((a, b) => a.order - b.order)
-      .map((c) => c._id);
+      let cardOrder = cards
+        .sort((a, b) => a.order - b.order)
+        .map((c) => c._id);
 
-    if (args.shuffle) {
-      cardOrder = shuffleArray(cardOrder);
-    }
+      if (args.shuffle) {
+        cardOrder = shuffleArray(cardOrder);
+      }
 
-    if (setup.cardLimit !== undefined && setup.cardLimit < cardOrder.length) {
-      cardOrder = cardOrder.slice(0, setup.cardLimit);
-    }
+      if (setup.cardLimit !== undefined && setup.cardLimit < cardOrder.length) {
+        cardOrder = cardOrder.slice(0, setup.cardLimit);
+      }
 
-    const id = await ctx.db.insert("studySessions", {
-      setId: args.setId,
-      userId: identity.tokenIdentifier,
-      frontFields: setup.frontFields,
-      backFields: setup.backFields,
-      ttsOnlyFields: setup.ttsOnlyFields,
-      cardOrder,
-      currentIndex: 0,
-      status: "in_progress",
-      startedAt: Date.now(),
-    });
-    return ok(id);
-  },
+      const id = yield* Effect.promise(() =>
+        ctx.db.insert("studySessions", {
+          setId: args.setId,
+          userId: identity.tokenIdentifier,
+          frontFields: setup.frontFields,
+          backFields: setup.backFields,
+          ttsOnlyFields: setup.ttsOnlyFields,
+          cardOrder,
+          currentIndex: 0,
+          status: "in_progress",
+          startedAt: Date.now(),
+        }),
+      );
+      return id;
+    }),
+  ),
 });
 
 export const recordResult = mutation({

@@ -5,12 +5,9 @@ import { SRS_DEFAULTS } from "./srs";
 import { fail, ok, unauthenticated, type CommonFailure } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import {
-  validateMaxNewCardsPerDay,
   validateMaxNewCardsPerDayEffect,
-  validateDayResetUtcHour,
   validateDayResetUtcHourEffect,
   validateTtsPlaybackSpeed,
-  validateDailyGoal,
   validateDailyGoalEffect,
   type SrsSettingsFailure,
 } from "./domain/srsSettings";
@@ -73,41 +70,40 @@ export const updateSrsSettings = mutation({
     dayResetUtcHour: v.number(),
     dailyGoal: v.number(),
   },
-  handler: async (ctx, args) => {
-    const validated = await toDomainResultAsync(
-      Effect.gen(function* () {
-        const identity = yield* requireAuth(ctx);
-        const max = yield* validateMaxNewCardsPerDayEffect(args.maxNewCardsPerDay);
-        const hour = yield* validateDayResetUtcHourEffect(args.dayResetUtcHour);
-        const goal = yield* validateDailyGoalEffect(args.dailyGoal);
-        return { userId: identity.tokenIdentifier, max, hour, goal };
-      }),
-    );
-    if (!validated.ok) return validated;
-    const { userId, max, hour, goal } = validated.value;
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const userId = identity.tokenIdentifier;
+      const max = yield* validateMaxNewCardsPerDayEffect(args.maxNewCardsPerDay);
+      const hour = yield* validateDayResetUtcHourEffect(args.dayResetUtcHour);
+      const goal = yield* validateDailyGoalEffect(args.dailyGoal);
 
-    const existing = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
+      const existing = yield* Effect.promise(() =>
+        ctx.db.query("userSettings")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .first(),
+      );
 
-    const patch = {
-      maxNewCardsPerDay: max,
-      dayResetUtcHour: hour,
-      dailyGoal: goal,
-    };
+      const patch = {
+        maxNewCardsPerDay: max,
+        dayResetUtcHour: hour,
+        dailyGoal: goal,
+      };
 
-    if (existing) {
-      await ctx.db.patch(existing._id, patch);
-    } else {
-      await ctx.db.insert("userSettings", {
-        userId,
-        ...patch,
-        ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
-      });
-    }
-    return ok(null);
-  },
+      if (existing) {
+        yield* Effect.promise(() => ctx.db.patch(existing._id, patch));
+      } else {
+        yield* Effect.promise(() =>
+          ctx.db.insert("userSettings", {
+            userId,
+            ...patch,
+            ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
+          }),
+        );
+      }
+      return null;
+    }),
+  ),
 });
 
 export const updateAiConfig = mutation({
