@@ -2,9 +2,10 @@
 
 
 import { useReducer, useState } from "react";
-import { useMutation, usePreloadedQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import {
   wizardReducer,
@@ -27,8 +28,7 @@ export default function WizardShell({
 }) {
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
-  const llmKeyStatus = usePreloadedQuery(preloadedHasLlmKey);
-  const hasLlmKey = llmKeyStatus?.hasLlmKey ?? false;
+  const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdSetId, setCreatedSetId] = useState<string | null>(null);
@@ -113,7 +113,7 @@ export default function WizardShell({
       {/* Step content */}
       <div>
         {state.step === 1 && (
-          <StepNameAndSource state={state} dispatch={dispatch} hasLlmKey={hasLlmKey} />
+          <StepNameAndSource state={state} dispatch={dispatch} aiAvailable={ai.available} />
         )}
         {state.step === 2 && (
           <StepAddCards state={state} dispatch={dispatch} />

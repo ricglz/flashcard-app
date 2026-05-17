@@ -6,6 +6,7 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SrsSetConfig from "@/components/SrsSetConfig";
@@ -37,7 +38,7 @@ export default function SetDetailClient({
   const cards = usePreloadedQuery(preloadedCards);
   const router = useRouter();
   const ttsConfig = useOfflinePreloadedQuery(preloadedTtsConfig);
-  const llmKeyStatus = usePreloadedQuery(preloadedHasLlmKey);
+  const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
   const [isForking, setIsForking] = useState(false);
@@ -76,7 +77,7 @@ export default function SetDetailClient({
         setId={setId}
         isMember={isMember}
         isOwner={isOwner}
-        hasLlmKey={llmKeyStatus?.hasLlmKey ?? false}
+        aiAvailable={ai.available}
         onBack={() => router.back()}
         onAiGenerate={() => setShowAiAppend(true)}
       />

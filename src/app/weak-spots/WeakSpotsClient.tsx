@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery, usePreloadedQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
@@ -37,8 +38,7 @@ export default function WeakSpotsClient({
   const [selectedSetId, setSelectedSetId] = useState<string | undefined>();
   const router = useRouter();
 
-  const llmKeyStatus = usePreloadedQuery(preloadedHasLlmKey);
-  const hasLlmKey = llmKeyStatus?.hasLlmKey ?? false;
+  const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const userSets = useOfflinePreloadedQuery(preloadedSets);
   const srsEnabledSets = useMemo(
     () => userSets.filter((s) => s.userSet.srsEnabled),
@@ -104,7 +104,7 @@ export default function WeakSpotsClient({
               <option key={s._id} value={s._id}>{s.name}</option>
             ))}
           </select>
-          {hasLlmKey && totalWeakCards > 0 && (
+          {ai.available && totalWeakCards > 0 && (
             <Link
               href={`/generate?methodology=${methodology}${selectedSetId ? `&setId=${selectedSetId}` : ""}`}
               className="px-3 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors whitespace-nowrap"

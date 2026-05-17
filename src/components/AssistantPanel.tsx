@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { useAiAvailable } from "@/hooks/useAiAvailable";
 import AssistantPanelInner from "./AssistantPanelInner";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -12,7 +11,7 @@ export type StudyContext = {
 };
 
 export default function AssistantPanel({ context }: { context: StudyContext }) {
-  const llmKeyStatus = useQuery(api.userSettings.hasLlmKey);
-  if (!llmKeyStatus?.hasLlmKey) return null;
+  const ai = useAiAvailable();
+  if (!ai.available) return null;
   return <AssistantPanelInner context={context} />;
 }

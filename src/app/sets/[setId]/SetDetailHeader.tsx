@@ -6,7 +6,7 @@ type Props = {
   setId: string;
   isMember: boolean;
   isOwner: boolean;
-  hasLlmKey: boolean;
+  aiAvailable: boolean;
   onBack: () => void;
   onAiGenerate: () => void;
 };
@@ -15,7 +15,7 @@ export default function SetDetailHeader({
   setId,
   isMember,
   isOwner,
-  hasLlmKey,
+  aiAvailable,
   onBack,
   onAiGenerate,
 }: Props) {
@@ -28,7 +28,7 @@ export default function SetDetailHeader({
         &larr; Back
       </button>
       <div className="flex gap-2">
-        {isOwner && hasLlmKey && (
+        {isOwner && aiAvailable && (
           <button
             onClick={onAiGenerate}
             className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"

@@ -5,10 +5,10 @@ import SourceCard from "./SourceCard";
 type Props = {
   state: WizardState;
   dispatch: React.Dispatch<WizardAction>;
-  hasLlmKey?: boolean;
+  aiAvailable?: boolean;
 };
 
-export default function StepNameAndSource({ state, dispatch, hasLlmKey }: Props) {
+export default function StepNameAndSource({ state, dispatch, aiAvailable }: Props) {
   const handlePresetSelect = (key: string) => {
     if (key in LANGUAGE_PRESETS) {
       const preset = LANGUAGE_PRESETS[key as PresetKey];
@@ -59,7 +59,7 @@ export default function StepNameAndSource({ state, dispatch, hasLlmKey }: Props)
             selected={state.sourceMethod === "manual"}
             onClick={() => dispatch({ type: "SET_SOURCE_METHOD", payload: "manual" })}
           />
-          {hasLlmKey && (
+          {aiAvailable && (
             <SourceCard
               title="AI Generate"
               description="Generate cards with AI from a prompt"
