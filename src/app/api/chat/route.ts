@@ -4,17 +4,7 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { getAuthToken } from "@/lib/server";
 import { ServerStudyAssistantPlugin } from "@/lib/serverStudyAssistantPlugin";
-
-const DEFAULT_MODELS: Record<string, string> = {
-  openai: "gpt-4o",
-  anthropic: "claude-sonnet-4-20250514",
-  google: "gemini-2.0-flash",
-  mistral: "mistral-large-latest",
-  groq: "llama-3.3-70b-versatile",
-  deepseek: "deepseek-chat",
-  xai: "grok-3",
-  ollama: "llama3",
-};
+import { DEFAULT_MODELS } from "@/lib/aiDefaults";
 
 type ChatRequest = {
   message: string;
@@ -49,6 +39,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (request.signal.aborted) return new Response(null, { status: 499 });
 
   let systemPrompt =
     aiConfig.customChatPrompt ??
