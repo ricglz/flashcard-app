@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SignInButton, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import type { Preloaded } from "convex/react";
 import type { api } from "../../../convex/_generated/api";

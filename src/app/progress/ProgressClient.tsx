@@ -65,7 +65,7 @@ export default function ProgressClient({
         <CardStatusBreakdown breakdown={breakdown} />
       )}
 
-      {mastery && mastery.length > 0 && <SetMasteryList mastery={mastery} />}
+      {mastery.length > 0 && <SetMasteryList mastery={mastery} />}
     </div>
   );
 }

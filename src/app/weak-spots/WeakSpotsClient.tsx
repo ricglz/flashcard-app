@@ -41,7 +41,7 @@ export default function WeakSpotsClient({
   const hasLlmKey = llmKeyStatus?.hasLlmKey ?? false;
   const userSets = useOfflinePreloadedQuery(preloadedSets);
   const srsEnabledSets = useMemo(
-    () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],
+    () => userSets.filter((s) => s.userSet.srsEnabled),
     [userSets]
   );
 

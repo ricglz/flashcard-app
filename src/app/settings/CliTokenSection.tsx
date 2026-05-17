@@ -87,9 +87,7 @@ export default function CliTokenSection({
         </p>
       </div>
 
-      {status === undefined ? (
-        <div className="animate-pulse text-sm text-muted">Loading token status…</div>
-      ) : status === null ? (
+      {status === null ? (
         <p className="text-sm text-muted">Unable to load status.</p>
       ) : status.enabled ? (
         <div className="space-y-3 text-sm">

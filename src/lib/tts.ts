@@ -176,6 +176,12 @@ export function friendlySpeechError(error: SpeechSynthesisErrorCode | undefined,
     case "canceled":
     case "interrupted":
       return { kind: "unknown", message: "Speech was interrupted." };
+    case "audio-busy":
+      return { kind: "audio_hardware", message: "Audio output is busy. Close other audio apps and try again." };
+    case "invalid-argument":
+      return { kind: "synthesis_failed", message: "Invalid speech request. Try again with different text." };
+    case "text-too-long":
+      return { kind: "synthesis_failed", message: "Text is too long for speech synthesis. Try a shorter passage." };
     case undefined:
     default:
       return { kind: "unknown", message: "Couldn’t play audio. Check volume, silent mode, or browser permissions." };
