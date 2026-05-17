@@ -172,7 +172,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
             placeholder="Ask about this card..."
             disabled={!!streaming}
             rows={1}
-            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm lg:text-base resize-none focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-base lg:text-base resize-none focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           />
           <button
             onClick={() => void handleSend()}
