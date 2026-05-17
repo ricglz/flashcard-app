@@ -1,8 +1,10 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
+import * as Effect from "effect/Effect";
 import { cliScopeValidator } from "./schema";
-import { fail, unauthenticated, forbidden, notFound } from "./domain/result";
+import { unauthenticated, forbidden } from "./domain/result";
+import { requireAuth, toDomainResultAsync } from "./domain/effect";
 
 const TOKEN_PREFIX = "fcai";
 const PUBLIC_ID_LENGTH = 12;
@@ -28,8 +30,6 @@ async function sha256Hex(input: string): Promise<string> {
 
 function randomTokenPart(length: number): string {
   let result = "";
-  // Rejection sampling keeps the generated characters unbiased while avoiding
-  // "_" so token parts can be delimited unambiguously with underscores.
   const maxByte = Math.floor(256 / TOKEN_PART_ALPHABET.length) * TOKEN_PART_ALPHABET.length;
   while (result.length < length) {
     const bytes = new Uint8Array(Math.ceil((length - result.length) * 1.1) + 4);
@@ -100,59 +100,61 @@ export const create = mutation({
     label: v.optional(v.string()),
     scopes: v.optional(v.array(cliScopeValidator)),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const now = Date.now();
-    await revokeActiveTokens(ctx, identity.tokenIdentifier, now);
-
-    const publicId = randomTokenPart(PUBLIC_ID_LENGTH);
-    const secret = randomTokenPart(SECRET_LENGTH);
-    const token = `${TOKEN_PREFIX}_${publicId}_${secret}`;
-    const tokenHash = await sha256Hex(secret);
-    const scopes = args.scopes ?? [...DEFAULT_SCOPES];
-
-    await ctx.db.insert("cliAccessTokens", {
-      userId: identity.tokenIdentifier,
-      publicId,
-      tokenHash,
-      label: args.label?.trim() ?? "Local AI assistant CLI",
-      scopes,
-      createdAt: now,
-      expiresAt: now + INACTIVITY_TTL_MS,
-      absoluteExpiresAt: now + ABSOLUTE_TTL_MS,
-    });
-
-    return {
-      token,
-      publicId,
-      scopes,
-      expiresAt: now + INACTIVITY_TTL_MS,
-      absoluteExpiresAt: now + ABSOLUTE_TTL_MS,
-    };
-  },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const now = Date.now();
+      yield* Effect.promise(() => revokeActiveTokens(ctx, identity.tokenIdentifier, now));
+      const publicId = randomTokenPart(PUBLIC_ID_LENGTH);
+      const secret = randomTokenPart(SECRET_LENGTH);
+      const token = `${TOKEN_PREFIX}_${publicId}_${secret}`;
+      const tokenHash = yield* Effect.promise(() => sha256Hex(secret));
+      const scopes = args.scopes ?? [...DEFAULT_SCOPES];
+      yield* Effect.promise(() =>
+        ctx.db.insert("cliAccessTokens", {
+          userId: identity.tokenIdentifier,
+          publicId,
+          tokenHash,
+          label: args.label?.trim() ?? "Local AI assistant CLI",
+          scopes,
+          createdAt: now,
+          expiresAt: now + INACTIVITY_TTL_MS,
+          absoluteExpiresAt: now + ABSOLUTE_TTL_MS,
+        }),
+      );
+      return {
+        token,
+        publicId,
+        scopes,
+        expiresAt: now + INACTIVITY_TTL_MS,
+        absoluteExpiresAt: now + ABSOLUTE_TTL_MS,
+      };
+    }),
+  ),
 });
 
 export const revoke = mutation({
   args: { publicId: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const now = Date.now();
-    const tokens = await ctx.db
-      .query("cliAccessTokens")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .take(100);
-    let revoked = 0;
-    for (const token of tokens) {
-      if (args.publicId && token.publicId !== args.publicId) continue;
-      if (!token.revokedAt) {
-        await ctx.db.patch(token._id, { revokedAt: now });
-        revoked++;
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const now = Date.now();
+      const tokens = yield* Effect.promise(() =>
+        ctx.db.query("cliAccessTokens")
+          .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+          .take(100),
+      );
+      let revoked = 0;
+      for (const token of tokens) {
+        if (args.publicId && token.publicId !== args.publicId) continue;
+        if (!token.revokedAt) {
+          yield* Effect.promise(() => ctx.db.patch(token._id, { revokedAt: now }));
+          revoked++;
+        }
       }
-    }
-    return { revoked };
-  },
+      return { revoked };
+    }),
+  ),
 });
 
 export const authenticate = internalMutation({
@@ -160,61 +162,63 @@ export const authenticate = internalMutation({
     token: v.string(),
     requiredScopes: v.array(cliScopeValidator),
   },
-  handler: async (ctx, args) => {
-    const parsed = parseCliToken(args.token);
-    if (!parsed) return fail(unauthenticated());
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const parsed = parseCliToken(args.token);
+      if (!parsed) return yield* Effect.fail(unauthenticated());
 
-    const row = await ctx.db
-      .query("cliAccessTokens")
-      .withIndex("by_publicId", (q) => q.eq("publicId", parsed.publicId))
-      .unique();
-    if (!row) return fail(unauthenticated());
+      const row = yield* Effect.promise(() =>
+        ctx.db.query("cliAccessTokens")
+          .withIndex("by_publicId", (q) => q.eq("publicId", parsed.publicId))
+          .unique(),
+      );
+      if (!row) return yield* Effect.fail(unauthenticated());
 
-    const now = Date.now();
-    const tokenHash = await sha256Hex(parsed.secret);
-    if (tokenHash !== row.tokenHash) return fail(unauthenticated());
-    if (row.revokedAt) return fail(forbidden("CLI token has been revoked."));
-    if (row.expiresAt <= now) return fail(forbidden("CLI token expired. Re-enable CLI access in the web app."));
-    if (row.absoluteExpiresAt !== undefined && row.absoluteExpiresAt <= now) {
-      return fail(forbidden("CLI token expired. Rotate CLI access in the web app."));
-    }
-
-    for (const scope of args.requiredScopes) {
-      if (!row.scopes.includes(scope)) {
-        return fail(forbidden(`CLI token is missing required scope: ${scope}`));
+      const now = Date.now();
+      const tokenHash = yield* Effect.promise(() => sha256Hex(parsed.secret));
+      if (tokenHash !== row.tokenHash) return yield* Effect.fail(unauthenticated());
+      if (row.revokedAt) return yield* Effect.fail(forbidden("CLI token has been revoked."));
+      if (row.expiresAt <= now) return yield* Effect.fail(forbidden("CLI token expired. Re-enable CLI access in the web app."));
+      if (row.absoluteExpiresAt !== undefined && row.absoluteExpiresAt <= now) {
+        return yield* Effect.fail(forbidden("CLI token expired. Rotate CLI access in the web app."));
       }
-    }
 
-    const nextExpiresAt = Math.min(
-      now + INACTIVITY_TTL_MS,
-      row.absoluteExpiresAt ?? now + INACTIVITY_TTL_MS
-    );
-    await ctx.db.patch(row._id, { lastUsedAt: now, expiresAt: nextExpiresAt });
+      for (const scope of args.requiredScopes) {
+        if (!row.scopes.includes(scope)) {
+          return yield* Effect.fail(forbidden(`CLI token is missing required scope: ${scope}`));
+        }
+      }
 
-    return {
-      ok: true as const,
-      value: {
+      const nextExpiresAt = Math.min(
+        now + INACTIVITY_TTL_MS,
+        row.absoluteExpiresAt ?? now + INACTIVITY_TTL_MS,
+      );
+      yield* Effect.promise(() =>
+        ctx.db.patch(row._id, { lastUsedAt: now, expiresAt: nextExpiresAt }),
+      );
+
+      return {
         userId: row.userId,
         publicId: row.publicId,
         scopes: row.scopes,
         lastUsedAt: now,
         expiresAt: nextExpiresAt,
         absoluteExpiresAt: row.absoluteExpiresAt,
-      },
-    };
-  },
+      };
+    }),
+  ),
 });
 
 export const getByPublicId = query({
   args: { publicId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
+    if (!identity) return null;
     const row = await ctx.db
       .query("cliAccessTokens")
       .withIndex("by_publicId", (q) => q.eq("publicId", args.publicId))
       .unique();
-    if (!row || row.userId !== identity.tokenIdentifier) return fail(notFound("CLI token not found"));
+    if (!row || row.userId !== identity.tokenIdentifier) return null;
     return {
       publicId: row.publicId,
       label: row.label,

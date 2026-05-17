@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import * as Effect from "effect/Effect";
 import { ratingValidator } from "./schema";
 import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from "./srs";
 import { populateQueue } from "./srsEngine";
 import { RATING_SCORES } from "./studySessions";
 import { incrementDailyStats } from "./progress";
-import { fail, unauthenticated, notFound, conflict } from "./domain/result";
+import { notFound, conflict } from "./domain/result";
+import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 
@@ -109,103 +111,118 @@ export const recordReview = mutation({
     srsCardId: v.id("srsCards"),
     rating: ratingValidator,
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
 
-    const srsCard = await ctx.db.get(args.srsCardId);
-    if (!srsCard || srsCard.userId !== identity.tokenIdentifier) {
-      return fail(notFound("SRS card not found"));
-    }
-
-    const queueItems = await ctx.db
-      .query("reviewQueue")
-      .withIndex("by_srsCardId", (q) => q.eq("srsCardId", args.srsCardId))
-      .take(10);
-    const queueItem = queueItems.find(
-      (item) => item.userId === identity.tokenIdentifier
-    );
-
-    if (!queueItem) {
-      if (queueItems.length > 0) {
-        return fail(notFound("Review queue item not found"));
+      const srsCard = yield* Effect.promise(() => ctx.db.get(args.srsCardId));
+      if (!srsCard || srsCard.userId !== identity.tokenIdentifier) {
+        return yield* Effect.fail(notFound("SRS card not found"));
       }
-      const remaining = await ctx.db
-        .query("reviewQueue")
-        .withIndex("by_userId_and_order", (q) =>
-          q.eq("userId", identity.tokenIdentifier)
-        )
-        .take(500);
-      return { remaining: remaining.length, outcome: "duplicate" as const };
-    }
 
-    if (
-      queueItem.cardId !== srsCard.cardId ||
-      queueItem.setId !== srsCard.setId ||
-      queueItem.srsCardId !== srsCard._id
-    ) {
-      return fail(notFound("Review queue item not found"));
-    }
+      const queueItems = yield* Effect.promise(() =>
+        ctx.db.query("reviewQueue")
+          .withIndex("by_srsCardId", (q) => q.eq("srsCardId", args.srsCardId))
+          .take(10),
+      );
+      const queueItem = queueItems.find(
+        (item) => item.userId === identity.tokenIdentifier,
+      );
 
-    const now = Date.now();
-    const result = computeSM2({
-      rating: args.rating,
-      easeFactor: srsCard.easeFactor,
-      interval: srsCard.interval,
-      repetitions: srsCard.repetitions,
-    });
+      if (!queueItem) {
+        if (queueItems.length > 0) {
+          return yield* Effect.fail(notFound("Review queue item not found"));
+        }
+        const remaining = yield* Effect.promise(() =>
+          ctx.db.query("reviewQueue")
+            .withIndex("by_userId_and_order", (q) =>
+              q.eq("userId", identity.tokenIdentifier),
+            )
+            .take(500),
+        );
+        return { remaining: remaining.length, outcome: "duplicate" as const };
+      }
 
-    await ctx.db.patch(args.srsCardId, {
-      easeFactor: result.easeFactor,
-      interval: result.interval,
-      repetitions: result.repetitions,
-      status: result.status,
-      nextReviewAt: computeNextReviewAt(result.interval, now),
-      lastReviewedAt: now,
-    });
+      if (
+        queueItem.cardId !== srsCard.cardId ||
+        queueItem.setId !== srsCard.setId ||
+        queueItem.srsCardId !== srsCard._id
+      ) {
+        return yield* Effect.fail(notFound("Review queue item not found"));
+      }
 
-    await ctx.db.insert("srsReviews", {
-      userId: identity.tokenIdentifier,
-      cardId: queueItem.cardId,
-      srsCardId: args.srsCardId,
-      rating: args.rating,
-      timestamp: now,
-      newInterval: result.interval,
-      newEaseFactor: result.easeFactor,
-    });
+      const now = Date.now();
+      const result = computeSM2({
+        rating: args.rating,
+        easeFactor: srsCard.easeFactor,
+        interval: srsCard.interval,
+        repetitions: srsCard.repetitions,
+      });
 
-    await ctx.db.delete(queueItem._id);
-    await incrementDailyStats(ctx, identity.tokenIdentifier, "srs", RATING_SCORES[args.rating]);
+      yield* Effect.promise(() =>
+        ctx.db.patch(args.srsCardId, {
+          easeFactor: result.easeFactor,
+          interval: result.interval,
+          repetitions: result.repetitions,
+          status: result.status,
+          nextReviewAt: computeNextReviewAt(result.interval, now),
+          lastReviewedAt: now,
+        }),
+      );
 
-    const remaining = await ctx.db
-      .query("reviewQueue")
-      .withIndex("by_userId_and_order", (q) => q.eq("userId", identity.tokenIdentifier))
-      .take(500);
+      yield* Effect.promise(() =>
+        ctx.db.insert("srsReviews", {
+          userId: identity.tokenIdentifier,
+          cardId: queueItem.cardId,
+          srsCardId: args.srsCardId,
+          rating: args.rating,
+          timestamp: now,
+          newInterval: result.interval,
+          newEaseFactor: result.easeFactor,
+        }),
+      );
 
-    return { remaining: remaining.length, outcome: "recorded" as const };
-  },
+      yield* Effect.promise(() => ctx.db.delete(queueItem._id));
+      yield* Effect.promise(() =>
+        incrementDailyStats(ctx, identity.tokenIdentifier, "srs", RATING_SCORES[args.rating]),
+      );
+
+      const remaining = yield* Effect.promise(() =>
+        ctx.db.query("reviewQueue")
+          .withIndex("by_userId_and_order", (q) => q.eq("userId", identity.tokenIdentifier))
+          .take(500),
+      );
+
+      return { remaining: remaining.length, outcome: "recorded" as const };
+    }),
+  ),
 });
 
 export const forceRefreshQueue = mutation({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const userId = identity.tokenIdentifier;
+  handler: (ctx) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const userId = identity.tokenIdentifier;
 
-    const existing = await ctx.db
-      .query("reviewQueue")
-      .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
-      .take(1);
-    if (existing.length > 0) return fail(conflict("Queue is not empty"));
+      const existing = yield* Effect.promise(() =>
+        ctx.db.query("reviewQueue")
+          .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
+          .take(1),
+      );
+      if (existing.length > 0) {
+        return yield* Effect.fail(conflict("Queue is not empty"));
+      }
 
-    const userSettings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
-    const newCardLimit = userSettings?.maxNewCardsPerDay ?? SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY;
+      const userSettings = yield* Effect.promise(() =>
+        ctx.db.query("userSettings")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .first(),
+      );
+      const newCardLimit = userSettings?.maxNewCardsPerDay ?? SRS_DEFAULTS.MAX_NEW_CARDS_PER_DAY;
 
-    const added = await populateQueue(ctx, userId, newCardLimit);
-    return { added };
-  },
+      const added = yield* Effect.promise(() => populateQueue(ctx, userId, newCardLimit));
+      return { added };
+    }),
+  ),
 });
