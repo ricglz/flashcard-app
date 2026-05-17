@@ -46,8 +46,9 @@ export async function* streamChat(
   });
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: "Request failed" }));
-    yield { type: "error", message: body.error ?? `HTTP ${res.status}` };
+    const body: unknown = await res.json().catch(() => null);
+    const error = body !== null && typeof body === "object" && "error" in body ? body.error : undefined;
+    yield { type: "error", message: typeof error === "string" ? error : `HTTP ${res.status}` };
     return;
   }
 
