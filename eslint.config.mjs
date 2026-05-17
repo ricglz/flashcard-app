@@ -2,6 +2,8 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+const reactPlugin = nextVitals.find(c => c.plugins?.react)?.plugins.react;
+
 const typeAwareRulesOff = {
   "@typescript-eslint/no-unnecessary-condition": "off",
   "@typescript-eslint/consistent-type-imports": "off",
@@ -16,6 +18,9 @@ const eslintConfig = defineConfig([
   ...nextTs,
   globalIgnores([
     ".next/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
@@ -24,6 +29,9 @@ const eslintConfig = defineConfig([
     "scripts/**",
   ]),
   {
+    plugins: {
+      react: reactPlugin,
+    },
     linterOptions: {
       reportUnusedDisableDirectives: "error",
     },
