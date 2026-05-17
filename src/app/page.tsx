@@ -1,7 +1,8 @@
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../convex/_generated/api";
 import { getAuthToken } from "@/lib/server";
-import HomeClient, { HomeLanding } from "./HomeClient";
+import HomeClient from "./HomeClient";
+import HomeLanding from "./HomeLanding";
 
 export default async function Home() {
   const token = await getAuthToken();

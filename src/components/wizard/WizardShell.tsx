@@ -17,8 +17,9 @@ import StepNameAndSource from "./StepNameAndSource";
 import StepAddCards from "./StepAddCards";
 import StepConfigureFields from "./StepConfigureFields";
 import StepReview from "./StepReview";
+import WizardStepIndicator from "./WizardStepIndicator";
 
-const STEP_LABELS = ["Name & Source", "Add Cards", "Configure Fields", "Review"];
+const STEP_COUNT = 4;
 
 export default function WizardShell({
   preloadedHasLlmKey,
@@ -38,7 +39,7 @@ export default function WizardShell({
     if (isSubmitting) return;
     setIsSubmitting(true);
     setSubmitError(null);
-    const validation = validateWizardStep({ ...state, step: 4 });
+    const validation = validateWizardStep({ ...state, step: STEP_COUNT });
     if (!validation.ok) {
       setSubmitError(validation.issues[0]?.message ?? "Fix validation errors before creating the set.");
       setIsSubmitting(false);
@@ -108,49 +109,7 @@ export default function WizardShell({
 
   return (
     <div className="space-y-8">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2">
-        {STEP_LABELS.map((label, i) => {
-          const stepNum = i + 1;
-          const isCurrent = stepNum === state.step;
-          const isCompleted = stepNum < state.step;
-          return (
-            <div key={label} className="flex items-center gap-2">
-              {i > 0 && (
-                <div
-                  className={`h-px w-8 ${
-                    isCompleted ? "bg-accent" : "bg-edge"
-                  }`}
-                />
-              )}
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
-                    isCurrent
-                      ? "bg-accent text-white"
-                      : isCompleted
-                        ? "bg-accent-surface text-accent-surface-text"
-                        : "bg-raised text-muted"
-                  }`}
-                >
-                  {stepNum}
-                </div>
-                <span
-                  className={`text-sm hidden sm:inline ${
-                    isCurrent
-                      ? "font-medium text-foreground"
-                      : isCompleted
-                        ? "text-muted"
-                        : "text-muted"
-                  }`}
-                >
-                  {label}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <WizardStepIndicator currentStep={state.step} />
 
       {/* Step content */}
       <div>
@@ -163,7 +122,7 @@ export default function WizardShell({
         {state.step === 3 && (
           <StepConfigureFields state={state} dispatch={dispatch} />
         )}
-        {state.step === 4 && (
+        {state.step === STEP_COUNT && (
           <>
             <StepReview
               state={state}
@@ -178,7 +137,7 @@ export default function WizardShell({
       </div>
 
       {/* Navigation */}
-      {state.step < 4 && (
+      {state.step < STEP_COUNT && (
         <div className="flex justify-between pt-4 border-t">
           <button
             type="button"
