@@ -1,6 +1,18 @@
 import * as Schema from "effect/Schema";
+import type { Id, TableNames } from "../../convex/_generated/dataModel";
 import { FIELD_ROLES, CARD_RATINGS } from "./types";
 import { METHODOLOGIES } from "./types";
+
+const ConvexId = <T extends TableNames>(_table: T) => {
+  const idSchema = Schema.declare(
+    (input: unknown): input is Id<T> => typeof input === "string",
+  );
+  return Schema.transform(Schema.String, idSchema, {
+    strict: true,
+    decode: (s) => s as Id<T>,
+    encode: (id) => String(id),
+  });
+};
 
 export const FieldRoleSchema = Schema.Literal(...FIELD_ROLES);
 
@@ -79,8 +91,8 @@ export type SetsListResponse = Schema.Schema.Type<typeof SetsListResponseSchema>
 
 export const WeakCardsScopeSchema = Schema.Union(
   Schema.Struct({ kind: Schema.Literal("srs_enabled_sets") }),
-  Schema.Struct({ kind: Schema.Literal("set"), setId: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("sets"), setIds: Schema.Array(Schema.String) })
+  Schema.Struct({ kind: Schema.Literal("set"), setId: ConvexId("flashcardSets") }),
+  Schema.Struct({ kind: Schema.Literal("sets"), setIds: Schema.Array(ConvexId("flashcardSets")) })
 );
 export type WeakCardsScope = Schema.Schema.Type<typeof WeakCardsScopeSchema>;
 
@@ -163,14 +175,14 @@ export type WeakCardsResponse = Schema.Schema.Type<typeof WeakCardsResponseSchem
 export const GeneratedSetPayloadSchema = Schema.Struct({
   name: Schema.String.pipe(Schema.minLength(1)),
   description: Schema.optional(Schema.String),
-  sourceSetIds: Schema.Array(Schema.String),
+  sourceSetIds: Schema.Array(ConvexId("flashcardSets")),
   sourceScope: SourceScopeSchema,
   weakContextMethodology: Schema.optional(WeakContextMethodologySchema),
   fieldDefinitions: Schema.Array(FieldDefinitionSchema),
   cards: Schema.Array(
     Schema.Struct({
       fields: Schema.Record({ key: Schema.String, value: Schema.String }),
-      sourceCardIds: Schema.optional(Schema.Array(Schema.String)),
+      sourceCardIds: Schema.optional(Schema.Array(ConvexId("flashcards"))),
       rationale: Schema.optional(Schema.String),
     })
   ),
