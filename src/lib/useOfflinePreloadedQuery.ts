@@ -12,10 +12,12 @@ export function useOfflinePreloadedQuery<
 >(preloaded: Preloaded<Query>): Query["_returnType"] {
   const result = usePreloadedQuery(preloaded);
 
-  const cacheKey = buildCacheKey(
-    preloaded._name,
-    JSON.parse(preloaded._argsJSON),
-  );
+  // _argsJSON is typed as string but Convex sets it to convexToJson(args) which is an object
+  const args =
+    typeof preloaded._argsJSON === "string"
+      ? JSON.parse(preloaded._argsJSON)
+      : preloaded._argsJSON;
+  const cacheKey = buildCacheKey(preloaded._name, args);
 
   useEffect(() => {
     if (result !== undefined) {

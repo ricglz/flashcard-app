@@ -98,8 +98,7 @@
 - [ ] Multi-language UX enhancements (tone color coding, language-specific rendering)
 
 ### Observability
-- [ ] Error tracking / reporting (client-side and Convex function errors)
-- [ ] Operational telemetry (usage metrics across all users, function latency, error rates)
+- [ ] Sentry integration for client + server error tracking (auto-capture unhandled errors, stack traces, user context)
 
 ### Platform
 - [ ] Pronunciation validation (speech-to-text comparison against expected pinyin)
