@@ -34,15 +34,34 @@
 ### AI Weak Spot Analysis
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
 
-### Study Assistant Tool Calling
+### Study Assistant Streaming & Tool Calling
+- [ ] Migrate chat from Convex action to Next.js Route Handler + SSE streaming — see [research doc](docs/research/tool-calling-streaming.md)
+  - Install TanStack Query, set up `QueryClientProvider`
+  - Create public query wrappers for `getAiConfig`, `listSetsForTool`, `getWeakCardsForTool`
+  - Build `POST /api/chat` route handler with Clerk auth + SSE streaming
+  - Adapt `StudyAssistantPlugin` for `fetchQuery` (instead of `ctx.runQuery`)
+  - Implement `streamedQuery` + reducer for mixed tool/text events
+  - Rewrite `AssistantPanelInner` to use streaming
+  - Remove `sendChatMessage` Convex action
+  - Tool status UI ("Looking up your sets..." with spinner)
+  - Typewriter text rendering
 - [ ] Expand tool set beyond `list_sets` and `get_weak_cards` if usage shows demand (e.g., study stats, mastery levels, annotations)
-- [ ] Add tool calling UI indicators in AssistantPanel (e.g., "Looking up your sets..." while tools execute) — see [research doc](docs/research/tool-calling-streaming.md)
 
 ## Code Quality — Error Handling
 
 ### Effect-Based Error Patterns
 - [ ] Audit try/catch patterns across the codebase and discuss migrating to Effect-based error handling for more typed, composable error flows (especially in AI actions and frontend async code).
 
+## Code Quality — Card Navigation
+
+### Shared `useCardNavigation` hook
+- [ ] Unify card position tracking across study session, browse, and SRS review into a shared hook
+  - Study session: `session.currentIndex` + `localIndexOffset` (optimistic) with render-time sync
+  - Browse: `currentIndex` state + `cardOrder` + `dismissed` set
+  - SRS: `reviewedIds` set, filters queue, takes first visible
+  - All three solve "which card am I on" with optimistic local state — divergent patterns
+- [ ] Initialize from server state (e.g. `session.currentIndex` for resumed sessions) via `useState` initializer rather than render-time `setLocalIndexOffset(0)`
+- [ ] Use a ref to track last-seen server index, reconcile only on unexpected jumps (multi-device edge case)
 ## E2E Testing
 
 ### Infrastructure
