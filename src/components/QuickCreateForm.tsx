@@ -35,7 +35,7 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
         setIsCreating(false);
         return;
       }
-      onCreated(result as string);
+      onCreated(result.value);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create set");
       setIsCreating(false);

@@ -5,7 +5,6 @@ import { useReducer, useState } from "react";
 import { useMutation, usePreloadedQuery } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
 import {
   wizardReducer,
@@ -51,12 +50,12 @@ export default function WizardShell({
         description: state.description.trim() || undefined,
         fieldDefinitions: state.fieldDefinitions,
       });
-      if (isFailureResult(setResult)) {
+      if (!setResult.ok) {
         setSubmitError(setResult.error.message);
         setIsSubmitting(false);
         return;
       }
-      const setId = (setResult as { ok: true; value: Id<"flashcardSets"> }).value;
+      const setId = setResult.value;
       if (state.cards.length > 0) {
         const cardResult = await batchCreateCards({
           setId,
