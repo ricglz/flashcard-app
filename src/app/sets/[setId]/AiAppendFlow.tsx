@@ -5,16 +5,12 @@ import { useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
+import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 import GeneratePreview from "@/app/generate/GeneratePreview";
 import AiAppendConfig from "./AiAppendConfig";
 
 type Phase = "config" | "generating" | "preview" | "confirming";
-type GeneratedCard = {
-  fields: Record<string, string>;
-  sourceCardIds?: string[];
-  rationale?: string;
-  selected: boolean;
-};
+type GeneratedCard = GeneratedSetPayload["cards"][number] & { selected: boolean };
 
 type Props = {
   setId: Id<"flashcardSets">;

@@ -13,12 +13,8 @@ import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
 
 type Step = "config" | "loading" | "preview" | "done";
-type GeneratedCard = {
-  fields: Record<string, string>;
-  sourceCardIds?: string[];
-  rationale?: string;
-  selected: boolean;
-};
+
+type GeneratedCard = GeneratedSetPayload["cards"][number] & { selected: boolean };
 
 export default function GenerateClient({
   preloadedSets,
@@ -32,7 +28,7 @@ export default function GenerateClient({
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
 
   const srsEnabledSets = useMemo(
-    () => userSets?.filter((s) => s.userSet.srsEnabled) ?? [],
+    () => userSets.filter((s) => s.userSet.srsEnabled),
     [userSets],
   );
 
@@ -93,12 +89,12 @@ export default function GenerateClient({
         .filter((c) => c.selected)
         .map(({ selected: _, ...c }) => ({
           ...c,
-          sourceCardIds: c.sourceCardIds?.map((id) => asId<"flashcards">(id)),
+          sourceCardIds: c.sourceCardIds && [...c.sourceCardIds],
         }));
       const result = await confirmSet({
         name: payload.name,
         description: payload.description,
-        sourceSetIds: [...payload.sourceSetIds].map((id) => asId<"flashcardSets">(id)),
+        sourceSetIds: [...payload.sourceSetIds],
         sourceScope: payload.sourceScope,
         weakContextMethodology: payload.weakContextMethodology,
         fieldDefinitions: [...payload.fieldDefinitions].map((fd) => ({ ...fd, metadata: { ...fd.metadata } })),

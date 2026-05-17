@@ -3,24 +3,13 @@
 import { v } from "convex/values";
 import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
 import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message } from "multi-llm-ts";
 import { Schema, ParseResult } from "effect";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
-
-const DEFAULT_MODELS: Record<string, string> = {
-  openai: "gpt-4o",
-  anthropic: "claude-sonnet-4-20250514",
-  google: "gemini-2.0-flash",
-  mistral: "mistral-large-latest",
-  groq: "llama-3.3-70b-versatile",
-  deepseek: "deepseek-chat",
-  xai: "grok-3",
-  ollama: "llama3",
-};
+import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
 
 type GenerateResult =
   | { ok: false; error: string; raw?: string }
@@ -77,12 +66,12 @@ async function generateAndValidateJson(
     internal.tooling.validateGeneratedSetForTool,
     {
       ...payload,
-      sourceSetIds: [...payload.sourceSetIds] as Id<"flashcardSets">[],
+      sourceSetIds: [...payload.sourceSetIds],
       fieldDefinitions: [...payload.fieldDefinitions],
       cards: payload.cards.map(c => ({
         ...c,
         fields: { ...c.fields },
-        sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] as Id<"flashcards">[] : undefined,
+        sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
       })),
       userId: opts.userId,
     },

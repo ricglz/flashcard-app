@@ -23,17 +23,19 @@ import type {
 import type { CardRating, FieldDefinition } from "../src/lib/types";
 
 type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
-type WeakReason = WeakCardsResponse["schemaGroups"][number]["sets"][number]["weakCards"][number]["weakReasons"][number];
-type MutableWeakCard = {
-  cardId: string;
-  fields: Record<string, string>;
-  weakScore: number;
+type WeakSchemaGroup = WeakCardsResponse["schemaGroups"][number];
+type WeakSet = WeakSchemaGroup["sets"][number];
+type WeakCard = WeakSet["weakCards"][number];
+type WeakReason = WeakCard["weakReasons"][number];
+type MutableWeakCard = Omit<WeakCard, "weakReasons" | "recentRatings"> & {
   weakReasons: WeakReason[];
-  metrics: WeakCardsResponse["schemaGroups"][number]["sets"][number]["weakCards"][number]["metrics"];
   recentRatings?: CardRating[];
 };
-type MutableWeakSet = { setId: string; name: string; weakCards: MutableWeakCard[] };
-type MutableWeakGroup = { schemaFingerprint: string; fieldDefinitions: FieldDefinition[]; sets: MutableWeakSet[] };
+type MutableWeakSet = Omit<WeakSet, "weakCards"> & { weakCards: MutableWeakCard[] };
+type MutableWeakGroup = Omit<WeakSchemaGroup, "fieldDefinitions" | "sets"> & {
+  fieldDefinitions: FieldDefinition[];
+  sets: MutableWeakSet[];
+};
 
 const DEFAULT_DAYS = 90;
 const DEFAULT_LIMIT_PER_SET = 10;

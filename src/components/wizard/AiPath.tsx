@@ -8,9 +8,9 @@ import AiCardPreview from "./AiCardPreview";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
 
-type GeneratedCard = {
-  fields: Record<string, string>;
-  rationale?: string;
+import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
+
+type GeneratedCard = Pick<GeneratedSetPayload["cards"][number], "fields" | "rationale"> & {
   selected: boolean;
 };
 

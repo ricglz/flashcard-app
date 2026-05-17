@@ -1,10 +1,9 @@
 "use client";
 
 import CardPreviewList, { type PreviewCard } from "@/components/CardPreviewList";
+import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 
-type GeneratedCard = PreviewCard & {
-  sourceCardIds?: string[];
-};
+type GeneratedCard = GeneratedSetPayload["cards"][number] & PreviewCard;
 
 type GeneratePreviewProps = {
   cards: GeneratedCard[];

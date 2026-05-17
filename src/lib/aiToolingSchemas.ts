@@ -67,7 +67,7 @@ export type SetsListRequest = Schema.Schema.Type<typeof SetsListRequestSchema>;
 export const SetsListResponseSchema = Schema.Struct({
   sets: Schema.Array(
     Schema.Struct({
-      setId: Schema.String,
+      setId: ConvexId("flashcardSets"),
       name: Schema.String,
       description: Schema.optional(Schema.String),
       srsEnabled: Schema.Boolean,
@@ -144,11 +144,11 @@ export const WeakCardsResponseSchema = Schema.Struct({
       fieldDefinitions: Schema.Array(FieldDefinitionSchema),
       sets: Schema.Array(
         Schema.Struct({
-          setId: Schema.String,
+          setId: ConvexId("flashcardSets"),
           name: Schema.String,
           weakCards: Schema.Array(
             Schema.Struct({
-              cardId: Schema.String,
+              cardId: ConvexId("flashcards"),
               fields: Schema.Record({ key: Schema.String, value: Schema.String }),
               weakScore: Schema.Number,
               weakReasons: Schema.Array(WeakReasonSchema),
@@ -198,7 +198,7 @@ export const GeneratedSetValidationResponseSchema = Schema.Struct({
 export type GeneratedSetValidationResponse = Schema.Schema.Type<typeof GeneratedSetValidationResponseSchema>;
 
 export const GeneratedSetCreateResponseSchema = Schema.Struct({
-  setId: Schema.String,
+  setId: ConvexId("flashcardSets"),
   cardCount: Schema.Number,
   srsEnabled: Schema.Boolean,
 });
