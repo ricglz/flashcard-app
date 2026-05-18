@@ -3,7 +3,8 @@ import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
-import { computeOverallScore, RATING_SCORES } from "../../convex/studySessions";
+import { computeOverallScore } from "../../convex/studySessions";
+import { CARD_RATING_SCORES } from "../../src/lib/types";
 import { unwrap, TEST_USER, fieldDefs, fieldDefsWithTts } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
@@ -55,12 +56,12 @@ describe("computeOverallScore", () => {
   });
 });
 
-describe("RATING_SCORES", () => {
+describe("CARD_RATING_SCORES", () => {
   it("has scores for all ratings", () => {
-    expect(RATING_SCORES.wrong).toBe(0);
-    expect(RATING_SCORES.hard).toBe(1);
-    expect(RATING_SCORES.good).toBe(2);
-    expect(RATING_SCORES.easy).toBe(3);
+    expect(CARD_RATING_SCORES.wrong).toBe(0);
+    expect(CARD_RATING_SCORES.hard).toBe(1);
+    expect(CARD_RATING_SCORES.good).toBe(2);
+    expect(CARD_RATING_SCORES.easy).toBe(3);
   });
 });
 

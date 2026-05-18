@@ -9,14 +9,8 @@ import { validateStudySessionSetupEffect, type StudySessionSetupFailure } from "
 import { type CommonFailure } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import type { CardRating, ActiveStudySession } from "../src/lib/types";
+import { CARD_RATING_SCORES } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
-
-export const RATING_SCORES: Record<CardRating, number> = {
-  wrong: 0,
-  hard: 1,
-  good: 2,
-  easy: 3,
-};
 
 /** Compute overall score from an array of card result ratings. */
 export function computeOverallScore(
@@ -24,7 +18,7 @@ export function computeOverallScore(
 ): number {
   if (ratings.length === 0) return 0;
   const totalScore = ratings.reduce(
-    (sum, r) => sum + RATING_SCORES[r.rating],
+    (sum, r) => sum + CARD_RATING_SCORES[r.rating],
     0
   );
   const maxScore = ratings.length * 3;
@@ -194,7 +188,7 @@ export const recordResult = mutation({
         }),
       );
 
-      const ratingScore = RATING_SCORES[args.rating];
+      const ratingScore = CARD_RATING_SCORES[args.rating];
       yield* Effect.promise(() =>
         incrementDailyStats(ctx, identity.tokenIdentifier, "session", ratingScore),
       );

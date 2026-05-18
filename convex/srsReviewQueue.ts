@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect";
 import { ratingValidator } from "./schema";
 import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from "./srs";
 import { populateQueue } from "./srsEngine";
-import { RATING_SCORES } from "./studySessions";
+import { CARD_RATING_SCORES } from "../src/lib/types";
 import { incrementDailyStats } from "./progress";
 import { notFound, conflict } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
@@ -184,7 +184,7 @@ export const recordReview = mutation({
 
       yield* Effect.promise(() => ctx.db.delete(queueItem._id));
       yield* Effect.promise(() =>
-        incrementDailyStats(ctx, identity.tokenIdentifier, "srs", RATING_SCORES[args.rating]),
+        incrementDailyStats(ctx, identity.tokenIdentifier, "srs", CARD_RATING_SCORES[args.rating]),
       );
 
       const remaining = yield* Effect.promise(() =>

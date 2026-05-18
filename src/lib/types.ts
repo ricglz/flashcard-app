@@ -146,12 +146,12 @@ export const SRS_RATING_LABELS: Record<CardRating, string> = {
 };
 
 /** Numeric score per rating for computing session averages. */
-export const CARD_RATING_SCORES: Record<CardRating, number> = {
+export const CARD_RATING_SCORES = {
   wrong: 0,
   hard: 1,
   good: 2,
   easy: 3,
-};
+} as const satisfies Record<CardRating, number>;
 
 // ---------------------------------------------------------------------------
 // Weak Context Methodology
@@ -164,6 +164,26 @@ export const METHODOLOGIES = [
   "learning_stuck",
 ] as const;
 export type Methodology = (typeof METHODOLOGIES)[number];
+
+export const METHODOLOGY_LABELS: Record<Methodology, string> = {
+  balanced: "Balanced",
+  recent_lapses: "Recent Lapses",
+  low_ease: "Low Ease",
+  learning_stuck: "Learning Stuck",
+};
+
+// ---------------------------------------------------------------------------
+// Visibility
+// ---------------------------------------------------------------------------
+
+export const VISIBILITIES = ["private", "unlisted", "public"] as const;
+export type Visibility = (typeof VISIBILITIES)[number];
+
+export const VISIBILITY_LABELS: Record<Visibility, string> = {
+  private: "Private",
+  unlisted: "Unlisted",
+  public: "Public",
+};
 
 // ---------------------------------------------------------------------------
 // Session Status
