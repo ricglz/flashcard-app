@@ -2,6 +2,7 @@ import Link from "next/link";
 import type {
   CardRating} from "@/lib/types";
 import {
+  CARD_RATINGS,
   SRS_RATING_LABELS,
   CARD_RATING_SCORES,
 } from "@/lib/types";
@@ -23,9 +24,9 @@ export default function SrsReviewComplete({
 }) {
   const totalScore =
     reviewedCount > 0
-      ? Object.entries(ratingCounts).reduce(
-          (sum, [rating, count]) =>
-            sum + CARD_RATING_SCORES[rating as CardRating] * count,
+      ? CARD_RATINGS.reduce(
+          (sum, rating) =>
+            sum + CARD_RATING_SCORES[rating] * ratingCounts[rating],
           0
         ) /
         (reviewedCount * 3)
