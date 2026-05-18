@@ -2,12 +2,12 @@ import { v } from "convex/values";
 import { query, mutation, internalQuery } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { SRS_DEFAULTS } from "./srs";
-import { fail, ok, unauthenticated, type CommonFailure } from "./domain/result";
+import { type CommonFailure } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import {
   validateMaxNewCardsPerDayEffect,
   validateDayResetUtcHourEffect,
-  validateTtsPlaybackSpeed,
+  validateTtsPlaybackSpeedEffect,
   validateDailyGoalEffect,
   type SrsSettingsFailure,
 } from "./domain/srsSettings";
@@ -112,68 +112,76 @@ export const updateAiConfig = mutation({
     apiKey: v.string(),
     customChatPrompt: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const userId = identity.tokenIdentifier;
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const userId = identity.tokenIdentifier;
 
-    const existing = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
+      const existing = yield* Effect.promise(() =>
+        ctx.db
+          .query("userSettings")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .first(),
+      );
 
-    const effectiveKey = args.apiKey || existing?.llmApiKey;
+      const effectiveKey = args.apiKey || existing?.llmApiKey;
 
-    const patch = {
-      llmProvider: args.provider || undefined,
-      llmApiKey: effectiveKey ?? undefined,
-      customChatPrompt: args.customChatPrompt,
-    };
+      const patch = {
+        llmProvider: args.provider || undefined,
+        llmApiKey: effectiveKey ?? undefined,
+        customChatPrompt: args.customChatPrompt,
+      };
 
-    if (existing) {
-      await ctx.db.patch(existing._id, patch);
-    } else {
-      await ctx.db.insert("userSettings", {
-        userId,
-        maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
-        dayResetUtcHour: DEFAULTS.dayResetUtcHour,
-        ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
-        ...patch,
-      });
-    }
-    return ok(null);
-  },
+      if (existing) {
+        yield* Effect.promise(() => ctx.db.patch(existing._id, patch));
+      } else {
+        yield* Effect.promise(() =>
+          ctx.db.insert("userSettings", {
+            userId,
+            maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
+            dayResetUtcHour: DEFAULTS.dayResetUtcHour,
+            ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
+            ...patch,
+          }),
+        );
+      }
+      return null;
+    }),
+  ),
 });
 
 export const updateTtsPlaybackSpeed = mutation({
   args: {
     ttsPlaybackSpeed: v.number(),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const userId = identity.tokenIdentifier;
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const userId = identity.tokenIdentifier;
+      const speed = yield* validateTtsPlaybackSpeedEffect(args.ttsPlaybackSpeed);
 
-    const speedResult = validateTtsPlaybackSpeed(args.ttsPlaybackSpeed);
-    if (!speedResult.ok) return speedResult;
+      const existing = yield* Effect.promise(() =>
+        ctx.db
+          .query("userSettings")
+          .withIndex("by_userId", (q) => q.eq("userId", userId))
+          .first(),
+      );
 
-    const existing = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .first();
-
-    if (existing) {
-      await ctx.db.patch(existing._id, { ttsPlaybackSpeed: speedResult.value });
-    } else {
-      await ctx.db.insert("userSettings", {
-        userId,
-        maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
-        dayResetUtcHour: DEFAULTS.dayResetUtcHour,
-        ttsPlaybackSpeed: speedResult.value,
-      });
-    }
-    return ok(null);
-  },
+      if (existing) {
+        yield* Effect.promise(() => ctx.db.patch(existing._id, { ttsPlaybackSpeed: speed }));
+      } else {
+        yield* Effect.promise(() =>
+          ctx.db.insert("userSettings", {
+            userId,
+            maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
+            dayResetUtcHour: DEFAULTS.dayResetUtcHour,
+            ttsPlaybackSpeed: speed,
+          }),
+        );
+      }
+      return null;
+    }),
+  ),
 });
 
 export const getAiConfig = internalQuery({
