@@ -7,8 +7,10 @@ import { weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message } from "multi-llm-ts";
+import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as ParseResult from "effect/ParseResult";
+import * as Either from "effect/Either";
 import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
 import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
 
@@ -47,25 +49,18 @@ async function generateAndValidateJson(
     console.warn("[ai] LLM returned empty response", { model: modelName });
     return { ok: false, error: "LLM returned empty response." };
   }
-  let parsed: unknown;
-  try {
-    const cleaned = response.content
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
-    parsed = JSON.parse(cleaned);
-  } catch {
-    console.warn("[ai] LLM response was not valid JSON", { model: modelName, raw: response.content });
-    return { ok: false, error: "LLM response was not valid JSON.", raw: response.content };
-  }
-  const decoded = Schema.decodeUnknownEither(GeneratedSetPayloadSchema)(parsed);
-  if (decoded._tag === "Left") {
-    const issues = ParseResult.ArrayFormatter.formatErrorSync(decoded.left);
+  const cleaned = response.content
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  const parseResult = Schema.decodeUnknownEither(Schema.parseJson(GeneratedSetPayloadSchema))(cleaned);
+  if (Either.isLeft(parseResult)) {
+    const issues = ParseResult.ArrayFormatter.formatErrorSync(parseResult.left);
     const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
-    console.warn("[ai] LLM returned invalid payload", { model: modelName, issues: message });
+    console.warn("[ai] LLM response was not valid JSON or had invalid payload", { model: modelName, issues: message });
     return { ok: false, error: `LLM returned invalid payload: ${message}`, raw: response.content };
   }
-  const payload = decoded.right;
+  const payload = parseResult.right;
   const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
     internal.tooling.validateGeneratedSetForTool,
     {
@@ -251,15 +246,17 @@ export const getAvailableModels = action({
   handler: async (ctx): Promise<AvailableModelsResult> => {
     const auth = await resolveAuthAndConfig(ctx);
     if (!auth.ok) return auth;
-    try {
-      const result = await loadModels(auth.keyInfo.provider, { apiKey: auth.keyInfo.apiKey });
-      if (!result) return { ok: true, models: [] };
-      return {
-        ok: true,
-        models: result.chat.map((m) => ({ id: m.id, name: m.name })),
-      };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "Failed to load models" };
-    }
+    return Effect.runPromise(
+      Effect.tryPromise({
+        try: () => loadModels(auth.keyInfo.provider, { apiKey: auth.keyInfo.apiKey }),
+        catch: (err): string => err instanceof Error ? err.message : "Failed to load models",
+      }).pipe(
+        Effect.map((result) => ({
+          ok: true as const,
+          models: result ? result.chat.map((m) => ({ id: m.id, name: m.name })) : [],
+        })),
+        Effect.catchAll((error) => Effect.succeed({ ok: false as const, error })),
+      ),
+    );
   },
 });
