@@ -3,11 +3,12 @@ import { mutation, query } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import * as Effect from "effect/Effect";
 import { fieldDefinitionValidator } from "./schema";
-import { assertOwner, assertOwnerEffect, enrollCardsForSetHelper } from "./userSets";
-import { fail, ok, unauthenticated, notFound, forbidden, conflict, type CommonFailure } from "./domain/result";
+import { assertOwnerEffect, enrollCardsForSetHelper } from "./userSets";
+import { type CommonFailure } from "./domain/result";
 import {
   fromDomainResult,
   requireAuth,
+  requireEntity,
   toDomainResultAsync,
 } from "./domain/effect";
 import {
@@ -67,44 +68,45 @@ export const create = mutation({
     description: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-
-    const validation = validateSetFieldsResult(
-      args.name,
-      args.fieldDefinitions as FieldDefinition[]
-    );
-    if (!validation.ok) return validation;
-
-    const fieldDefinitions = validation.value.fieldDefinitions ?? (args.fieldDefinitions as FieldDefinition[]);
-    const setId = await ctx.db.insert("flashcardSets", {
-      name: validation.value.name ?? args.name,
-      description: args.description?.trim() ?? undefined,
-      fieldDefinitions,
-      ownerId: identity.tokenIdentifier,
-      origin: { kind: "manual" as const },
-      visibility: "private",
-      cardCount: 0,
-      updatedAt: Date.now(),
-      createdAt: Date.now(),
-    });
-
-    const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefinitions);
-
-    await ctx.db.insert("userSets", {
-      userId: identity.tokenIdentifier,
-      setId,
-      role: "owner",
-      srsEnabled: true,
-      defaultFrontFields,
-      defaultBackFields,
-      defaultTtsOnlyFields: [],
-      createdAt: Date.now(),
-    });
-
-    return ok(setId);
-  },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const validation = yield* fromDomainResult(
+        validateSetFieldsResult(
+          args.name,
+          args.fieldDefinitions as FieldDefinition[]
+        ),
+      );
+      const fieldDefinitions = validation.fieldDefinitions ?? (args.fieldDefinitions as FieldDefinition[]);
+      const setId = yield* Effect.promise(() =>
+        ctx.db.insert("flashcardSets", {
+          name: validation.name ?? args.name,
+          description: args.description?.trim() ?? undefined,
+          fieldDefinitions,
+          ownerId: identity.tokenIdentifier,
+          origin: { kind: "manual" as const },
+          visibility: "private",
+          cardCount: 0,
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        }),
+      );
+      const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefinitions);
+      yield* Effect.promise(() =>
+        ctx.db.insert("userSets", {
+          userId: identity.tokenIdentifier,
+          setId,
+          role: "owner",
+          srsEnabled: true,
+          defaultFrontFields,
+          defaultBackFields,
+          defaultTtsOnlyFields: [],
+          createdAt: Date.now(),
+        }),
+      );
+      return setId;
+    }),
+  ),
 });
 
 export const update = mutation({
@@ -142,43 +144,50 @@ export const update = mutation({
 
 export const remove = mutation({
   args: { id: v.id("flashcardSets") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
-    if (!owner.ok) return owner;
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
 
-    await deleteAllMatching(ctx,
-      () => ctx.db.query("flashcards").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
-    );
+      yield* Effect.promise(() =>
+        deleteAllMatching(ctx,
+          () => ctx.db.query("flashcards").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+        ),
+      );
 
-    await deleteAllMatching(ctx,
-      () => ctx.db.query("studySessions").withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
-      async (ctx, session) => {
-        await deleteAllMatching(ctx,
-          () => ctx.db.query("cardResults").withIndex("by_sessionId", (q) => q.eq("sessionId", session._id)).take(DELETION_BATCH_SIZE),
-        );
-      },
-    );
+      yield* Effect.promise(() =>
+        deleteAllMatching(ctx,
+          () => ctx.db.query("studySessions").withIndex("by_setId_and_userId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+          async (ctx, session) => {
+            await deleteAllMatching(ctx,
+              () => ctx.db.query("cardResults").withIndex("by_sessionId", (q) => q.eq("sessionId", session._id)).take(DELETION_BATCH_SIZE),
+            );
+          },
+        ),
+      );
 
-    await deleteAllMatching(ctx,
-      () => ctx.db.query("srsCards").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
-      async (ctx, srsCard) => {
-        await deleteAllMatching(ctx,
-          () => ctx.db.query("reviewQueue").withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id)).take(DELETION_BATCH_SIZE),
-        );
-      },
-    );
+      yield* Effect.promise(() =>
+        deleteAllMatching(ctx,
+          () => ctx.db.query("srsCards").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+          async (ctx, srsCard) => {
+            await deleteAllMatching(ctx,
+              () => ctx.db.query("reviewQueue").withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id)).take(DELETION_BATCH_SIZE),
+            );
+          },
+        ),
+      );
 
-    await deleteAllMatching(ctx,
-      () => ctx.db.query("userSets").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
-    );
+      yield* Effect.promise(() =>
+        deleteAllMatching(ctx,
+          () => ctx.db.query("userSets").withIndex("by_setId", (q) => q.eq("setId", args.id)).take(DELETION_BATCH_SIZE),
+        ),
+      );
 
-    const set = await ctx.db.get(args.id);
-    if (!set) return fail(notFound("Set not found"));
-    await ctx.db.delete(args.id);
-    return ok(null);
-  },
+      yield* requireEntity(ctx.db.get(args.id), "Set not found");
+      yield* Effect.promise(() => ctx.db.delete(args.id));
+      return null;
+    }),
+  ),
 });
 
 export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;
@@ -283,86 +292,102 @@ export const updateVisibility = mutation({
       v.literal("public")
     ),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const owner = await assertOwner(ctx, identity.tokenIdentifier, args.id);
-    if (!owner.ok) return owner;
-
-    await ctx.db.patch(args.id, { visibility: args.visibility });
-    return ok(null);
-  },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
+      yield* Effect.promise(() => ctx.db.patch(args.id, { visibility: args.visibility }));
+      return null;
+    }),
+  ),
 });
 
 export const fork = mutation({
   args: { sourceSetId: v.id("flashcardSets") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const sourceSet = yield* requireEntity(ctx.db.get(args.sourceSetId), "Source set not found.");
 
-    const sourceSet = await ctx.db.get(args.sourceSetId);
-    if (!sourceSet) return fail(notFound("Source set not found."));
+      if (sourceSet.ownerId === identity.tokenIdentifier) {
+        return yield* Effect.fail({
+          _tag: "Conflict" as const,
+          message: "You cannot fork your own set.",
+        });
+      }
 
-    if (sourceSet.ownerId === identity.tokenIdentifier) {
-      return fail(conflict("You cannot fork your own set."));
-    }
+      const link = yield* Effect.promise(() =>
+        ctx.db
+          .query("userSets")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", identity.tokenIdentifier).eq("setId", args.sourceSetId)
+          )
+          .first(),
+      );
+      const visibility = sourceSet.visibility;
+      if (!link && visibility === "private") {
+        return yield* Effect.fail({
+          _tag: "Forbidden" as const,
+          message: "Cannot fork a private set.",
+        });
+      }
 
-    const link = await ctx.db
-      .query("userSets")
-      .withIndex("by_userId_and_setId", (q) =>
-        q.eq("userId", identity.tokenIdentifier).eq("setId", args.sourceSetId)
-      )
-      .first();
-    const visibility = sourceSet.visibility;
-    if (!link && visibility === "private") {
-      return fail(forbidden("Cannot fork a private set."));
-    }
+      const now = Date.now();
+      const sourceCards = yield* Effect.promise(() =>
+        ctx.db
+          .query("flashcards")
+          .withIndex("by_setId", (q) => q.eq("setId", args.sourceSetId))
+          .take(1000),
+      );
 
-    const now = Date.now();
-    const sourceCards = await ctx.db
-      .query("flashcards")
-      .withIndex("by_setId", (q) => q.eq("setId", args.sourceSetId))
-      .take(1000);
+      const newSetId = yield* Effect.promise(() =>
+        ctx.db.insert("flashcardSets", {
+          name: `Copy of ${sourceSet.name}`,
+          description: sourceSet.description,
+          ownerId: identity.tokenIdentifier,
+          fieldDefinitions: sourceSet.fieldDefinitions,
+          origin: {
+            kind: "forked" as const,
+            sourceSetId: args.sourceSetId,
+            forkedAt: now,
+          },
+          visibility: "private",
+          cardCount: sourceCards.length,
+          updatedAt: now,
+          createdAt: now,
+        }),
+      );
 
-    const newSetId = await ctx.db.insert("flashcardSets", {
-      name: `Copy of ${sourceSet.name}`,
-      description: sourceSet.description,
-      ownerId: identity.tokenIdentifier,
-      fieldDefinitions: sourceSet.fieldDefinitions,
-      origin: {
-        kind: "forked" as const,
-        sourceSetId: args.sourceSetId,
-        forkedAt: now,
-      },
-      visibility: "private",
-      cardCount: sourceCards.length,
-      updatedAt: now,
-      createdAt: now,
-    });
+      for (const card of sourceCards) {
+        yield* Effect.promise(() =>
+          ctx.db.insert("flashcards", {
+            setId: newSetId,
+            fields: card.fields,
+            order: card.order,
+          }),
+        );
+      }
 
-    for (const card of sourceCards) {
-      await ctx.db.insert("flashcards", {
-        setId: newSetId,
-        fields: card.fields,
-        order: card.order,
-      });
-    }
+      const fieldDefs = getFieldDefinitions(sourceSet);
+      const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
+      yield* Effect.promise(() =>
+        ctx.db.insert("userSets", {
+          userId: identity.tokenIdentifier,
+          setId: newSetId,
+          role: "owner",
+          srsEnabled: true,
+          defaultFrontFields,
+          defaultBackFields,
+          defaultTtsOnlyFields: [],
+          createdAt: now,
+        }),
+      );
 
-    const fieldDefs = getFieldDefinitions(sourceSet);
-    const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
-    await ctx.db.insert("userSets", {
-      userId: identity.tokenIdentifier,
-      setId: newSetId,
-      role: "owner",
-      srsEnabled: true,
-      defaultFrontFields,
-      defaultBackFields,
-      defaultTtsOnlyFields: [],
-      createdAt: now,
-    });
+      yield* Effect.promise(() =>
+        enrollCardsForSetHelper(ctx, identity.tokenIdentifier, newSetId),
+      );
 
-    await enrollCardsForSetHelper(ctx, identity.tokenIdentifier, newSetId);
-
-    return ok(newSetId);
-  },
+      return newSetId;
+    }),
+  ),
 });

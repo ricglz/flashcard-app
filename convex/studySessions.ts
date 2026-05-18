@@ -6,7 +6,7 @@ import { assertMemberEffect } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
-import { fail, ok, unauthenticated, notFound, conflict, type CommonFailure } from "./domain/result";
+import { type CommonFailure } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import type { CardRating, ActiveStudySession } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
@@ -154,81 +154,105 @@ export const recordResult = mutation({
     cardId: v.id("flashcards"),
     rating: ratingValidator,
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const session = await ctx.db.get(args.sessionId);
-    if (!session || session.userId !== identity.tokenIdentifier) {
-      return fail(notFound("Session not found"));
-    }
-    if (session.status !== "in_progress") {
-      return ok({ isComplete: true, outcome: "alreadyComplete" as const });
-    }
-
-    const expectedCardId = session.cardOrder[session.currentIndex];
-    if (args.cardId !== expectedCardId) {
-      const alreadyRecorded = await ctx.db
-        .query("cardResults")
-        .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-        .take(1000);
-      if (alreadyRecorded.some((result) => result.cardId === args.cardId)) {
-        return ok({ isComplete: false, outcome: "duplicate" as const });
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const session = yield* requireEntity(ctx.db.get(args.sessionId));
+      if (session.userId !== identity.tokenIdentifier) {
+        return yield* Effect.fail({
+          _tag: "NotFound" as const,
+          message: "Session not found",
+        });
       }
-      return fail(conflict("cardId does not match the current card in the session"));
-    }
+      if (session.status !== "in_progress") {
+        return { isComplete: true, outcome: "alreadyComplete" as const };
+      }
 
-    await ctx.db.insert("cardResults", {
-      sessionId: args.sessionId,
-      cardId: args.cardId,
-      rating: args.rating,
-      timestamp: Date.now(),
-    });
+      const expectedCardId = session.cardOrder[session.currentIndex];
+      if (args.cardId !== expectedCardId) {
+        const alreadyRecorded = yield* Effect.promise(() =>
+          ctx.db
+            .query("cardResults")
+            .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+            .take(1000),
+        );
+        if (alreadyRecorded.some((result) => result.cardId === args.cardId)) {
+          return { isComplete: false, outcome: "duplicate" as const };
+        }
+        return yield* Effect.fail({
+          _tag: "Conflict" as const,
+          message: "cardId does not match the current card in the session",
+        });
+      }
 
-    const ratingScore = RATING_SCORES[args.rating];
-    await incrementDailyStats(ctx, identity.tokenIdentifier, "session", ratingScore);
+      yield* Effect.promise(() =>
+        ctx.db.insert("cardResults", {
+          sessionId: args.sessionId,
+          cardId: args.cardId,
+          rating: args.rating,
+          timestamp: Date.now(),
+        }),
+      );
 
-    const nextIndex = session.currentIndex + 1;
-    const isComplete = nextIndex >= session.cardOrder.length;
+      const ratingScore = RATING_SCORES[args.rating];
+      yield* Effect.promise(() =>
+        incrementDailyStats(ctx, identity.tokenIdentifier, "session", ratingScore),
+      );
 
-    if (isComplete) {
-      const allResults = await ctx.db
-        .query("cardResults")
-        .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-        .take(1000);
-      const overallScore = computeOverallScore(allResults);
+      const nextIndex = session.currentIndex + 1;
+      const isComplete = nextIndex >= session.cardOrder.length;
 
-      await ctx.db.patch(args.sessionId, {
-        currentIndex: nextIndex,
-        status: "completed" as const,
-        completedAt: Date.now(),
-        overallScore,
-      });
-    } else {
-      await ctx.db.patch(args.sessionId, { currentIndex: nextIndex });
-    }
+      if (isComplete) {
+        const allResults = yield* Effect.promise(() =>
+          ctx.db
+            .query("cardResults")
+            .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+            .take(1000),
+        );
+        const overallScore = computeOverallScore(allResults);
+        yield* Effect.promise(() =>
+          ctx.db.patch(args.sessionId, {
+            currentIndex: nextIndex,
+            status: "completed" as const,
+            completedAt: Date.now(),
+            overallScore,
+          }),
+        );
+      } else {
+        yield* Effect.promise(() =>
+          ctx.db.patch(args.sessionId, { currentIndex: nextIndex }),
+        );
+      }
 
-    return ok({ isComplete, outcome: "recorded" as const });
-  },
+      return { isComplete, outcome: "recorded" as const };
+    }),
+  ),
 });
 
 export const abandon = mutation({
   args: { sessionId: v.id("studySessions") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return fail(unauthenticated());
-    const session = await ctx.db.get(args.sessionId);
-    if (!session || session.userId !== identity.tokenIdentifier) {
-      return fail(notFound("Session not found"));
-    }
-    if (session.status !== "in_progress") {
-      return ok({ outcome: "alreadyClosed" as const });
-    }
-    await ctx.db.patch(args.sessionId, {
-      status: "abandoned" as const,
-      completedAt: Date.now(),
-    });
-    return ok({ outcome: "abandoned" as const });
-  },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const session = yield* requireEntity(ctx.db.get(args.sessionId));
+      if (session.userId !== identity.tokenIdentifier) {
+        return yield* Effect.fail({
+          _tag: "NotFound" as const,
+          message: "Session not found",
+        });
+      }
+      if (session.status !== "in_progress") {
+        return { outcome: "alreadyClosed" as const };
+      }
+      yield* Effect.promise(() =>
+        ctx.db.patch(args.sessionId, {
+          status: "abandoned" as const,
+          completedAt: Date.now(),
+        }),
+      );
+      return { outcome: "abandoned" as const };
+    }),
+  ),
 });
 
 export type StudySessionFailure = CommonFailure | StudySessionSetupFailure;
