@@ -20,7 +20,8 @@ export default function CsvImporter({
     setError(null);
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = ev.target?.result as string;
+      const text = ev.target?.result;
+      if (typeof text !== "string") return;
       const result = parseCsv(text);
       if (!result.ok) {
         setError(result.errors.map((err) => err.message).join("\n"));
