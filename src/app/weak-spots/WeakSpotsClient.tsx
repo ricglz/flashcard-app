@@ -9,15 +9,9 @@ import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
-import type { Methodology } from "@/lib/types";
+import { METHODOLOGIES, METHODOLOGY_LABELS, type Methodology } from "@/lib/types";
 import type { WeakReason } from "@/lib/aiToolingSchemas";
-
-const METHODOLOGY_LABELS: Record<Methodology, string> = {
-  balanced: "Balanced",
-  recent_lapses: "Recent Lapses",
-  low_ease: "Low Ease",
-  learning_stuck: "Learning Stuck",
-};
+import TypedSelect from "@/components/TypedSelect";
 
 const REASON_LABELS: Record<WeakReason, string> = {
   recent_wrong_rating: "Wrong",
@@ -86,15 +80,13 @@ export default function WeakSpotsClient({
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <div className="flex gap-3 mb-6">
-          <select
+          <TypedSelect
             value={methodology}
-            onChange={(e) => setMethodology(e.target.value as Methodology)}
+            options={METHODOLOGIES}
+            labels={METHODOLOGY_LABELS}
+            onChange={setMethodology}
             className="px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          >
-            {Object.entries(METHODOLOGY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+          />
           <select
             value={selectedSetId ?? ""}
             onChange={(e) => setSelectedSetId(e.target.value || undefined)}

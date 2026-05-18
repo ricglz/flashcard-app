@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { FieldDefinition} from "@/lib/types";
+import type { FieldDefinition, FieldRole } from "@/lib/types";
 import { FIELD_ROLES, FIELD_ROLE_LABELS } from "@/lib/types";
+import TypedSelect from "@/components/TypedSelect";
 
 type Props = {
   value: FieldDefinition[];
@@ -80,21 +81,13 @@ export default function FieldDefinitionEditor({
               placeholder="Field name"
             />
           )}
-          <select
+          <TypedSelect
             value={field.role}
-            onChange={(e) =>
-              updateField(index, {
-                role: e.target.value as FieldDefinition["role"],
-              })
-            }
+            options={FIELD_ROLES}
+            labels={FIELD_ROLE_LABELS}
+            onChange={(role: FieldRole) => updateField(index, { role })}
             className="px-2 py-1 border rounded text-sm"
-          >
-            {FIELD_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {FIELD_ROLE_LABELS[role]}
-              </option>
-            ))}
-          </select>
+          />
           <label className="flex items-center gap-1 text-xs">
             <input
               type="checkbox"

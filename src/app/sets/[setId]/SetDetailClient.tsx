@@ -9,6 +9,8 @@ import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { VISIBILITIES, VISIBILITY_LABELS, type Visibility } from "@/lib/types";
+import TypedSelect from "@/components/TypedSelect";
 import SrsSetConfig from "@/components/SrsSetConfig";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import CardsTable from "./CardsTable";
@@ -102,20 +104,15 @@ export default function SetDetailClient({
             {set.visibility.charAt(0).toUpperCase() + set.visibility.slice(1)}
           </span>
           {isOwner && (
-            <select
-              value={set.visibility}
-              onChange={(e) => {
-                void updateVisibility({
-                  id: set._id,
-                  visibility: e.target.value as "private" | "unlisted" | "public",
-                });
+            <TypedSelect
+              value={set.visibility as Visibility}
+              options={VISIBILITIES}
+              labels={VISIBILITY_LABELS}
+              onChange={(visibility) => {
+                void updateVisibility({ id: set._id, visibility });
               }}
               className="text-xs border border-edge rounded px-2 py-0.5 bg-transparent"
-            >
-              <option value="private">Private</option>
-              <option value="unlisted">Unlisted</option>
-              <option value="public">Public</option>
-            </select>
+            />
           )}
         </div>
 

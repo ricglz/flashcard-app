@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import type { Methodology } from "@/lib/types";
+import { METHODOLOGIES, METHODOLOGY_LABELS } from "@/lib/types";
 import { useAvailableModels } from "@/lib/useAvailableModels";
+import TypedSelect from "@/components/TypedSelect";
 
 type SrsSet = {
   _id: string;
@@ -51,16 +53,13 @@ export default function GenerateConfigForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Methodology</label>
-          <select
+          <TypedSelect
             value={methodology}
-            onChange={(e) => setMethodology(e.target.value as Methodology)}
+            options={METHODOLOGIES}
+            labels={METHODOLOGY_LABELS}
+            onChange={setMethodology}
             className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          >
-            <option value="balanced">Balanced</option>
-            <option value="recent_lapses">Recent Lapses</option>
-            <option value="low_ease">Low Ease</option>
-            <option value="learning_stuck">Learning Stuck</option>
-          </select>
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Source Set</label>

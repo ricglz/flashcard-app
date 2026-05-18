@@ -14,7 +14,15 @@ import FilterBar, {
   type CardCountRange,
 } from "./FilterBar";
 
-type SortOption = "newest" | "name" | "cards";
+import TypedSelect from "@/components/TypedSelect";
+
+const SORT_OPTIONS = ["newest", "name", "cards"] as const;
+type SortOption = (typeof SORT_OPTIONS)[number];
+const SORT_LABELS: Record<SortOption, string> = {
+  newest: "Newest",
+  name: "Name A-Z",
+  cards: "Most Cards",
+};
 
 export default function ExploreClient() {
   const [searchInput, setSearchInput] = useState("");
@@ -96,15 +104,13 @@ export default function ExploreClient() {
             className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
           {!isSearching && (
-            <select
+            <TypedSelect
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              options={SORT_OPTIONS}
+              labels={SORT_LABELS}
+              onChange={setSortBy}
               className="px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-            >
-              <option value="newest">Newest</option>
-              <option value="name">Name A-Z</option>
-              <option value="cards">Most Cards</option>
-            </select>
+            />
           )}
         </div>
 
