@@ -49,14 +49,14 @@ export default function AiPath({
         addToSrs: true,
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(result.error.message);
         return;
       }
-      if (!result.validation.ok) {
-        setError(`Validation issues: ${result.validation.issues.join(", ")}`);
+      if (!result.value.validation.ok) {
+        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
         return;
       }
-      const payload = result.payload;
+      const payload = result.value.payload;
       const cards = payload.cards.map((c) => ({
         fields: { ...c.fields },
         rationale: c.rationale,

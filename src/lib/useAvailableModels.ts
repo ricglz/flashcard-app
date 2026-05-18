@@ -16,7 +16,7 @@ export function useAvailableModels(enabled = true) {
     setLoading(true);
     try {
       const result = await getModels({});
-      if (result.ok) setModels(result.models);
+      if (result.ok) setModels(result.value.models);
     } finally {
       setLoading(false);
     }

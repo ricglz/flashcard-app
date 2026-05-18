@@ -11,71 +11,110 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as ParseResult from "effect/ParseResult";
 import * as Either from "effect/Either";
-import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
+import { GeneratedSetPayloadSchema, type GeneratedSetPayload, type WeakCardsResponse } from "../src/lib/aiToolingSchemas";
 import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
+import type { CommonFailure, DomainResult } from "./domain/result";
+import { requireAuth, toDomainResultAsync } from "./domain/effect";
+import type { Id } from "./_generated/dataModel";
 
-type GenerateResult =
-  | { ok: false; error: string; raw?: string }
-  | { ok: true; validation: { ok: boolean; issues: string[] }; payload: GeneratedSetPayload };
+type AiFailure =
+  | CommonFailure
+  | { readonly _tag: "LlmError"; readonly message: string; readonly raw?: string };
 
 type AuthAndConfig = {
   userId: string;
   keyInfo: { provider: string; apiKey: string; customChatPrompt?: string };
 };
 
-async function resolveAuthAndConfig(
+type GenerateValue = {
+  validation: { ok: boolean; issues: string[] };
+  payload: GeneratedSetPayload;
+};
+
+type ToolingMutationResult = DomainResult<
+  { setId: Id<"flashcardSets">; cardCount: number; srsEnabled: boolean },
+  CommonFailure
+>;
+
+type ConfirmValue = {
+  setId: string;
+  cardCount: number;
+  srsEnabled: boolean;
+};
+
+function resolveAuthAndConfig(
   ctx: ActionCtx,
-): Promise<{ ok: true } & AuthAndConfig | { ok: false; error: string }> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return { ok: false, error: "Please sign in to continue." };
-  const userId = identity.tokenIdentifier;
-  const keyInfo = await ctx.runQuery(internal.userSettings.getAiConfig, { userId });
-  if (!keyInfo) return { ok: false, error: "No API key configured. Add one in Settings." };
-  return { ok: true, userId, keyInfo };
+): Effect.Effect<AuthAndConfig, AiFailure> {
+  return Effect.gen(function* () {
+    const identity = yield* requireAuth(ctx);
+    const keyInfo: AuthAndConfig["keyInfo"] | null =
+      yield* Effect.promise(() =>
+        ctx.runQuery(internal.userSettings.getAiConfig, { userId: identity.tokenIdentifier }),
+      );
+    if (!keyInfo) {
+      return yield* Effect.fail({
+        _tag: "NotFound" as const,
+        message: "No API key configured. Add one in Settings.",
+      });
+    }
+    return { userId: identity.tokenIdentifier, keyInfo };
+  });
 }
 
-async function generateAndValidateJson(
+function generateAndValidateJson(
   ctx: ActionCtx,
   opts: { prompt: string; model: string | undefined; keyInfo: AuthAndConfig["keyInfo"]; userId: string },
-): Promise<GenerateResult> {
-  const modelName = opts.model ?? DEFAULT_MODELS[opts.keyInfo.provider] ?? "gpt-4o";
-  const llm = igniteModel(opts.keyInfo.provider, modelName, { apiKey: opts.keyInfo.apiKey });
-  const thread = [
-    new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
-    new Message("user", opts.prompt),
-  ];
-  const response = await llm.complete(thread);
-  if (!response.content) {
-    console.warn("[ai] LLM returned empty response", { model: modelName });
-    return { ok: false, error: "LLM returned empty response." };
-  }
-  const cleaned = response.content
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-  const parseResult = Schema.decodeUnknownEither(Schema.parseJson(GeneratedSetPayloadSchema))(cleaned);
-  if (Either.isLeft(parseResult)) {
-    const issues = ParseResult.ArrayFormatter.formatErrorSync(parseResult.left);
-    const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
-    console.warn("[ai] LLM response was not valid JSON or had invalid payload", { model: modelName, issues: message });
-    return { ok: false, error: `LLM returned invalid payload: ${message}`, raw: response.content };
-  }
-  const payload = parseResult.right;
-  const validation: { ok: boolean; issues: string[] } = await ctx.runQuery(
-    internal.tooling.validateGeneratedSetForTool,
-    {
-      ...payload,
-      sourceSetIds: [...payload.sourceSetIds],
-      fieldDefinitions: [...payload.fieldDefinitions],
-      cards: payload.cards.map(c => ({
-        ...c,
-        fields: { ...c.fields },
-        sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
-      })),
-      userId: opts.userId,
-    },
-  );
-  return { ok: true, validation, payload };
+): Effect.Effect<GenerateValue, AiFailure> {
+  return Effect.gen(function* () {
+    const modelName = opts.model ?? DEFAULT_MODELS[opts.keyInfo.provider] ?? "gpt-4o";
+    const llm = igniteModel(opts.keyInfo.provider, modelName, { apiKey: opts.keyInfo.apiKey });
+    const thread = [
+      new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
+      new Message("user", opts.prompt),
+    ];
+    const response = yield* Effect.promise(() => llm.complete(thread));
+    if (!response.content) {
+      console.warn("[ai] LLM returned empty response", { model: modelName });
+      return yield* Effect.fail({
+        _tag: "LlmError" as const,
+        message: "LLM returned empty response.",
+      });
+    }
+    const cleaned = response.content
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    const parseResult = Schema.decodeUnknownEither(Schema.parseJson(GeneratedSetPayloadSchema))(cleaned);
+    if (Either.isLeft(parseResult)) {
+      const issues = ParseResult.ArrayFormatter.formatErrorSync(parseResult.left);
+      const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
+      console.warn("[ai] LLM response was not valid JSON or had invalid payload", { model: modelName, issues: message });
+      return yield* Effect.fail({
+        _tag: "LlmError" as const,
+        message: `LLM returned invalid payload: ${message}`,
+        raw: response.content,
+      });
+    }
+    const payload = parseResult.right;
+    const validation: { ok: boolean; issues: string[] } =
+      yield* Effect.promise(() =>
+        ctx.runQuery(
+          internal.tooling.validateGeneratedSetForTool,
+          {
+            ...payload,
+            sourceSetIds: [...payload.sourceSetIds],
+            fieldDefinitions: [...payload.fieldDefinitions],
+            cards: payload.cards.map(c => ({
+              ...c,
+              fields: { ...c.fields },
+              sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
+            })),
+            userId: opts.userId,
+          },
+        ),
+      );
+    return { validation, payload };
+  });
 }
 
 export const generateRemedialCards = action({
@@ -88,36 +127,41 @@ export const generateRemedialCards = action({
     addToSrs: v.boolean(),
     instructions: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<GenerateResult> => {
-    const auth = await resolveAuthAndConfig(ctx);
-    if (!auth.ok) return auth;
-    const { userId, keyInfo } = auth;
+  handler: (ctx, args): Promise<DomainResult<GenerateValue, AiFailure>> => toDomainResultAsync<GenerateValue, AiFailure>(
+    Effect.gen(function* () {
+      const { userId, keyInfo } = yield* resolveAuthAndConfig(ctx);
 
-    const scope = args.setId
-      ? { kind: "set" as const, setId: args.setId }
-      : { kind: "srs_enabled_sets" as const };
+      const scope = args.setId
+        ? { kind: "set" as const, setId: args.setId }
+        : { kind: "srs_enabled_sets" as const };
 
-    const weakCards = await ctx.runQuery(internal.tooling.getWeakCardsForTool, {
-      userId,
-      scope,
-      methodology: args.methodology,
-      include: { recentRatings: true },
-    });
+      const weakCards = (yield* Effect.promise(() =>
+          ctx.runQuery(internal.tooling.getWeakCardsForTool, {
+            userId,
+            scope,
+            methodology: args.methodology,
+            include: { recentRatings: true },
+          }),
+        )) as WeakCardsResponse;
 
-    if (weakCards.schemaGroups.length === 0) {
-      return { ok: false, error: "No weak cards found. Study more cards first." };
-    }
+      if (weakCards.schemaGroups.length === 0) {
+        return yield* Effect.fail({
+          _tag: "NotFound" as const,
+          message: "No weak cards found. Study more cards first.",
+        });
+      }
 
-    const prompt = renderRemedialPrompt({
-      context: weakCards,
-      targetCardCount: args.targetCardCount ?? 20,
-      name: args.name,
-      addToSrs: args.addToSrs,
-      instructions: args.instructions,
-    });
+      const prompt = renderRemedialPrompt({
+        context: weakCards,
+        targetCardCount: args.targetCardCount ?? 20,
+        name: args.name,
+        addToSrs: args.addToSrs,
+        instructions: args.instructions,
+      });
 
-    return generateAndValidateJson(ctx, { prompt, model: args.model, keyInfo, userId });
-  },
+      return yield* generateAndValidateJson(ctx, { prompt, model: args.model, keyInfo, userId });
+    }),
+  ),
 });
 
 export const generateFromPrompt = action({
@@ -135,27 +179,23 @@ export const generateFromPrompt = action({
     addToSrs: v.boolean(),
     instructions: v.optional(v.string()),
   },
-  handler: async (ctx, args): Promise<GenerateResult> => {
-    const auth = await resolveAuthAndConfig(ctx);
-    if (!auth.ok) return auth;
-    const { userId, keyInfo } = auth;
+  handler: (ctx, args): Promise<DomainResult<GenerateValue, AiFailure>> => toDomainResultAsync<GenerateValue, AiFailure>(
+    Effect.gen(function* () {
+      const { userId, keyInfo } = yield* resolveAuthAndConfig(ctx);
 
-    const prompt = renderFreeformPrompt({
-      prompt: args.prompt,
-      fieldDefinitions: args.fieldDefinitions as Parameters<typeof renderFreeformPrompt>[0]["fieldDefinitions"],
-      targetCardCount: args.targetCardCount,
-      name: args.name,
-      addToSrs: args.addToSrs,
-      instructions: args.instructions,
-    });
+      const prompt = renderFreeformPrompt({
+        prompt: args.prompt,
+        fieldDefinitions: args.fieldDefinitions as Parameters<typeof renderFreeformPrompt>[0]["fieldDefinitions"],
+        targetCardCount: args.targetCardCount,
+        name: args.name,
+        addToSrs: args.addToSrs,
+        instructions: args.instructions,
+      });
 
-    return generateAndValidateJson(ctx, { prompt, model: args.model, keyInfo, userId });
-  },
+      return yield* generateAndValidateJson(ctx, { prompt, model: args.model, keyInfo, userId });
+    }),
+  ),
 });
-
-type ConfirmResult =
-  | { ok: false; error: string }
-  | { ok: true; setId: string; cardCount: number; srsEnabled: boolean };
 
 export const confirmGeneratedSet = action({
   args: {
@@ -181,27 +221,30 @@ export const confirmGeneratedSet = action({
     })),
     addToSrs: v.boolean(),
   },
-  handler: async (ctx, args): Promise<ConfirmResult> => {
-    const auth = await resolveAuthAndConfig(ctx);
-    if (!auth.ok) return auth;
+  handler: (ctx, args): Promise<DomainResult<ConfirmValue, AiFailure>> => toDomainResultAsync<ConfirmValue, AiFailure>(
+    Effect.gen(function* () {
+      const { userId } = yield* resolveAuthAndConfig(ctx);
 
-    const result = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
-      name: args.name,
-      description: args.description,
-      sourceSetIds: args.sourceSetIds,
-      sourceScope: args.sourceScope,
-      weakContextMethodology: args.weakContextMethodology,
-      fieldDefinitions: args.fieldDefinitions,
-      cards: args.cards,
-      addToSrs: args.addToSrs,
-      userId: auth.userId,
-    });
+      const result = (yield* Effect.promise(() =>
+          ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
+            name: args.name,
+            description: args.description,
+            sourceSetIds: args.sourceSetIds,
+            sourceScope: args.sourceScope,
+            weakContextMethodology: args.weakContextMethodology,
+            fieldDefinitions: args.fieldDefinitions,
+            cards: args.cards,
+            addToSrs: args.addToSrs,
+            userId,
+          }),
+        )) as ToolingMutationResult;
 
-    if (!result.ok) {
-      return { ok: false, error: result.error.message };
-    }
-    return { ok: true, setId: result.value.setId as string, cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
-  },
+      if (!result.ok) {
+        return yield* Effect.fail(result.error);
+      }
+      return { setId: String(result.value.setId), cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
+    }),
+  ),
 });
 
 export const confirmAppendCards = action({
@@ -219,44 +262,42 @@ export const confirmAppendCards = action({
       rationale: v.optional(v.string()),
     })),
   },
-  handler: async (ctx, args): Promise<ConfirmResult> => {
-    const auth = await resolveAuthAndConfig(ctx);
-    if (!auth.ok) return auth;
+  handler: (ctx, args): Promise<DomainResult<ConfirmValue, AiFailure>> => toDomainResultAsync<ConfirmValue, AiFailure>(
+    Effect.gen(function* () {
+      const { userId } = yield* resolveAuthAndConfig(ctx);
 
-    const result = await ctx.runMutation(internal.tooling.appendGeneratedCardsForTool, {
-      userId: auth.userId,
-      targetSetId: args.targetSetId,
-      fieldDefinitions: args.fieldDefinitions,
-      cards: args.cards,
-    });
+      const result = (yield* Effect.promise(() =>
+          ctx.runMutation(internal.tooling.appendGeneratedCardsForTool, {
+            userId,
+            targetSetId: args.targetSetId,
+            fieldDefinitions: args.fieldDefinitions,
+            cards: args.cards,
+          }),
+        )) as ToolingMutationResult;
 
-    if (!result.ok) {
-      return { ok: false, error: result.error.message };
-    }
-    return { ok: true, setId: result.value.setId as string, cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
-  },
+      if (!result.ok) {
+        return yield* Effect.fail(result.error);
+      }
+      return { setId: String(result.value.setId), cardCount: result.value.cardCount, srsEnabled: result.value.srsEnabled };
+    }),
+  ),
 });
-
-type AvailableModelsResult =
-  | { ok: false; error: string }
-  | { ok: true; models: { id: string; name: string }[] };
 
 export const getAvailableModels = action({
   args: {},
-  handler: async (ctx): Promise<AvailableModelsResult> => {
-    const auth = await resolveAuthAndConfig(ctx);
-    if (!auth.ok) return auth;
-    return Effect.runPromise(
-      Effect.tryPromise({
-        try: () => loadModels(auth.keyInfo.provider, { apiKey: auth.keyInfo.apiKey }),
-        catch: (err): string => err instanceof Error ? err.message : "Failed to load models",
-      }).pipe(
-        Effect.map((result) => ({
-          ok: true as const,
-          models: result ? result.chat.map((m) => ({ id: m.id, name: m.name })) : [],
-        })),
-        Effect.catchAll((error) => Effect.succeed({ ok: false as const, error })),
-      ),
-    );
-  },
+  handler: (ctx): Promise<DomainResult<{ models: { id: string; name: string }[] }, AiFailure>> => toDomainResultAsync<{ models: { id: string; name: string }[] }, AiFailure>(
+    Effect.gen(function* () {
+      const { keyInfo } = yield* resolveAuthAndConfig(ctx);
+      const result = yield* Effect.tryPromise({
+        try: () => loadModels(keyInfo.provider, { apiKey: keyInfo.apiKey }),
+        catch: (err): AiFailure => ({
+          _tag: "LlmError" as const,
+          message: err instanceof Error ? err.message : "Failed to load models",
+        }),
+      });
+      return { models: result ? result.chat.map((m) => ({ id: m.id, name: m.name })) : [] };
+    }),
+  ),
 });
+
+export type { AiFailure };

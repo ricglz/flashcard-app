@@ -55,17 +55,17 @@ export default function GenerateClient({
         addToSrs: config.addToSrs,
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(result.error.message);
         setStep("config");
         return;
       }
-      if (!result.validation.ok) {
-        setError(`Validation issues: ${result.validation.issues.join(", ")}`);
+      if (!result.value.validation.ok) {
+        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
         setStep("config");
         return;
       }
-      setPayload(result.payload);
-      const payloadCards = result.payload.cards;
+      setPayload(result.value.payload);
+      const payloadCards = result.value.payload.cards;
       setCards(
         payloadCards.map((c) => ({
           fields: { ...c.fields },
@@ -102,12 +102,12 @@ export default function GenerateClient({
         cards: selectedCards,
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(result.error.message);
         setStep("preview");
         return;
       }
       setStep("done");
-      router.push(`/sets/${result.setId}`);
+      router.push(`/sets/${result.value.setId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create set");
       setStep("preview");

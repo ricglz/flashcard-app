@@ -51,16 +51,16 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         ...(config.instructions ? { instructions: config.instructions } : {}),
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(result.error.message);
         setPhase("config");
         return;
       }
-      if (!result.validation.ok) {
-        setError(`Validation issues: ${result.validation.issues.join(", ")}`);
+      if (!result.value.validation.ok) {
+        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
         setPhase("config");
         return;
       }
-      const { cards } = result.payload;
+      const { cards } = result.value.payload;
       setCards(
         cards.map((c) => ({
           fields: { ...c.fields },
@@ -93,7 +93,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         cards: selectedCards,
       });
       if (!result.ok) {
-        setError(result.error);
+        setError(result.error.message);
         setPhase("preview");
         return;
       }
