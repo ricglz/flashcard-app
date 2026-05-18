@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { asId } from "@/lib/convexHelpers";
 import type { Methodology } from "@/lib/types";
+import type { WeakReason } from "@/lib/aiToolingSchemas";
 
 const METHODOLOGY_LABELS: Record<Methodology, string> = {
   balanced: "Balanced",
@@ -18,7 +19,7 @@ const METHODOLOGY_LABELS: Record<Methodology, string> = {
   learning_stuck: "Learning Stuck",
 };
 
-const REASON_LABELS: Record<string, string> = {
+const REASON_LABELS: Record<WeakReason, string> = {
   recent_wrong_rating: "Wrong",
   recent_hard_rating: "Hard",
   low_ease_factor: "Low Ease",
@@ -183,7 +184,7 @@ export default function WeakSpotsClient({
                               key={reason}
                               className="px-1.5 py-0.5 bg-surface-hover rounded text-xs text-muted"
                             >
-                              {REASON_LABELS[reason] ?? reason}
+                              {REASON_LABELS[reason]}
                             </span>
                           ))}
                           <span className="px-1.5 py-0.5 text-xs text-muted">

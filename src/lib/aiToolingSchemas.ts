@@ -133,6 +133,7 @@ export const WeakReasonSchema = Schema.Literal(
   "many_reviews_not_graduated",
   "recently_due_again"
 );
+export type WeakReason = Schema.Schema.Type<typeof WeakReasonSchema>;
 
 export const WeakCardsResponseSchema = Schema.Struct({
   scope: WeakCardsScopeSchema,
