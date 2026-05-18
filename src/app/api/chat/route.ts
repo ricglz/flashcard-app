@@ -1,20 +1,26 @@
 import { fetchQuery } from "convex/nextjs";
 import { igniteModel, Message } from "multi-llm-ts";
 import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
 import { getAuthToken } from "@/lib/server";
 import { ServerStudyAssistantPlugin } from "@/lib/serverStudyAssistantPlugin";
 import { DEFAULT_MODELS } from "@/lib/aiDefaults";
+import { asId } from "@/lib/convexHelpers";
+import * as Schema from "effect/Schema";
+import * as Either from "effect/Either";
+import * as ParseResult from "effect/ParseResult";
 
-type ChatRequest = {
-  message: string;
-  history: Array<{ role: "user" | "assistant"; content: string }>;
-  model?: string;
-  context?: {
-    setId?: Id<"flashcardSets">;
-    cardFields?: Record<string, string>;
-  };
-};
+const ChatRequestSchema = Schema.Struct({
+  message: Schema.String,
+  history: Schema.Array(Schema.Struct({
+    role: Schema.Literal("user", "assistant"),
+    content: Schema.String,
+  })),
+  model: Schema.optional(Schema.String),
+  context: Schema.optional(Schema.Struct({
+    setId: Schema.optional(Schema.String),
+    cardFields: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
+  })),
+});
 
 function sseEvent(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
@@ -26,7 +32,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const body = (await request.json()) as ChatRequest;
+  const raw: unknown = await request.json();
+  const decoded = Schema.decodeUnknownEither(ChatRequestSchema)(raw);
+  if (Either.isLeft(decoded)) {
+    const issues = ParseResult.ArrayFormatter.formatErrorSync(decoded.left);
+    const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    return Response.json({ error: `Invalid request: ${message}` }, { status: 400 });
+  }
+  const body = decoded.right;
 
   const aiConfig = await fetchQuery(
     api.userSettings.getAiConfigForServer,
@@ -46,17 +59,16 @@ export async function POST(request: Request) {
     "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful.";
 
   if (body.context?.setId) {
-    const setList = await fetchQuery(
-      api.tooling.listSetsPublic,
-      { include: { fieldDefinitions: true } },
+    const set = await fetchQuery(
+      api.flashcardSets.get,
+      { id: asId<"flashcardSets">(body.context.setId) },
       { token },
     );
-    const matchedSet = setList.sets.find((s) => s.setId === body.context?.setId);
-    if (matchedSet) {
-      const fieldNames = matchedSet.fieldDefinitions
-        ?.map((f) => f.name)
+    if (set) {
+      const fieldNames = set.fieldDefinitions
+        .map((f: { name: string }) => f.name)
         .join(", ");
-      systemPrompt += `\n\nThe user is studying the set "${matchedSet.name}" with fields: ${fieldNames}.`;
+      systemPrompt += `\n\nThe user is studying the set "${set.name}" with fields: ${fieldNames}.`;
     }
   }
 
