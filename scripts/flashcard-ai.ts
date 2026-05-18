@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import * as Schema from "effect/Schema";
+import * as Either from "effect/Either";
+import * as ParseResult from "effect/ParseResult";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -32,7 +34,13 @@ type Config = Schema.Schema.Type<typeof ConfigSchema>;
 type Json = Record<string, unknown>;
 
 function decode<S extends Schema.Schema.AnyNoContext>(schema: S, value: unknown): Schema.Schema.Type<S> {
-  return Schema.decodeUnknownSync(schema)(value);
+  const result = Schema.decodeUnknownEither(schema)(value);
+  if (Either.isLeft(result)) {
+    const issues = ParseResult.ArrayFormatter.formatErrorSync(result.left);
+    const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    throw new Error(`Invalid data: ${message}`);
+  }
+  return result.right;
 }
 
 function readConfig(): Config {
@@ -74,7 +82,7 @@ async function apiPost<S extends Schema.Schema.AnyNoContext>(path: string, body:
       const error = decode(ApiErrorResponseSchema, json);
       throw new Error(error.error.message);
     } catch (err) {
-      if (err instanceof Error && err.message !== "" && !err.message.includes("Expected")) throw err;
+      if (err instanceof Error && err.message !== "" && !err.message.startsWith("Invalid data:")) throw err;
       throw new Error(`Request failed with status ${res.status}`);
     }
   }
