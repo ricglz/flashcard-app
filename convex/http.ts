@@ -10,6 +10,7 @@ import {
 } from "../src/lib/aiToolingSchemas";
 import * as Schema from "effect/Schema";
 import * as ParseResult from "effect/ParseResult";
+import * as Either from "effect/Either";
 
 const http = httpRouter();
 
@@ -22,7 +23,7 @@ async function parseBody<A, I>(
   const text = await req.text();
   const json = text.trim().length === 0 ? "{}" : text;
   const result = Schema.decodeUnknownEither(Schema.parseJson(schema))(json);
-  if (result._tag === "Left") {
+  if (Either.isLeft(result)) {
     const issues = ParseResult.ArrayFormatter.formatErrorSync(result.left);
     const message = issues.map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`).join("; ");
     return { ok: false, response: errorResponse("bad_request", message, 400) };
