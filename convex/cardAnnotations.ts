@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { fail, ok, unauthenticated } from "./domain/result";
 import { assertMember } from "./userSets";
+import { getFieldDefinitions } from "./lib/typed";
 
 export const getForSet = query({
   args: { setId: v.id("flashcardSets") },
@@ -46,8 +47,33 @@ export const getFlagged = query({
       .collect();
 
     const setIds = [...new Set(flagged.map((a) => a.setId))];
-    const sets = await Promise.all(setIds.map((id) => ctx.db.get(id)));
-    const setMap = new Map(sets.filter((s): s is NonNullable<typeof s> => s !== null).map((s) => [s._id, s]));
+    const perSetData = await Promise.all(
+      setIds.map(async (setId) => {
+        const [set, userSet] = await Promise.all([
+          ctx.db.get(setId),
+          ctx.db
+            .query("userSets")
+            .withIndex("by_userId_and_setId", (q) =>
+              q.eq("userId", userId).eq("setId", setId)
+            )
+            .first(),
+        ]);
+        return { setId, set, userSet };
+      })
+    );
+
+    const setMap = new Map<string, { name: string; fieldDefinitions: ReturnType<typeof getFieldDefinitions> }>();
+    const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
+
+    for (const { setId, set, userSet } of perSetData) {
+      if (!set || !userSet) continue;
+      setMap.set(setId, { name: set.name, fieldDefinitions: getFieldDefinitions(set) });
+      userSetMap.set(setId, {
+        defaultFrontFields: userSet.defaultFrontFields,
+        defaultBackFields: userSet.defaultBackFields,
+        defaultTtsOnlyFields: userSet.defaultTtsOnlyFields,
+      });
+    }
 
     const cardIds = flagged.map((a) => a.cardId);
     const cards = await Promise.all(cardIds.map((id) => ctx.db.get(id)));
@@ -56,16 +82,20 @@ export const getFlagged = query({
     return flagged
       .map((a) => {
         const card = cardMap.get(a.cardId);
-        const set = setMap.get(a.setId);
-        if (!card || !set) return null;
+        const setData = setMap.get(a.setId);
+        const userSetData = userSetMap.get(a.setId);
+        if (!card || !setData || !userSetData) return null;
         return {
           annotationId: a._id,
           cardId: a.cardId,
           setId: a.setId,
-          setName: set.name,
-          fieldDefinitions: set.fieldDefinitions,
+          setName: setData.name,
+          fieldDefinitions: setData.fieldDefinitions,
           fields: card.fields,
           note: a.note,
+          frontFields: userSetData.defaultFrontFields,
+          backFields: userSetData.defaultBackFields,
+          ttsOnlyFields: userSetData.defaultTtsOnlyFields,
         };
       })
       .filter(Boolean);
