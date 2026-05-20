@@ -10,6 +10,7 @@ import {
 } from "@/lib/chatStream";
 import type { StudyContext } from "./AssistantPanel";
 import ToolStatusIndicator from "./ToolStatusIndicator";
+import MarkdownContent from "./MarkdownContent";
 
 export default function AssistantPanelInner({ context }: { context: StudyContext }) {
   const [open, setOpen] = useState(false);
@@ -141,20 +142,24 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
             className={`text-sm lg:text-base ${msg.role === "user" ? "text-right" : ""}`}
           >
             <div
-              className={`inline-block max-w-[85%] px-3 py-2 rounded-lg whitespace-pre-wrap ${
+              className={`inline-block max-w-[85%] px-3 py-2 rounded-lg ${
                 msg.role === "user"
-                  ? "bg-accent text-white"
+                  ? "bg-accent text-white whitespace-pre-wrap"
                   : "bg-surface-hover"
               }`}
             >
-              {msg.content}
+              {msg.role === "user" ? (
+                msg.content
+              ) : (
+                <MarkdownContent>{msg.content}</MarkdownContent>
+              )}
             </div>
           </div>
         ))}
         {streaming && streaming.text && (
           <div className="text-sm lg:text-base">
-            <div className="inline-block max-w-[85%] px-3 py-2 rounded-lg whitespace-pre-wrap bg-surface-hover">
-              {streaming.text}
+            <div className="inline-block max-w-[85%] px-3 py-2 rounded-lg bg-surface-hover">
+              <MarkdownContent>{streaming.text}</MarkdownContent>
               <span className="inline-block w-0.5 h-4 bg-foreground animate-pulse ml-0.5 align-text-bottom" />
             </div>
           </div>

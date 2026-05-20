@@ -1,3 +1,5 @@
+import MarkdownContent from "./MarkdownContent";
+
 export type PreviewCard = {
   fields: Record<string, string>;
   rationale?: string;
@@ -40,7 +42,9 @@ export default function CardPreviewList({
                 </div>
               ))}
               {card.rationale && (
-                <p className="text-xs text-muted mt-1 italic">{card.rationale}</p>
+                <div className="text-xs text-muted mt-1 italic">
+                  <MarkdownContent compact>{card.rationale}</MarkdownContent>
+                </div>
               )}
             </div>
           </div>

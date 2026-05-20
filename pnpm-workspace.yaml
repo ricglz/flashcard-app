@@ -8,3 +8,4 @@ allowBuilds:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+storeDir: /Users/ricglz/play-repos/flashcard-app/.pnpm-store
