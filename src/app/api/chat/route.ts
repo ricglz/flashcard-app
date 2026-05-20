@@ -9,6 +9,7 @@ import { asId } from "@/lib/convexHelpers";
 import * as Schema from "effect/Schema";
 import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
+import * as Effect from "effect/Effect";
 
 const ChatRequestSchema = Schema.Struct({
   message: Schema.String,
@@ -25,6 +26,84 @@ const ChatRequestSchema = Schema.Struct({
 
 function sseEvent(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+// Cache for models known to not support tools
+const noToolsCache = new Map<string, boolean>();
+
+function getCacheKey(provider: string, modelName: string): string {
+  return `${provider}:${modelName}`;
+}
+
+function isToolUnsupportedError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return msg.includes("tool calling") && msg.includes("not supported");
+}
+
+async function generateWithPlugins(
+  provider: string,
+  modelName: string,
+  apiKey: string,
+  thread: Message[],
+  token: string,
+  request: Request,
+  controller: ReadableStreamDefaultController
+): Promise<void> {
+  const llm = igniteModel(provider, modelName, { apiKey });
+  llm.addPlugin(new ServerStudyAssistantPlugin(token));
+  const stream = llm.generate(thread);
+  
+  for await (const chunk of stream) {
+    if (request.signal.aborted) break;
+    if (chunk.type === "content") {
+      const cleaned = stripHallucinatedFnCalls(chunk.text, (match) => {
+        console.warn("[chat] stripped hallucinated function-call syntax from text chunk:", match);
+      });
+      if (cleaned) {
+        controller.enqueue(sseEvent({ type: "text", content: cleaned }));
+      }
+    } else if (chunk.type === "tool") {
+      controller.enqueue(
+        sseEvent({
+          type: "tool",
+          name: chunk.name,
+          state: chunk.state,
+        }),
+      );
+    }
+  }
+}
+
+async function generateWithoutPlugins(
+  provider: string,
+  modelName: string,
+  apiKey: string,
+  thread: Message[],
+  request: Request,
+  controller: ReadableStreamDefaultController
+): Promise<void> {
+  const llm = igniteModel(provider, modelName, { apiKey });
+  const stream = llm.generate(thread);
+  
+  for await (const chunk of stream) {
+    if (request.signal.aborted) break;
+    if (chunk.type === "content") {
+      const cleaned = stripHallucinatedFnCalls(chunk.text, (match) => {
+        console.warn("[chat] stripped hallucinated function-call syntax from text chunk:", match);
+      });
+      if (cleaned) {
+        controller.enqueue(sseEvent({ type: "text", content: cleaned }));
+      }
+    } else if (chunk.type === "tool") {
+      controller.enqueue(
+        sseEvent({
+          type: "tool",
+          name: chunk.name,
+          state: chunk.state,
+        }),
+      );
+    }
+  }
 }
 
 export async function POST(request: Request) {
@@ -82,10 +161,6 @@ export async function POST(request: Request) {
 
   const modelName =
     body.model ?? DEFAULT_MODELS[aiConfig.provider] ?? "gpt-4o";
-  const llm = igniteModel(aiConfig.provider, modelName, {
-    apiKey: aiConfig.apiKey,
-  });
-  llm.addPlugin(new ServerStudyAssistantPlugin(token));
 
   const thread = [
     new Message("system", systemPrompt),
@@ -93,39 +168,60 @@ export async function POST(request: Request) {
     new Message("user", body.message),
   ];
 
+  const cacheKey = getCacheKey(aiConfig.provider, modelName);
+  const cachedNoTools = noToolsCache.get(cacheKey);
+
   const stream = new ReadableStream({
     async start(controller) {
-      try {
-        for await (const chunk of llm.generate(thread)) {
-          if (request.signal.aborted) break;
-          if (chunk.type === "content") {
-            const cleaned = stripHallucinatedFnCalls(chunk.text, (match) => {
-              console.warn("[chat] stripped hallucinated function-call syntax from text chunk:", match);
-            });
-            if (cleaned) {
-              controller.enqueue(sseEvent({ type: "text", content: cleaned }));
-            }
-          } else if (chunk.type === "tool") {
-            controller.enqueue(
-              sseEvent({
-                type: "tool",
-                name: chunk.name,
-                state: chunk.state,
-              }),
-            );
-          }
-        }
+      const program = cachedNoTools
+        ? Effect.tryPromise({
+            try: () => generateWithoutPlugins(
+              aiConfig.provider, modelName, aiConfig.apiKey, thread, request, controller
+            ),
+            catch: (e) => e as Error,
+          })
+        : Effect.tryPromise({
+            try: () => generateWithPlugins(
+              aiConfig.provider, modelName, aiConfig.apiKey, thread, token, request, controller
+            ),
+            catch: (e) => e as Error,
+          }).pipe(
+            Effect.catchIf(isToolUnsupportedError, () => {
+              console.log(`[chat] Model ${modelName} doesn't support tools, retrying without plugins`);
+              noToolsCache.set(cacheKey, true);
+              
+              const noToolsPrompt = systemPrompt + 
+                "\n\nNote: You do not have access to the user's flashcard data with the current model. Provide general study advice based on the conversation.";
+              const newThread = [
+                new Message("system", noToolsPrompt),
+                ...body.history.map((m) => new Message(m.role, m.content)),
+                new Message("user", body.message),
+              ];
+              
+              return Effect.tryPromise({
+                try: () => generateWithoutPlugins(
+                  aiConfig.provider, modelName, aiConfig.apiKey, newThread, request, controller
+                ),
+                catch: (e) => e as Error,
+              });
+            })
+          );
+
+      const result = await Effect.runPromise(Effect.either(program));
+
+      if (Either.isRight(result)) {
         controller.enqueue(sseEvent({ type: "done" }));
-      } catch (err) {
+      } else {
+        console.error(`[chat] Generation failed:`, result.left);
         controller.enqueue(
           sseEvent({
             type: "error",
-            message: err instanceof Error ? err.message : "Stream failed",
+            message: result.left.message,
           }),
         );
-      } finally {
-        controller.close();
       }
+      
+      controller.close();
     },
   });
 
