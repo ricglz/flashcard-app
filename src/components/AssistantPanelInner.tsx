@@ -18,6 +18,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
   const [streaming, setStreaming] = useState<ChatStreamState | null>(null);
   const [model, setModel] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const { models: availableModels } = useAvailableModels(open);
@@ -36,6 +37,10 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
     const text = input.trim();
     if (!text || streaming) return;
     setInput("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.overflowY = "hidden";
+    }
 
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
@@ -166,13 +171,20 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
       <div className="p-3 border-t border-edge">
         <div className="flex gap-2 items-end">
           <textarea
+            ref={textareaRef}
             value={input}
-            onChange={(e) => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`; }}
+            onChange={(e) => { 
+              setInput(e.target.value); 
+              e.target.style.height = "auto"; 
+              const newHeight = Math.min(e.target.scrollHeight, 120);
+              e.target.style.height = `${newHeight}px`;
+              e.target.style.overflowY = e.target.scrollHeight > 120 ? "auto" : "hidden";
+            }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
             placeholder="Ask about this card..."
             disabled={!!streaming}
             rows={1}
-            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-base lg:text-base resize-none focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-base lg:text-base resize-none overflow-y-hidden focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
           />
           <button
             onClick={() => void handleSend()}
