@@ -5,6 +5,8 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import { useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
+import { Button } from "@/components/ui/Button";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 
 function formatDate(ms: number | undefined) {
@@ -22,45 +24,33 @@ export default function CliTokenSection({
   const revokeToken = useMutation(api.cliTokens.revoke);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const [isBusy, setIsBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  
+  const { execute: executeCreate, isSaving: isCreating, error, setError } = useSaveHandler({
+    onSuccess: (result) => {
+      setNewToken(result.token);
+      setCopyState("idle");
+    },
+  });
+  
+  const { execute: executeRevoke, isSaving: isRevoking } = useSaveHandler({
+    onSuccess: () => {
+      setNewToken(null);
+      setCopyState("idle");
+    },
+  });
+  
+  const isBusy = isCreating || isRevoking;
 
   async function handleCreate() {
-    setIsBusy(true);
-    setError(null);
     setCopyState("idle");
-    try {
-      const result = await createToken({ label: "Local AI assistant CLI" });
-      if (!result.ok) {
-        setError(result.error.message);
-        return;
-      }
-      setNewToken(result.value.token);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create token");
-    } finally {
-      setIsBusy(false);
-    }
+    await executeCreate(() => createToken({ label: "Local AI assistant CLI" }));
   }
 
   async function handleRevoke() {
     if (!confirm("Revoke CLI assistant access? Existing local CLI tokens will stop working.")) return;
-    setIsBusy(true);
-    setError(null);
     setCopyState("idle");
-    try {
-      const result = await revokeToken({});
-      if (!result.ok) {
-        setError(result.error.message);
-        return;
-      }
-      setNewToken(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke token");
-    } finally {
-      setIsBusy(false);
-    }
+    await executeRevoke(() => revokeToken({}));
   }
 
   async function handleCopyToken() {
@@ -108,32 +98,20 @@ export default function CliTokenSection({
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={handleCreate}
-              disabled={isBusy}
-              className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover disabled:opacity-50"
-            >
+            <Button onClick={handleCreate} disabled={isBusy} variant="secondary" loading={isCreating}>
               Rotate token
-            </button>
-            <button
-              onClick={handleRevoke}
-              disabled={isBusy}
-              className="px-4 py-2 text-danger border border-danger rounded-lg hover:bg-danger-surface disabled:opacity-50"
-            >
+            </Button>
+            <Button onClick={handleRevoke} disabled={isBusy} variant="danger" loading={isRevoking}>
               Revoke
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-muted">CLI access is disabled.</p>
-          <button
-            onClick={handleCreate}
-            disabled={isBusy}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50"
-          >
-            {isBusy ? "Creating…" : "Create temporary CLI token"}
-          </button>
+          <Button onClick={handleCreate} disabled={isBusy} loading={isCreating}>
+            Create temporary CLI token
+          </Button>
         </div>
       )}
 
@@ -141,12 +119,13 @@ export default function CliTokenSection({
         <div className="p-4 border border-warning rounded-lg bg-warning/10 space-y-2">
           <p className="font-medium text-sm">Copy this token now. It will not be shown again.</p>
           <code className="block p-3 bg-background rounded border border-edge text-xs break-all">{newToken}</code>
-          <button
+          <Button
             onClick={() => void handleCopyToken()}
-            className="px-3 py-1.5 text-sm border border-edge rounded-lg hover:bg-surface-hover"
+            variant="secondary"
+            size="sm"
           >
             {copyState === "copied" ? "Copied!" : copyState === "error" ? "Copy failed" : "Copy token"}
-          </button>
+          </Button>
           <p className="text-xs text-muted" role="status" aria-live="polite">
             {copyState === "copied"
               ? "Token copied to clipboard."
