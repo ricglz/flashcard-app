@@ -1,9 +1,7 @@
-# Flashcard App
+This file should contain only things that agents will update when they don't understand something, and not as a "cache" or something that they could always find or figure out based on reading the code.
 
-## Overview
-Chinese-first flashcard PWA with generic field-based data model.
-
-> NOTE. Right now there are no active users, so we can just do changes as we seem fit
+## Status
+Right now there are no active users, so we can just do changes as we seem fit without needing to think about backfilling. Observability is still important
 
 ## Progress Tracking
 - **PROGRESS.md** is forward-looking only — it tracks what's next, not what's done. Never list completed items; git history is the authoritative record.
@@ -33,6 +31,7 @@ When making plans don't
 * Over-explain things. There's no need for fluff
 * Give time estimates. Related to the prior, it's just fluff
 * Don't prioritize. This doesn't mean that don't propose phases, but there's no higher/smaller priority. Just items that we should execute on
+* Consider how to organize commits
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
