@@ -6,6 +6,9 @@ import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
 
 import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { Button } from "@/components/ui/Button";
+import { TextInput, Textarea } from "@/components/ui/TextInput";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 export default function AiSettingsSection({
   preloaded,
@@ -19,9 +22,13 @@ export default function AiSettingsSection({
   const [llmApiKey, setLlmApiKey] = useState("");
   const [chatPrompt, setChatPrompt] = useState("");
   const [chatPromptInitialized, setChatPromptInitialized] = useState(false);
-  const [llmSaving, setLlmSaving] = useState(false);
   const [llmSaved, setLlmSaved] = useState(false);
-  const [llmError, setLlmError] = useState<string | null>(null);
+  const { execute: saveConfig, isSaving: llmSaving, error: llmError } = useSaveHandler({
+    onSuccess: () => {
+      setLlmApiKey("");
+      setLlmSaved(true);
+    },
+  });
 
   if (settings && !chatPromptInitialized) {
     setChatPrompt(settings.customChatPrompt ?? "");
@@ -51,7 +58,7 @@ export default function AiSettingsSection({
               if (!e.target.value) setLlmApiKey("");
               setLlmSaved(false);
             }}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">Select a provider...</option>
             <option value="openai">OpenAI</option>
@@ -70,68 +77,49 @@ export default function AiSettingsSection({
             {settings?.llmKeyHint && !llmApiKey && (
               <p className="text-xs text-muted mb-1 font-mono">{settings.llmKeyHint}</p>
             )}
-            <input
+            <TextInput
               id="llm-key"
               type="password"
               placeholder={settings?.hasLlmKey ? "Enter new key to replace" : "Enter your API key"}
               value={llmApiKey}
               onChange={(e) => { setLlmApiKey(e.target.value); setLlmSaved(false); }}
-              className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
             />
           </div>
         )}
         <div>
           <label htmlFor="chat-prompt" className="block text-sm font-medium mb-1">Chat Assistant Prompt (optional)</label>
-          <textarea
+          <Textarea
             id="chat-prompt"
             value={chatPrompt}
             onChange={(e) => { setChatPrompt(e.target.value); setLlmSaved(false); }}
             rows={3}
             placeholder="You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful."
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           />
           <p className="text-xs text-muted mt-1">Leave empty to use the default prompt.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
+          <Button
             onClick={() => {
-              void (async () => {
-                setLlmSaving(true);
-                setLlmError(null);
-                setLlmSaved(false);
-                try {
-                  const provider = llmProvider ?? settings?.llmProvider;
-                  if (!provider) {
-                    setLlmError("Please select a provider.");
-                    return;
-                  }
-                  if (!llmApiKey && !settings?.hasLlmKey) {
-                    setLlmError("Please enter an API key.");
-                    return;
-                  }
-                  const result = await updateAiConfig({
-                    provider,
-                    apiKey: llmApiKey,
-                    customChatPrompt: chatPrompt || undefined,
-                  });
-                  if (!result.ok) {
-                    setLlmError(result.error.message);
-                    return;
-                  }
-                  setLlmApiKey("");
-                  setLlmSaved(true);
-                } catch (err) {
-                  setLlmError(err instanceof Error ? err.message : "Failed to save");
-                } finally {
-                  setLlmSaving(false);
-                }
-              })();
+              const provider = llmProvider ?? settings?.llmProvider;
+              if (!provider) {
+                return;
+              }
+              if (!llmApiKey && !settings?.hasLlmKey) {
+                return;
+              }
+              void saveConfig(() =>
+                updateAiConfig({
+                  provider,
+                  apiKey: llmApiKey,
+                  customChatPrompt: chatPrompt || undefined,
+                })
+              );
             }}
-            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === (settings?.customChatPrompt ?? ""))}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm disabled:opacity-50"
+            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === (settings?.customChatPrompt ?? "")) || !((llmProvider ?? settings?.llmProvider) && (llmApiKey || settings?.hasLlmKey))}
+            loading={llmSaving}
           >
-            {llmSaving ? "Saving..." : "Save"}
-          </button>
+            Save
+          </Button>
           {llmSaved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
           {settings?.hasLlmKey && (
             <span className="text-xs text-muted">
