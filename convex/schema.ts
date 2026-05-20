@@ -13,12 +13,10 @@ export const fieldDefinitionValidator = v.object({
     v.literal("definition"),
     v.literal("note")
   ),
-  // Intentionally v.any() — metadata is an open map for disjoint types
-  // per field role (e.g. TTS config, future rendering hints). Typed
-  // accessors like getTtsConfig() in src/lib/types.ts provide type safety
-  // at the application layer. If a stronger validator that still supports
-  // extensible metadata types is found, update this.
-  metadata: v.record(v.string(), v.any()),
+  metadata: v.union(
+    v.object({}),
+    v.object({ tts: v.object({ lang: v.string() }) }),
+  ),
   order: v.number(),
 });
 

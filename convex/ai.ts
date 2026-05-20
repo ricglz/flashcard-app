@@ -11,11 +11,10 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as ParseResult from "effect/ParseResult";
 import * as Either from "effect/Either";
-import { GeneratedSetPayloadSchema, type GeneratedSetPayload, type WeakCardsResponse } from "../src/lib/aiToolingSchemas";
+import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/aiToolingSchemas";
 import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
 import type { CommonFailure, DomainResult } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
-import type { Id } from "./_generated/dataModel";
 
 type AiFailure =
   | CommonFailure
@@ -30,11 +29,6 @@ type GenerateValue = {
   validation: { ok: boolean; issues: string[] };
   payload: GeneratedSetPayload;
 };
-
-type ToolingMutationResult = DomainResult<
-  { setId: Id<"flashcardSets">; cardCount: number; srsEnabled: boolean },
-  CommonFailure
->;
 
 type ConfirmValue = {
   setId: string;
@@ -135,14 +129,14 @@ export const generateRemedialCards = action({
         ? { kind: "set" as const, setId: args.setId }
         : { kind: "srs_enabled_sets" as const };
 
-      const weakCards = (yield* Effect.promise(() =>
+      const weakCards = yield* Effect.promise(() =>
           ctx.runQuery(internal.tooling.getWeakCardsForTool, {
             userId,
             scope,
             methodology: args.methodology,
             include: { recentRatings: true },
           }),
-        )) as WeakCardsResponse;
+        );
 
       if (weakCards.schemaGroups.length === 0) {
         return yield* Effect.fail({
@@ -225,7 +219,7 @@ export const confirmGeneratedSet = action({
     Effect.gen(function* () {
       const { userId } = yield* resolveAuthAndConfig(ctx);
 
-      const result = (yield* Effect.promise(() =>
+      const result = yield* Effect.promise(() =>
           ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
             name: args.name,
             description: args.description,
@@ -237,7 +231,7 @@ export const confirmGeneratedSet = action({
             addToSrs: args.addToSrs,
             userId,
           }),
-        )) as ToolingMutationResult;
+        );
 
       if (!result.ok) {
         return yield* Effect.fail(result.error);
@@ -266,14 +260,14 @@ export const confirmAppendCards = action({
     Effect.gen(function* () {
       const { userId } = yield* resolveAuthAndConfig(ctx);
 
-      const result = (yield* Effect.promise(() =>
+      const result = yield* Effect.promise(() =>
           ctx.runMutation(internal.tooling.appendGeneratedCardsForTool, {
             userId,
             targetSetId: args.targetSetId,
             fieldDefinitions: args.fieldDefinitions,
             cards: args.cards,
           }),
-        )) as ToolingMutationResult;
+        );
 
       if (!result.ok) {
         return yield* Effect.fail(result.error);

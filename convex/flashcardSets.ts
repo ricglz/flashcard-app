@@ -74,10 +74,10 @@ export const create = mutation({
       const validation = yield* fromDomainResult(
         validateSetFieldsResult(
           args.name,
-          args.fieldDefinitions as FieldDefinition[]
+          args.fieldDefinitions,
         ),
       );
-      const fieldDefinitions = validation.fieldDefinitions ?? (args.fieldDefinitions as FieldDefinition[]);
+      const fieldDefinitions = validation.fieldDefinitions ?? args.fieldDefinitions;
       const setId = yield* Effect.promise(() =>
         ctx.db.insert("flashcardSets", {
           name: validation.name ?? args.name,
@@ -123,7 +123,7 @@ export const update = mutation({
       const validation = yield* fromDomainResult(
         validateSetFieldsResult(
           args.name,
-          args.fieldDefinitions as FieldDefinition[] | undefined,
+          args.fieldDefinitions,
         ),
       );
       const patch: {

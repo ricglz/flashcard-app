@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
   fieldDefinitionValidator,
   ratingValidator,
@@ -61,12 +61,8 @@ const generatedCardValidator = v.object({
   rationale: v.optional(v.string()),
 });
 
-function originSummary(origin: unknown): { kind: string } | undefined {
-  if (origin && typeof origin === "object" && "kind" in origin) {
-    const kind = (origin as { kind?: unknown }).kind;
-    if (typeof kind === "string") return { kind };
-  }
-  return undefined;
+function originSummary(origin: Doc<"flashcardSets">["origin"]): { kind: string } {
+  return { kind: origin.kind };
 }
 
 async function getUserSetLinks(ctx: QueryCtx, userId: string) {
@@ -142,7 +138,7 @@ export const listSetsForTool = internalQuery({
         ...(set.description !== undefined ? { description: set.description } : {}),
         srsEnabled: link.srsEnabled,
         cardCount: await countCards(ctx, set._id),
-        ...(originSummary(set.origin) ? { origin: originSummary(set.origin) } : {}),
+        origin: originSummary(set.origin),
         ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
         ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
         ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, args.userId, set._id) } : {}),
@@ -437,7 +433,7 @@ export const createGeneratedSetForTool = internalMutation({
     if (!validation.ok || !validation.normalized) return fail(invalidInput(validation.issues.join(" ") || "Invalid generated set."));
     const normalized = validation.normalized;
     const sourceSetIds = normalized.sourceSetIds as Id<"flashcardSets">[];
-    const fieldDefinitions = normalized.fieldDefinitions as FieldDefinition[];
+    const fieldDefinitions = [...normalized.fieldDefinitions];
     const now = Date.now();
     const setId = await ctx.db.insert("flashcardSets", {
       name: normalized.name,
@@ -506,7 +502,7 @@ export const appendGeneratedCardsForTool = internalMutation({
 
     const targetFingerprint = schemaFingerprint(getFieldDefinitions(targetSet));
     const payloadFingerprint = schemaFingerprint(
-      args.fieldDefinitions as FieldDefinition[],
+      args.fieldDefinitions,
     );
     if (targetFingerprint !== payloadFingerprint) {
       return fail(invalidInput("Field definitions don't match the target set."));
@@ -525,7 +521,7 @@ export const appendGeneratedCardsForTool = internalMutation({
       .take(10000);
     const maxOrder = existingCards.reduce((max, c) => Math.max(max, c.order), -1);
 
-    const fieldNames = (args.fieldDefinitions as FieldDefinition[]).map(
+    const fieldNames = args.fieldDefinitions.map(
       (f) => f.name,
     );
     for (const [i, card] of args.cards.entries()) {
@@ -580,7 +576,7 @@ export const listSetsPublic = query({
         ...(set.description !== undefined ? { description: set.description } : {}),
         srsEnabled: link.srsEnabled,
         cardCount: await countCards(ctx, set._id),
-        ...(originSummary(set.origin) ? { origin: originSummary(set.origin) } : {}),
+        origin: originSummary(set.origin),
         ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
         ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
         ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, userId, set._id) } : {}),
