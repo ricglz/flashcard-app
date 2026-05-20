@@ -1,6 +1,9 @@
 import { fetchQuery } from "convex/nextjs";
 import { MultiToolPlugin, type PluginExecutionContext, type PluginTool } from "multi-llm-ts";
 import { api } from "../../convex/_generated/api";
+import * as Schema from "effect/Schema";
+import * as Either from "effect/Either";
+import * as ParseResult from "effect/ParseResult";
 
 const MAX_ROUNDS = 3;
 
@@ -36,6 +39,13 @@ const TOOL_DEFINITIONS: PluginTool[] = [
   },
 ];
 
+// Schema for get_weak_cards parameters with validation
+const GetWeakCardsParamsSchema = Schema.Struct({
+  methodology: Schema.optional(
+    Schema.Literal("balanced", "recent_lapses", "low_ease", "learning_stuck")
+  ),
+});
+
 export class ServerStudyAssistantPlugin extends MultiToolPlugin {
   private token: string;
   private roundCount = 0;
@@ -70,40 +80,53 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
 
   async execute(
     _context: PluginExecutionContext,
-    params: { tool: string; parameters: Record<string, unknown> },
+    params: { tool: string; parameters?: Record<string, unknown> | null },
   ): Promise<unknown> {
     if (++this.roundCount > MAX_ROUNDS) {
       return { error: "Maximum tool call rounds exceeded. Please respond with what you have." };
     }
 
-    switch (params.tool) {
-      case "list_sets":
-        return await fetchQuery(
-          api.tooling.listSetsPublic,
-          { include: { srsSummary: true, fieldDefinitions: true } },
-          { token: this.token },
-        );
+    try {
+      switch (params.tool) {
+        case "list_sets":
+          return await fetchQuery(
+            api.tooling.listSetsPublic,
+            { include: { srsSummary: true, fieldDefinitions: true } },
+            { token: this.token },
+          );
 
-      case "get_weak_cards": {
-        const methodology = params.parameters.methodology as
-          | "balanced"
-          | "recent_lapses"
-          | "low_ease"
-          | "learning_stuck"
-          | undefined;
-        return await fetchQuery(
-          api.tooling.getWeakCardsPublic,
-          {
-            scope: { kind: "srs_enabled_sets" },
-            methodology: methodology ?? "balanced",
-            include: { recentRatings: true },
-          },
-          { token: this.token },
-        );
+        case "get_weak_cards": {
+          // Parse parameters with schema, fallback to defaults on error
+          const paramsResult = Schema.decodeUnknownEither(GetWeakCardsParamsSchema)(
+            params.parameters ?? {}
+          );
+          
+          if (Either.isLeft(paramsResult)) {
+            const issues = ParseResult.ArrayFormatter.formatErrorSync(paramsResult.left);
+            console.warn("[study-assistant] Invalid parameters for get_weak_cards:", issues);
+          }
+          
+          const methodology = (Either.isRight(paramsResult)
+            ? paramsResult.right.methodology
+            : undefined) ?? "balanced";
+          
+          return await fetchQuery(
+            api.tooling.getWeakCardsPublic,
+            {
+              scope: { kind: "srs_enabled_sets" },
+              methodology,
+              include: { recentRatings: true },
+            },
+            { token: this.token },
+          );
+        }
+
+        default:
+          return { error: `Unknown tool: ${params.tool}` };
       }
-
-      default:
-        return { error: `Unknown tool: ${params.tool}` };
+    } catch (error) {
+      console.error(`[study-assistant] Tool execution failed for ${params.tool}:`, error);
+      return { error: `Tool execution failed: ${error instanceof Error ? error.message : "Unknown error"}` };
     }
   }
 }
