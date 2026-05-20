@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 
 import type { SrsConfig } from "@/components/SrsSettingsPanel";
 import SrsSettingsPanel from "@/components/SrsSettingsPanel";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 type Settings = NonNullable<FunctionReturnType<typeof api.userSettings.get>>;
 
@@ -14,11 +14,10 @@ export default function SrsSettingsSectionInner({ settings }: { settings: Settin
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
   const updateTtsSpeed = useMutation(api.userSettings.updateTtsPlaybackSpeed);
 
-  const [isSaving, setIsSaving] = useState(false);
+  const { execute, isSaving } = useSaveHandler();
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
-    setIsSaving(true);
-    try {
+    const result = await execute(async () => {
       const [srsResult, ttsResult] = await Promise.all([
         updateSrsSettings({
           maxNewCardsPerDay: config.maxNewCardsPerDay,
@@ -27,18 +26,11 @@ export default function SrsSettingsSectionInner({ settings }: { settings: Settin
         }),
         updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
-      if (!srsResult.ok) {
-        console.error(srsResult.error.message);
-        return false;
-      }
-      if (!ttsResult.ok) {
-        console.error(ttsResult.error.message);
-        return false;
-      }
-      return true;
-    } finally {
-      setIsSaving(false);
-    }
+      if (!srsResult.ok) return srsResult;
+      if (!ttsResult.ok) return ttsResult;
+      return { ok: true, value: true } as const;
+    });
+    return result !== null;
   }
 
   return (
