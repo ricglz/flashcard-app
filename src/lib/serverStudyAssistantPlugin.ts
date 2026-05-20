@@ -4,6 +4,15 @@ import { api } from "../../convex/_generated/api";
 
 const MAX_ROUNDS = 3;
 
+const TOOL_NAME_LIST = ["list_sets", "get_weak_cards"] as const;
+type ToolName = typeof TOOL_NAME_LIST[number];
+const TOOL_NAMES: ReadonlySet<string> = new Set(TOOL_NAME_LIST);
+
+const TOOL_RUNNING_DESCRIPTIONS: Record<ToolName, string> = {
+  list_sets: "Looking up your flashcard sets...",
+  get_weak_cards: "Analyzing your weak cards...",
+};
+
 const TOOL_DEFINITIONS: PluginTool[] = [
   {
     name: "list_sets",
@@ -26,8 +35,6 @@ const TOOL_DEFINITIONS: PluginTool[] = [
     ],
   },
 ];
-
-const TOOL_NAMES = new Set(TOOL_DEFINITIONS.map((t) => t.name));
 
 export class ServerStudyAssistantPlugin extends MultiToolPlugin {
   private token: string;
@@ -52,6 +59,13 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
 
   handlesTool(name: string): boolean {
     return TOOL_NAMES.has(name);
+  }
+
+  getRunningDescription(tool: string): string {
+    if (tool in TOOL_RUNNING_DESCRIPTIONS) {
+      return TOOL_RUNNING_DESCRIPTIONS[tool as ToolName];
+    }
+    return tool;
   }
 
   async execute(
