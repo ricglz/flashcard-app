@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -21,6 +22,7 @@ import {
   removeEntry,
   getPendingCount,
 } from "./offlineOutbox";
+import { shouldDrainOutbox } from "./syncState";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2000;
@@ -76,56 +78,62 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   const isOnline = useOnlineStatus();
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
 
   const refreshCount = useCallback(async () => {
     setPendingCount(await getPendingCount());
   }, []);
 
+  const drainOutbox = useCallback(async () => {
+    const count = await getPendingCount();
+    if (
+      !shouldDrainOutbox({
+        isOnline,
+        isSyncing: isSyncingRef.current,
+        pendingCount: count,
+      })
+    ) {
+      return;
+    }
+
+    isSyncingRef.current = true;
+    setIsSyncing(true);
+    try {
+      let success = false;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        if (attempt > 0) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+        }
+        success = await flushEntries(client);
+        if (success) break;
+      }
+
+      if (!success) {
+        toast.error("Failed to sync some changes. They'll retry next time you're online.");
+      }
+    } finally {
+      isSyncingRef.current = false;
+      setIsSyncing(false);
+      await refreshCount();
+    }
+  }, [isOnline, client, refreshCount]);
+
   useEffect(() => {
-    const handler = () => void refreshCount();
+    const handler = () => {
+      void refreshCount();
+      void drainOutbox();
+    };
     window.addEventListener("outbox-changed", handler);
     return () => window.removeEventListener("outbox-changed", handler);
-  }, [refreshCount]);
+  }, [refreshCount, drainOutbox]);
 
   useEffect(() => {
     void getPendingCount().then(setPendingCount);
   }, []);
 
   useEffect(() => {
-    if (!isOnline || isSyncing) return;
-
-    let cancelled = false;
-
-    async function drain() {
-      if (cancelled || (await getPendingCount()) === 0) return;
-
-      setIsSyncing(true);
-
-      let success = false;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
-      for (let attempt = 0; attempt < MAX_ATTEMPTS && !cancelled; attempt++) {
-        if (attempt > 0) {
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
-          if (cancelled) break;
-        }
-        success = await flushEntries(client);
-        if (success) break;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cancelled is mutated asynchronously by the cleanup closure
-      if (!cancelled) {
-        if (!success) {
-          toast.error("Failed to sync some changes. They'll retry next time you're online.");
-        }
-        setIsSyncing(false);
-        await refreshCount();
-      }
-    }
-
-    void drain();
-    return () => { cancelled = true; };
-  }, [isOnline, isSyncing, client, refreshCount]);
+    void drainOutbox();
+  }, [drainOutbox]);
 
   return (
     <SyncContext.Provider value={{ pendingCount, isSyncing }}>
