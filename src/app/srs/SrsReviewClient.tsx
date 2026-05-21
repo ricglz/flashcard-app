@@ -31,7 +31,9 @@ export default function SrsReviewClient({
 }: Props) {
   const router = useRouter();
   const queue = usePreloadedQuery(preloadedQueue);
-  const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview);
+  const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview, {
+    strategy: "queue-first",
+  });
   const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const stats = useOfflinePreloadedQuery(preloadedStats);
   const tts = useTtsControls(preloadedTtsConfig);
@@ -55,10 +57,18 @@ export default function SrsReviewClient({
   const [noMoreCards, setNoMoreCards] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const initialQueueSize = useRef(effectiveQueue.length);
+  const initialReviewedToday = useRef<number | null>(null);
+  if (initialReviewedToday.current === null && stats) {
+    initialReviewedToday.current = stats.reviewedToday;
+  }
 
   const visibleQueue = effectiveQueue.filter((item) => !reviewedIds.has(item._id));
   const totalCards = visibleQueue.length + reviewedCount;
   const currentItem = visibleQueue.length > 0 ? visibleQueue[0] : null;
+  const reviewedToday = Math.max(
+    stats?.reviewedToday ?? 0,
+    (initialReviewedToday.current ?? stats?.reviewedToday ?? 0) + reviewedCount,
+  );
 
   const isSessionComplete =
     visibleQueue.length === 0 && reviewedCount >= initialQueueSize.current;
@@ -121,7 +131,7 @@ export default function SrsReviewClient({
         <SrsReviewComplete
           reviewedCount={reviewedCount}
           ratingCounts={ratingCounts}
-          reviewedToday={stats?.reviewedToday ?? reviewedCount}
+          reviewedToday={reviewedToday}
           onLoadMore={handleLoadMore}
           isLoadingMore={isLoadingMore}
           noMoreCards={noMoreCards}
