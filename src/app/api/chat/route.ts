@@ -40,6 +40,10 @@ function isToolUnsupportedError(error: unknown): boolean {
   return msg.includes("tool calling") && msg.includes("not supported");
 }
 
+function normalizeGenerationError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 async function generateWithPlugins(
   provider: string,
   modelName: string,
@@ -178,13 +182,13 @@ export async function POST(request: Request) {
             try: () => generateWithoutPlugins(
               aiConfig.provider, modelName, aiConfig.apiKey, thread, request, controller
             ),
-            catch: (e) => e as Error,
+            catch: normalizeGenerationError,
           })
         : Effect.tryPromise({
             try: () => generateWithPlugins(
               aiConfig.provider, modelName, aiConfig.apiKey, thread, token, request, controller
             ),
-            catch: (e) => e as Error,
+            catch: normalizeGenerationError,
           }).pipe(
             Effect.catchIf(isToolUnsupportedError, () => {
               console.warn(`[chat] Model ${modelName} doesn't support tools, retrying without plugins`);
@@ -202,7 +206,7 @@ export async function POST(request: Request) {
                 try: () => generateWithoutPlugins(
                   aiConfig.provider, modelName, aiConfig.apiKey, newThread, request, controller
                 ),
-                catch: (e) => e as Error,
+                catch: normalizeGenerationError,
               });
             })
           );

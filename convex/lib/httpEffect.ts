@@ -1,7 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import * as ParseResult from "effect/ParseResult";
-import type { FunctionReturnType } from "convex/server";
 import { internal } from "../_generated/api";
 import type { ActionCtx } from "../_generated/server";
 import type { ApiErrorResponse } from "../../src/lib/aiToolingSchemas";
@@ -15,6 +14,13 @@ export type Auth = {
   expiresAt: number;
   absoluteExpiresAt: number | undefined;
 };
+
+type AuthResult =
+  | { readonly ok: true; readonly value: Auth }
+  | {
+      readonly ok: false;
+      readonly error: { readonly _tag: string; readonly message: string };
+    };
 
 // Error types for HTTP pipeline
 export class UnauthenticatedError {
@@ -48,6 +54,17 @@ function bearerToken(req: Request): string | null {
   return match?.[1] ?? null;
 }
 
+function parseErrorMessage(error: unknown): string {
+  if (!ParseResult.isParseError(error)) {
+    return error instanceof Error ? error.message : "Invalid request.";
+  }
+
+  const issues = ParseResult.ArrayFormatter.formatErrorSync(error);
+  return issues
+    .map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`)
+    .join("; ");
+}
+
 /**
  * Effect-based authentication
  */
@@ -62,9 +79,9 @@ export function authenticateEffect(
       return yield* Effect.fail(new UnauthenticatedError("Missing bearer token."));
     }
 
-    const auth = (yield* Effect.promise(() =>
+    const auth: AuthResult = yield* Effect.promise(() =>
       ctx.runMutation(internal.cliTokens.authenticate, { token, requiredScopes })
-    )) as FunctionReturnType<typeof internal.cliTokens.authenticate>;
+    );
 
     if (!auth.ok) {
       if (auth.error._tag === "Forbidden") {
@@ -91,11 +108,7 @@ export function parseBodyEffect<A, I>(
     const result = yield* Effect.try({
       try: () => Schema.decodeUnknownSync(Schema.parseJson(schema))(json),
       catch: (error) => {
-        const issues = ParseResult.ArrayFormatter.formatErrorSync(error as ParseResult.ParseError);
-        const message = issues
-          .map((i: ParseResult.ArrayFormatterIssue) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ");
-        return new ParseError(message);
+        return new ParseError(parseErrorMessage(error));
       },
     });
 
@@ -161,7 +174,7 @@ export function handleToolingRequest<A, I, R>(
     const result = yield* Effect.tryPromise({
       try: () => handler(auth, body),
       catch: (err) => {
-        throw new ParseError(err instanceof Error ? err.message : "Invalid request.");
+        return new ParseError(err instanceof Error ? err.message : "Invalid request.");
       },
     });
     return jsonResponse(result);
@@ -192,7 +205,7 @@ export function handleToolingRequestNoBody<R>(
     const result = yield* Effect.tryPromise({
       try: () => handler(auth),
       catch: (err) => {
-        throw new ParseError(err instanceof Error ? err.message : "Invalid request.");
+        return new ParseError(err instanceof Error ? err.message : "Invalid request.");
       },
     });
     return jsonResponse(result);

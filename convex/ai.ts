@@ -36,6 +36,13 @@ type ConfirmValue = {
   srsEnabled: boolean;
 };
 
+function llmFailure(err: unknown, fallback = "LLM request failed."): AiFailure {
+  return {
+    _tag: "LlmError" as const,
+    message: err instanceof Error ? err.message : fallback,
+  };
+}
+
 function resolveAuthAndConfig(
   ctx: ActionCtx,
 ): Effect.Effect<AuthAndConfig, AiFailure> {
@@ -61,12 +68,17 @@ function generateAndValidateJson(
 ): Effect.Effect<GenerateValue, AiFailure> {
   return Effect.gen(function* () {
     const modelName = opts.model ?? DEFAULT_MODELS[opts.keyInfo.provider] ?? "gpt-4o";
-    const llm = igniteModel(opts.keyInfo.provider, modelName, { apiKey: opts.keyInfo.apiKey });
-    const thread = [
-      new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
-      new Message("user", opts.prompt),
-    ];
-    const response = yield* Effect.promise(() => llm.complete(thread));
+    const response = yield* Effect.tryPromise({
+      try: () => {
+        const llm = igniteModel(opts.keyInfo.provider, modelName, { apiKey: opts.keyInfo.apiKey });
+        const thread = [
+          new Message("system", "You are a flashcard generation assistant. Return only valid JSON."),
+          new Message("user", opts.prompt),
+        ];
+        return llm.complete(thread);
+      },
+      catch: llmFailure,
+    });
     if (!response.content) {
       console.warn("[ai] LLM returned empty response", { model: modelName });
       return yield* Effect.fail({
@@ -284,10 +296,7 @@ export const getAvailableModels = action({
       const { keyInfo } = yield* resolveAuthAndConfig(ctx);
       const result = yield* Effect.tryPromise({
         try: () => loadModels(keyInfo.provider, { apiKey: keyInfo.apiKey }),
-        catch: (err): AiFailure => ({
-          _tag: "LlmError" as const,
-          message: err instanceof Error ? err.message : "Failed to load models",
-        }),
+        catch: (err) => llmFailure(err, "Failed to load models"),
       });
       return { models: result ? result.chat.map((m) => ({ id: m.id, name: m.name })) : [] };
     }),
