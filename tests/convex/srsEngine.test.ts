@@ -1,15 +1,13 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
-
-type TestDb = ReturnType<typeof convexTest>;
 
 async function setupSrsSet(
   t: TestDb,
@@ -143,7 +141,7 @@ describe("populateQueueForUser respects dayResetUtcHour", () => {
 
     const cardList = await as.query(api.flashcards.list, { setId });
 
-    await insertDueReviewCard(t, { setId, cardId: cardList[0]._id });
+    await insertDueReviewCard(t, { setId, cardId: cardList[0]!._id });
 
     await populateForTestUser(t);
 
@@ -196,11 +194,11 @@ describe("populateQueueForUser queue population edge cases", () => {
     const cardList = await as.query(api.flashcards.list, { setId });
     const firstSrsCardId = await insertDueReviewCard(t, {
       setId,
-      cardId: cardList[0]._id,
+      cardId: cardList[0]!._id,
     });
     const secondSrsCardId = await insertDueReviewCard(t, {
       setId,
-      cardId: cardList[1]._id,
+      cardId: cardList[1]!._id,
     });
 
     await t.run(async (ctx) => {

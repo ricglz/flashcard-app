@@ -1,3 +1,5 @@
+import type { FieldDefinition } from "../../src/lib/types";
+
 export async function unwrap<T>(
   result: { ok: true; value: T } | { ok: false; error: { message: string } } | T,
 ): Promise<T> {
@@ -13,12 +15,12 @@ export const TEST_USER = {
   subject: "user1",
 };
 
-export const fieldDefs = [
+export const fieldDefs: FieldDefinition[] = [
   { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
   { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
 ];
 
-export const fieldDefsWithTts = [
+export const fieldDefsWithTts: FieldDefinition[] = [
   { name: "Character", role: "primary" as const, metadata: { tts: { lang: "zh-CN" } }, order: 0 },
   { name: "Pinyin", role: "pronunciation" as const, metadata: {}, order: 1 },
   { name: "Meaning", role: "definition" as const, metadata: {}, order: 2 },

@@ -1,15 +1,15 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
 
 async function setupSetWithSrsReviews(
-  t: ReturnType<typeof convexTest>,
+  t: TestDb,
   reviewTimestamps: number[]
 ) {
   const as = t.withIdentity(TEST_USER);
@@ -31,7 +31,7 @@ async function setupSetWithSrsReviews(
     await t.run(async (ctx) => {
       const srsCardId = await ctx.db.insert("srsCards", {
         userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[i]._id,
+        cardId: cardList[i]!._id,
         setId,
         easeFactor: 2.5,
         interval: 1,
@@ -42,10 +42,10 @@ async function setupSetWithSrsReviews(
 
       await ctx.db.insert("srsReviews", {
         userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[i]._id,
+        cardId: cardList[i]!._id,
         srsCardId,
         rating: "good",
-        timestamp: reviewTimestamps[i],
+        timestamp: reviewTimestamps[i]!,
         newInterval: 1,
         newEaseFactor: 2.5,
       });
@@ -77,7 +77,7 @@ describe("getHydratedQueue", () => {
       for (let i = 0; i < cardList.length; i++) {
         const srsCardId = await ctx.db.insert("srsCards", {
           userId: TEST_USER.tokenIdentifier,
-          cardId: cardList[i]._id,
+          cardId: cardList[i]!._id,
           setId,
           easeFactor: 2.5,
           interval: 1,
@@ -88,7 +88,7 @@ describe("getHydratedQueue", () => {
 
         await ctx.db.insert("reviewQueue", {
           userId: TEST_USER.tokenIdentifier,
-          cardId: cardList[i]._id,
+          cardId: cardList[i]!._id,
           srsCardId,
           setId,
           queuedAt: Date.now(),
@@ -100,12 +100,12 @@ describe("getHydratedQueue", () => {
     const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
     expect(queue).toHaveLength(3);
 
-    expect(queue[0].card.fields).toEqual({ Front: "Q0", Back: "A0" });
-    expect(queue[0].fieldDefinitions).toHaveLength(2);
-    expect(queue[0].fieldDefinitions[0].name).toBe("Front");
-    expect(queue[0].frontFields).toEqual(["Front"]);
-    expect(queue[0].backFields).toEqual(["Back"]);
-    expect(queue[0].srsCardId).toBeDefined();
+    expect(queue[0]!.card.fields).toEqual({ Front: "Q0", Back: "A0" });
+    expect(queue[0]!.fieldDefinitions).toHaveLength(2);
+    expect(queue[0]!.fieldDefinitions[0]!.name).toBe("Front");
+    expect(queue[0]!.frontFields).toEqual(["Front"]);
+    expect(queue[0]!.backFields).toEqual(["Back"]);
+    expect(queue[0]!.srsCardId).toBeDefined();
   });
 
   it("returns empty array when queue is empty", async () => {
@@ -197,7 +197,6 @@ describe("getQueueStats", () => {
   });
 });
 
-type TestDb = ReturnType<typeof convexTest>;
 const OTHER_USER = {
   tokenIdentifier: "test-user-2",
   subject: "user2",
@@ -220,7 +219,7 @@ async function setupQueuedReview(t: TestDb, user = TEST_USER) {
   const srsCardId = await t.run(async (ctx) => {
     const id = await ctx.db.insert("srsCards", {
       userId: user.tokenIdentifier,
-      cardId: cardList[0]._id,
+      cardId: cardList[0]!._id,
       setId,
       easeFactor: 2.5,
       interval: 1,
@@ -230,7 +229,7 @@ async function setupQueuedReview(t: TestDb, user = TEST_USER) {
     });
     await ctx.db.insert("reviewQueue", {
       userId: user.tokenIdentifier,
-      cardId: cardList[0]._id,
+      cardId: cardList[0]!._id,
       srsCardId: id,
       setId,
       queuedAt: Date.now(),
@@ -323,7 +322,7 @@ describe("recordReview", () => {
     await t.run(async (ctx) => {
       const otherSrsCardId = await ctx.db.insert("srsCards", {
         userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[1]._id,
+        cardId: cardList[1]!._id,
         setId,
         easeFactor: 2.5,
         interval: 1,
@@ -333,7 +332,7 @@ describe("recordReview", () => {
       });
       await ctx.db.insert("reviewQueue", {
         userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[1]._id,
+        cardId: cardList[1]!._id,
         srsCardId: otherSrsCardId,
         setId,
         queuedAt: Date.now(),
@@ -382,7 +381,7 @@ describe("recordReview", () => {
     const srsCardId = await t.run(async (ctx) => {
       const id = await ctx.db.insert("srsCards", {
         userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[1]._id,
+        cardId: cardList[1]!._id,
         setId,
         easeFactor: 2.5,
         interval: 1,
@@ -392,7 +391,7 @@ describe("recordReview", () => {
       });
       await ctx.db.insert("reviewQueue", {
         userId: OTHER_USER.tokenIdentifier,
-        cardId: cardList[1]._id,
+        cardId: cardList[1]!._id,
         srsCardId: id,
         setId,
         queuedAt: Date.now(),
@@ -425,7 +424,7 @@ describe("recordReview", () => {
         q.eq("srsCardId", srsCardId)
       ).first();
       if (!queue) throw new Error("Missing test queue item");
-      await ctx.db.patch(queue._id, { cardId: cardList[1]._id, setId });
+      await ctx.db.patch(queue._id, { cardId: cardList[1]!._id, setId });
     });
 
     const result = await as.mutation(api.srsReviewQueue.recordReview, {

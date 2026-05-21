@@ -1,9 +1,9 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -13,7 +13,7 @@ const OTHER_USER = {
 };
 
 async function createSetWithCards(
-  t: ReturnType<typeof convexTest>,
+  t: TestDb,
   opts?: { origin?: "manual" | "ai_generated"; cardCount?: number },
 ) {
   const as = t.withIdentity(TEST_USER);

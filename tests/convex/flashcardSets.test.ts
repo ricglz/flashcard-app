@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
@@ -6,6 +5,7 @@ import schema from "../../convex/schema";
 import { validateSetFields } from "../../convex/domain/fieldDefinitions";
 import { asId } from "../../src/lib/convexHelpers";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -211,7 +211,7 @@ describe("flashcardSets.remove", () => {
     });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 
@@ -230,7 +230,7 @@ describe("flashcardSets.remove", () => {
 });
 
 describe("flashcardSets.fork", () => {
-  async function createPublicSetWithCards(t: ReturnType<typeof convexTest>) {
+  async function createPublicSetWithCards(t: TestDb) {
     const as = t.withIdentity(TEST_USER);
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Original Set",

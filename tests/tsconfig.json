@@ -1,7 +1,8 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["vite/client", "vitest/globals"]
+    "types": ["vitest/globals"]
   },
-  "include": ["**/*.test.ts", "**/*.ts"]
+  "include": ["**/*.test.ts", "**/*.ts"],
+  "exclude": ["../node_modules", "../src/sw.ts"]
 }

@@ -157,7 +157,7 @@ export function validateFieldDefinitions(
 
 export function validateSetFieldsEffect(
   name: string | undefined,
-  fieldDefinitions: readonly FieldDefinition[] | undefined,
+  fieldDefinitions: readonly FieldDefinitionInput[] | undefined,
 ): Effect.Effect<
   { name?: string; fieldDefinitions?: FieldDefinition[] },
   SetFieldsValidationFailure
@@ -174,7 +174,7 @@ export function validateSetFieldsEffect(
 
 export function validateSetFields(
   name: string | undefined,
-  fieldDefinitions: readonly FieldDefinition[] | undefined,
+  fieldDefinitions: readonly FieldDefinitionInput[] | undefined,
 ): DomainResult<
   { name?: string; fieldDefinitions?: FieldDefinition[] },
   SetFieldsValidationFailure

@@ -1,14 +1,14 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
 
-async function setupSrsSet(t: ReturnType<typeof convexTest>, cardCount = 5) {
+async function setupSrsSet(t: TestDb, cardCount = 5) {
   const as = t.withIdentity(TEST_USER);
 
   const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
@@ -25,7 +25,7 @@ async function setupSrsSet(t: ReturnType<typeof convexTest>, cardCount = 5) {
   return { setId, as };
 }
 
-async function getQueueItems(t: ReturnType<typeof convexTest>) {
+async function getQueueItems(t: TestDb) {
   return await t.run(async (ctx) => {
     return await ctx.db
       .query("reviewQueue")

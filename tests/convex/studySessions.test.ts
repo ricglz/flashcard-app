@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
@@ -7,13 +6,13 @@ import { computeOverallScore } from "../../convex/studySessions";
 import { CARD_RATING_SCORES } from "../../src/lib/types";
 import { unwrap, TEST_USER, fieldDefs, fieldDefsWithTts } from "./helpers";
 import type { Id } from "../../convex/_generated/dataModel";
+import type { TestDb, TestIdentity } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
-type TestDb = ReturnType<typeof convexTest>;
 
 
 async function createSetWithCards(
-  as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>,
+  as: TestIdentity,
   cardCount: number,
   defs = fieldDefs
 ) {
@@ -45,12 +44,12 @@ describe("computeOverallScore", () => {
   });
 
   it("returns 0 for all wrong", () => {
-    const results = [{ rating: "wrong" }, { rating: "wrong" }];
+    const results = [{ rating: "wrong" }, { rating: "wrong" }] as const;
     expect(computeOverallScore(results)).toBe(0);
   });
 
   it("returns 1 for all easy", () => {
-    const results = [{ rating: "easy" }, { rating: "easy" }];
+    const results = [{ rating: "easy" }, { rating: "easy" }] as const;
     expect(computeOverallScore(results)).toBe(1);
   });
 
@@ -62,7 +61,7 @@ describe("computeOverallScore", () => {
       { rating: "hard" },
       { rating: "good" },
       { rating: "easy" },
-    ];
+    ] as const;
     expect(computeOverallScore(results)).toBe(0.5);
   });
 });
@@ -236,14 +235,14 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
-    const { value: { isComplete } } = await as.mutation(
+    const { isComplete } = await unwrap(await as.mutation(
       api.studySessions.recordResult,
       {
         sessionId,
-        cardId: session!.cardOrder[0],
+        cardId: session!.cardOrder[0]!,
         rating: "good",
       }
-    );
+    ));
     expect(isComplete).toBe(false);
 
     const updated = await as.query(api.studySessions.get, {
@@ -267,14 +266,14 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
-    const { value: { isComplete } } = await as.mutation(
+    const { isComplete } = await unwrap(await as.mutation(
       api.studySessions.recordResult,
       {
         sessionId,
-        cardId: session!.cardOrder[0],
+        cardId: session!.cardOrder[0]!,
         rating: "easy",
       }
-    );
+    ));
     expect(isComplete).toBe(true);
 
     const completed = await as.query(api.studySessions.get, {
@@ -302,7 +301,7 @@ describe("studySessions.recordResult", () => {
     // Try to submit result for card at index 1 when we're at index 0
     expect(await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[1],
+      cardId: session!.cardOrder[1]!,
       rating: "good",
     })).toMatchObject({ ok: false, error: { message: "cardId does not match the current card in the session" } });
   });
@@ -322,13 +321,13 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 
     const replay = await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "easy",
     });
 
@@ -358,12 +357,12 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "wrong",
     });
     const completedResult = await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[1],
+      cardId: session!.cardOrder[1]!,
       rating: "easy",
     });
 
@@ -398,7 +397,7 @@ describe("studySessions.recordResult", () => {
 
     expect(await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     })).toMatchObject({ ok: true, value: { outcome: "alreadyComplete" } });
   });
@@ -442,7 +441,7 @@ describe("studySessions.abandon", () => {
     });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 

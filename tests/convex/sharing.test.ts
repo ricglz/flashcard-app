@@ -1,10 +1,10 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import schema from "../../convex/schema";
 import { unwrap, fieldDefs } from "./helpers";
+import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -19,7 +19,7 @@ const VISITOR = {
   subject: "visitor",
 };
 
-async function createSetWithCards(t: ReturnType<typeof convexTest>) {
+async function createSetWithCards(t: TestDb) {
   const as = t.withIdentity(OWNER);
   const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Shared Set",

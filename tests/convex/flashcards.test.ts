@@ -1,15 +1,15 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import type { Id } from "../../convex/_generated/dataModel";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestIdentity } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
 async function createSet(
-  as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>
+  as: TestIdentity,
 ): Promise<Id<"flashcardSets">> {
   return unwrap(await as.mutation(api.flashcardSets.create, {
     name: "Test Set",
@@ -31,8 +31,8 @@ describe("flashcards.create", () => {
 
     const cards = await as.query(api.flashcards.list, { setId });
     expect(cards).toHaveLength(1);
-    expect(cards[0]._id).toBe(cardId);
-    expect(cards[0].fields).toEqual({ Front: "Question", Back: "Answer" });
+    expect(cards[0]!._id).toBe(cardId);
+    expect(cards[0]!.fields).toEqual({ Front: "Question", Back: "Answer" });
   });
 
   it("allows missing defined fields", async () => {
@@ -47,7 +47,7 @@ describe("flashcards.create", () => {
     }));
 
     const cards = await as.query(api.flashcards.list, { setId });
-    expect(cards[0].fields).toEqual({ Front: "Question" });
+    expect(cards[0]!.fields).toEqual({ Front: "Question" });
   });
 
   it("rejects unknown fields", async () => {
@@ -173,6 +173,6 @@ describe("flashcards.update", () => {
     }));
 
     const cards = await as.query(api.flashcards.list, { setId });
-    expect(cards[0].order).toBe(2);
+    expect(cards[0]!.order).toBe(2);
   });
 });

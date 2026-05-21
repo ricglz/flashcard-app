@@ -14,7 +14,7 @@ import { getFieldDefinitions } from "./lib/typed";
 
 /** Compute overall score from an array of card result ratings. */
 export function computeOverallScore(
-  ratings: Array<{ rating: CardRating }>
+  ratings: ReadonlyArray<{ readonly rating: CardRating }>
 ): number {
   if (ratings.length === 0) return 0;
   const totalScore = ratings.reduce(

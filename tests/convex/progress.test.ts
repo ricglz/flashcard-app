@@ -1,15 +1,15 @@
-/// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { TestIdentity } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
 
 async function createSetWithCards(
-  as: ReturnType<ReturnType<typeof convexTest>["withIdentity"]>,
+  as: TestIdentity,
   cardCount: number
 ) {
   const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
@@ -42,7 +42,7 @@ describe("incrementDailyStats via recordResult", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 
@@ -66,12 +66,12 @@ describe("incrementDailyStats via recordResult", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[1],
+      cardId: session!.cardOrder[1]!,
       rating: "easy",
     });
 
@@ -112,7 +112,7 @@ describe("getDailyGoalProgress", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 
@@ -148,7 +148,7 @@ describe("getStreakStats", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 
@@ -181,14 +181,14 @@ describe("getDailyHistory", () => {
     const session = await as.query(api.studySessions.get, { id: sessionId });
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
-      cardId: session!.cardOrder[0],
+      cardId: session!.cardOrder[0]!,
       rating: "good",
     });
 
     const history = await as.query(api.progress.getDailyHistory, { days: 7 });
     expect(history.length).toBe(1);
-    expect(history[0].totalCards).toBe(1);
-    expect(history[0].accuracy).toBe(1);
+    expect(history[0]!.totalCards).toBe(1);
+    expect(history[0]!.accuracy).toBe(1);
   });
 
   it("rejects invalid day ranges", async () => {
@@ -230,7 +230,7 @@ describe("getPerSetMastery", () => {
             .eq("setId", setId)
         )
         .take(10);
-      await ctx.db.patch(cards[0]._id, {
+      await ctx.db.patch(cards[0]!._id, {
         status: "learning",
         easeFactor: 2.0,
       });
@@ -238,13 +238,13 @@ describe("getPerSetMastery", () => {
 
     const mastery = await as.query(api.progress.getPerSetMastery, {});
     expect(mastery).toHaveLength(1);
-    expect(mastery[0].setName).toBe("Test");
-    expect(mastery[0].total).toBe(3);
-    expect(mastery[0].new).toBe(2);
-    expect(mastery[0].learning).toBe(1);
-    expect(mastery[0].review).toBe(0);
+    expect(mastery[0]!.setName).toBe("Test");
+    expect(mastery[0]!.total).toBe(3);
+    expect(mastery[0]!.new).toBe(2);
+    expect(mastery[0]!.learning).toBe(1);
+    expect(mastery[0]!.review).toBe(0);
     // avgEase: (2.0 + 2.5 + 2.5) / 3 ≈ 2.333
-    expect(mastery[0].avgEase).toBeCloseTo(2.333, 2);
+    expect(mastery[0]!.avgEase).toBeCloseTo(2.333, 2);
   });
 
   it("returns empty array when no SRS-enabled sets", async () => {
