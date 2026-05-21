@@ -68,17 +68,10 @@
 
 ### Infrastructure
 - [ ] Dedicated Clerk + Convex test instances so e2e tests don't write to the dev database
-- [ ] Playwright setup and CI integration
-- [ ] Use `clerk.signIn()` from `@clerk/testing/playwright` instead of manual modal UI — creates proper server-side sessions that work with server component auth guards (`getAuthToken()` / `auth()`)
-- [ ] Shared Playwright fixture (`e2e/fixtures.ts`) that calls `setupClerkTestingToken({ page })` per-test — `storageState` alone doesn't persist the route interception across browser contexts
-- [ ] Persistent test user in Clerk dashboard + `E2E_CLERK_USER_EMAIL` env var (required by `clerk.signIn()`)
-- [ ] Test data seeding utilities (create sets, cards, sessions programmatically)
-- [ ] Convex test environment isolation (each test run gets clean state)
+- [ ] Playwright CI integration (GitHub Actions)
+- [ ] Test data seeding utilities (create sets, cards, sessions programmatically to avoid UI-dependent setup)
 
 ### Core User Flows
-- [ ] Set creation wizard — CSV import path (upload → infer fields → configure metadata → create)
-- [ ] Set creation wizard — manual entry path (name → add cards → configure fields → create)
-- [ ] Set creation wizard — navigation (step validation, back/forward state preservation)
 - [ ] Study session happy path (create set → add cards → study → rate cards → complete → view results)
 - [ ] Session resume (start → navigate away → return → resume prompt)
 
