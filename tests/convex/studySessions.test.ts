@@ -6,8 +6,10 @@ import schema from "../../convex/schema";
 import { computeOverallScore } from "../../convex/studySessions";
 import { CARD_RATING_SCORES } from "../../src/lib/types";
 import { unwrap, TEST_USER, fieldDefs, fieldDefsWithTts } from "./helpers";
+import type { Id } from "../../convex/_generated/dataModel";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
+type TestDb = ReturnType<typeof convexTest>;
 
 
 async function createSetWithCards(
@@ -26,6 +28,15 @@ async function createSetWithCards(
   }));
   await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
   return setId;
+}
+
+async function getCardResults(t: TestDb, sessionId: Id<"studySessions">) {
+  return await t.run(async (ctx) => {
+    return await ctx.db
+      .query("cardResults")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
+      .take(1000);
+  });
 }
 
 describe("computeOverallScore", () => {
@@ -294,6 +305,78 @@ describe("studySessions.recordResult", () => {
       cardId: session!.cardOrder[1],
       rating: "good",
     })).toMatchObject({ ok: false, error: { message: "cardId does not match the current card in the session" } });
+  });
+
+  it("treats replay for an already recorded card as a duplicate", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 2);
+
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const session = await as.query(api.studySessions.get, { id: sessionId });
+    await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session!.cardOrder[0],
+      rating: "good",
+    });
+
+    const replay = await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session!.cardOrder[0],
+      rating: "easy",
+    });
+
+    expect(replay).toEqual({
+      ok: true,
+      value: { isComplete: false, outcome: "duplicate" },
+    });
+    const results = await getCardResults(t, sessionId);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.rating).toBe("good");
+    const updated = await as.query(api.studySessions.get, { id: sessionId });
+    expect(updated!.currentIndex).toBe(1);
+  });
+
+  it("replays ordered queued results and completes the session", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 2);
+
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const session = await as.query(api.studySessions.get, { id: sessionId });
+    await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session!.cardOrder[0],
+      rating: "wrong",
+    });
+    const completedResult = await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session!.cardOrder[1],
+      rating: "easy",
+    });
+
+    expect(completedResult).toMatchObject({
+      ok: true,
+      value: { isComplete: true, outcome: "recorded" },
+    });
+    const results = await getCardResults(t, sessionId);
+    expect(results).toHaveLength(2);
+    const completed = await as.query(api.studySessions.get, { id: sessionId });
+    expect(completed!.status).toBe("completed");
+    expect(completed!.currentIndex).toBe(2);
+    expect(completed!.overallScore).toBe(0.5);
   });
 
   it("rejects recording result on abandoned session", async () => {
