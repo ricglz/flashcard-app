@@ -232,23 +232,27 @@ export const getCardStatusBreakdown = query({
     if (enabledSets.length === 0)
       return { new: 0, learning: 0, review: 0 };
 
-    const enabledSetIds = new Set(enabledSets.map((us) => us.setId));
     let newCount = 0;
     let learningCount = 0;
     let reviewCount = 0;
 
-    const allCards = await ctx.db
-      .query("srsCards")
-      .withIndex("by_userId_and_nextReviewAt", (q) =>
-        q.eq("userId", identity.tokenIdentifier)
+    const cardsBySet = await Promise.all(
+      enabledSets.map((us) =>
+        ctx.db
+          .query("srsCards")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", identity.tokenIdentifier).eq("setId", us.setId)
+          )
+          .take(2000)
       )
-      .take(5000);
+    );
 
-    for (const card of allCards) {
-      if (!enabledSetIds.has(card.setId)) continue;
-      if (card.status === "new") newCount++;
-      else if (card.status === "learning") learningCount++;
-      else reviewCount++;
+    for (const cards of cardsBySet) {
+      for (const card of cards) {
+        if (card.status === "new") newCount++;
+        else if (card.status === "learning") learningCount++;
+        else reviewCount++;
+      }
     }
 
     return { new: newCount, learning: learningCount, review: reviewCount };
@@ -272,21 +276,23 @@ export const getPerSetMastery = query({
     if (enabledSets.length === 0) return [];
 
     const setIds = enabledSets.map((us) => us.setId);
-    const [sets, allCards] = await Promise.all([
+    const [sets, cardsBySet] = await Promise.all([
       Promise.all(setIds.map((id) => ctx.db.get(id))),
-      ctx.db
-        .query("srsCards")
-        .withIndex("by_userId_and_nextReviewAt", (q) =>
-          q.eq("userId", identity.tokenIdentifier)
+      Promise.all(
+        setIds.map((setId) =>
+          ctx.db
+            .query("srsCards")
+            .withIndex("by_userId_and_setId", (q) =>
+              q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
+            )
+            .take(2000)
         )
-        .take(5000),
+      ),
     ]);
 
     const setNameMap = new Map(
       sets.filter((s) => s !== null).map((s) => [s._id, s.name])
     );
-    const enabledSetIds = new Set(setIds);
-
     const perSet = new Map<string, {
       newCount: number; learningCount: number; reviewCount: number;
       totalEase: number; total: number;
@@ -295,15 +301,16 @@ export const getPerSetMastery = query({
       perSet.set(setId, { newCount: 0, learningCount: 0, reviewCount: 0, totalEase: 0, total: 0 });
     }
 
-    for (const card of allCards) {
-      if (!enabledSetIds.has(card.setId)) continue;
-      const entry = perSet.get(card.setId);
-      if (!entry) continue;
-      entry.total++;
-      entry.totalEase += card.easeFactor;
-      if (card.status === "new") entry.newCount++;
-      else if (card.status === "learning") entry.learningCount++;
-      else entry.reviewCount++;
+    for (const cards of cardsBySet) {
+      for (const card of cards) {
+        const entry = perSet.get(card.setId);
+        if (!entry) continue;
+        entry.total++;
+        entry.totalEase += card.easeFactor;
+        if (card.status === "new") entry.newCount++;
+        else if (card.status === "learning") entry.learningCount++;
+        else entry.reviewCount++;
+      }
     }
 
     const results = [];

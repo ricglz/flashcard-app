@@ -81,16 +81,19 @@ export async function populateQueue(
 
   const newCards: typeof dueCards = [];
   if (newCardLimit > 0) {
+    const srsCardsBySet = await Promise.all(
+      srsSetIds.map((setId) =>
+        ctx.db
+          .query("srsCards")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", userId).eq("setId", setId)
+          )
+          .take(500)
+      )
+    );
+
     const perSetAvailable: (typeof dueCards)[] = [];
-
-    for (const setId of srsSetIds) {
-      const srsCardsForSet = await ctx.db
-        .query("srsCards")
-        .withIndex("by_userId_and_setId", (q) =>
-          q.eq("userId", userId).eq("setId", setId)
-        )
-        .take(500);
-
+    for (const srsCardsForSet of srsCardsBySet) {
       const available = srsCardsForSet.filter(
         (sc) => sc.status === "new" && !alreadyQueued.has(sc._id)
       );

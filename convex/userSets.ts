@@ -256,14 +256,14 @@ export async function enrollCardsForSetHelper(
     .withIndex("by_setId", (q) => q.eq("setId", setId))
     .take(1000);
 
+  const existingSrsCards = await ctx.db
+    .query("srsCards")
+    .withIndex("by_userId_and_setId", (q) => q.eq("userId", userId).eq("setId", setId))
+    .take(1000);
+  const existingCardIds = new Set(existingSrsCards.map((sc) => sc.cardId));
+
   for (const card of cards) {
-    const existing = await ctx.db
-      .query("srsCards")
-      .withIndex("by_cardId_and_userId", (q) =>
-        q.eq("cardId", card._id).eq("userId", userId)
-      )
-      .first();
-    if (!existing) {
+    if (!existingCardIds.has(card._id)) {
       await ctx.db.insert("srsCards", {
         userId,
         cardId: card._id,

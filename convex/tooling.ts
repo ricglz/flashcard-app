@@ -89,11 +89,6 @@ async function assertAccessibleSets(
   return ok(unique);
 }
 
-async function countCards(ctx: QueryCtx, setId: Id<"flashcardSets">) {
-  const cards = await ctx.db.query("flashcards").withIndex("by_setId", (q) => q.eq("setId", setId)).take(1000);
-  return cards.length;
-}
-
 async function srsSummary(ctx: QueryCtx, userId: string, setId: Id<"flashcardSets">) {
   const srsCards = await ctx.db
     .query("srsCards")
@@ -127,24 +122,25 @@ export const listSetsForTool = internalQuery({
   },
   handler: async (ctx, args): Promise<SetsListResponse> => {
     const links = await getUserSetLinks(ctx, args.userId);
-    const sets = [];
-    for (const link of links) {
-      const set = await ctx.db.get(link.setId);
-      if (!set) continue;
-      const fieldDefinitions = getFieldDefinitions(set);
-      sets.push({
-        setId: set._id,
-        name: set.name,
-        ...(set.description !== undefined ? { description: set.description } : {}),
-        srsEnabled: link.srsEnabled,
-        cardCount: await countCards(ctx, set._id),
-        origin: originSummary(set.origin),
-        ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
-        ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
-        ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, args.userId, set._id) } : {}),
-      });
-    }
-    return { sets };
+    const sets = await Promise.all(
+      links.map(async (link) => {
+        const set = await ctx.db.get(link.setId);
+        if (!set) return null;
+        const fieldDefinitions = getFieldDefinitions(set);
+        return {
+          setId: set._id,
+          name: set.name,
+          ...(set.description !== undefined ? { description: set.description } : {}),
+          srsEnabled: link.srsEnabled,
+          cardCount: set.cardCount,
+          origin: originSummary(set.origin),
+          ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
+          ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
+          ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, args.userId, set._id) } : {}),
+        };
+      }),
+    );
+    return { sets: sets.filter((s) => s !== null) };
   },
 });
 
@@ -254,45 +250,64 @@ export async function getWeakCardsHelper(
     else if (scope.kind === "sets") setIds = scope.setIds;
     else setIds = links.filter((link) => link.srsEnabled).map((link) => link.setId);
 
+    const uniqueSetIds = [...new Set(setIds)];
+    const sets = await Promise.all(uniqueSetIds.map((id) => ctx.db.get(id)));
+    const existingSets = sets.filter((set): set is Doc<"flashcardSets"> => set !== null);
+    const setMap = new Map(existingSets.map((set) => [set._id, set]));
+
+    const srsCardsBySet = await Promise.all(
+      uniqueSetIds.map((setId) =>
+        ctx.db
+          .query("srsCards")
+          .withIndex("by_userId_and_setId", (q) => q.eq("userId", args.userId).eq("setId", setId))
+          .take(1000)
+      )
+    );
+
+    const allReviews = await ctx.db
+      .query("srsReviews")
+      .withIndex("by_userId_and_timestamp", (q) => q.eq("userId", args.userId).gte("timestamp", since))
+      .order("desc")
+      .take(5000);
+    const reviewsBySrsCardId = new Map<string, typeof allReviews>();
+    for (const review of allReviews) {
+      const arr = reviewsBySrsCardId.get(review.srsCardId) ?? [];
+      arr.push(review);
+      reviewsBySrsCardId.set(review.srsCardId, arr);
+    }
+
     const candidates: Array<{
       setId: Id<"flashcardSets">;
       setName: string;
       fieldDefinitions: FieldDefinition[];
       schemaFingerprint: string;
       cardId: Id<"flashcards">;
-      fields: Record<string, string>;
+      srsCardId: Id<"srsCards">;
       weakScore: number;
       weakReasons: WeakReason[];
       metrics: WeakCardsResponse["schemaGroups"][number]["sets"][number]["weakCards"][number]["metrics"];
       recentRatings?: CardRating[];
     }> = [];
 
-    for (const setId of [...new Set(setIds)]) {
+    for (let i = 0; i < uniqueSetIds.length; i++) {
+      const setId = uniqueSetIds[i];
+      const srsCards = srsCardsBySet[i];
+      if (!setId || !srsCards) continue;
       const link = linkBySetId.get(setId);
       if (!link) continue;
-      const set = await ctx.db.get(setId);
+      const set = setMap.get(setId);
       if (!set) continue;
       if (args.filters?.excludeAiGeneratedSets && set.origin.kind === "ai_generated") continue;
       const fieldDefinitions = getFieldDefinitions(set);
       const fingerprint = schemaFingerprint(fieldDefinitions);
-      const srsCards = await ctx.db
-        .query("srsCards")
-        .withIndex("by_userId_and_setId", (q) => q.eq("userId", args.userId).eq("setId", setId))
-        .take(1000);
       const perSet = [];
       for (const srsCard of srsCards) {
         if (args.filters?.statuses && !args.filters.statuses.includes(srsCard.status)) continue;
         if (args.filters?.maxEaseFactor !== undefined && srsCard.easeFactor > args.filters.maxEaseFactor) continue;
-        const reviews = await ctx.db
-          .query("srsReviews")
-          .withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id))
-          .order("desc")
-          .take(50);
+        const reviews = reviewsBySrsCardId.get(srsCard._id) ?? [];
         const recentReviews = reviews.filter((review) => review.timestamp >= since);
         if ((args.filters?.minReviews ?? 0) > recentReviews.length) continue;
         if (args.filters?.ratings && !recentReviews.some((review) => args.filters?.ratings?.includes(review.rating))) continue;
-        const card = await ctx.db.get(srsCard.cardId);
-        if (!card) continue;
         const scored = scoreWeakCard({ methodology, srsCard, reviews: recentReviews, now });
         if (scored.score <= 0 && recentReviews.length === 0 && srsCard.status !== "learning" && srsCard.easeFactor > LOW_EASE_THRESHOLD) continue;
         perSet.push({
@@ -300,8 +315,8 @@ export async function getWeakCardsHelper(
           setName: set.name,
           fieldDefinitions,
           schemaFingerprint: fingerprint,
-          cardId: card._id,
-          fields: card.fields,
+          cardId: srsCard.cardId,
+          srsCardId: srsCard._id,
           weakScore: scored.score,
           weakReasons: scored.reasons,
           metrics: {
@@ -323,8 +338,16 @@ export async function getWeakCardsHelper(
 
     candidates.sort((a, b) => b.weakScore - a.weakScore);
     const selected = candidates.slice(0, totalLimit);
+
+    const cardIds = selected.map((c) => c.cardId);
+    const cards = await Promise.all(cardIds.map((id) => ctx.db.get(id)));
+    const existingCards = cards.filter((card): card is Doc<"flashcards"> => card !== null);
+    const cardMap = new Map(existingCards.map((card) => [card._id, card]));
+
     const groups = new Map<string, MutableWeakGroup>();
     for (const candidate of selected) {
+      const card = cardMap.get(candidate.cardId);
+      if (!card) continue;
       let group = groups.get(candidate.schemaFingerprint);
       if (!group) {
         group = { schemaFingerprint: candidate.schemaFingerprint, fieldDefinitions: candidate.fieldDefinitions, sets: [] };
@@ -337,7 +360,7 @@ export async function getWeakCardsHelper(
       }
       setEntry.weakCards.push({
         cardId: candidate.cardId,
-        fields: candidate.fields,
+        fields: card.fields,
         weakScore: candidate.weakScore,
         weakReasons: candidate.weakReasons,
         metrics: candidate.metrics,
@@ -371,8 +394,9 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   if (!accessible.ok) issues.push(accessible.error.message);
 
   const expectedFingerprint = schemaFingerprint(normalized.fieldDefinitions);
-  for (const sourceSetId of normalized.sourceSetIds as Id<"flashcardSets">[]) {
-    const source = await ctx.db.get(sourceSetId);
+  const uniqueSourceSetIds = [...new Set(normalized.sourceSetIds as Id<"flashcardSets">[])];
+  const sourceSets = await Promise.all(uniqueSourceSetIds.map((id) => ctx.db.get(id)));
+  for (const source of sourceSets) {
     if (!source) {
       issues.push("Source set not found.");
       continue;
@@ -385,13 +409,19 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   }
 
   const expectedFieldNames = normalized.fieldDefinitions.map((field) => field.name);
+  const allSourceCardIds = normalized.cards
+    .flatMap((c) => c.sourceCardIds ?? [])
+    .filter((id, idx, arr) => arr.indexOf(id) === idx) as Id<"flashcards">[];
+  const sourceCards = await Promise.all(allSourceCardIds.map((id) => ctx.db.get(id)));
+  const existingSourceCards = sourceCards.filter((card): card is Doc<"flashcards"> => card !== null);
+  const sourceCardMap = new Map(existingSourceCards.map((card) => [card._id, card]));
+
   for (const [index, card] of normalized.cards.entries()) {
     const validation = validateCardFields(expectedFieldNames, card.fields);
     if (!validation.ok) issues.push(`Card ${index + 1}: ${validation.error.message}`);
     if (card.sourceCardIds) {
       for (const cardId of card.sourceCardIds as Id<"flashcards">[]) {
-        const sourceCard = await ctx.db.get(cardId);
-        if (!sourceCard) issues.push(`Card ${index + 1}: source card not found.`);
+        if (!sourceCardMap.has(cardId)) issues.push(`Card ${index + 1}: source card not found.`);
       }
     }
   }
@@ -524,12 +554,16 @@ export const appendGeneratedCardsForTool = internalMutation({
     const fieldNames = args.fieldDefinitions.map(
       (f) => f.name,
     );
-    for (const [i, card] of args.cards.entries()) {
+    const validatedCards = [];
+    for (const card of args.cards) {
       const validated = validateCardFields(fieldNames, card.fields);
       if (!validated.ok) return fail(invalidInput(validated.error.message));
+      validatedCards.push(validated.value);
+    }
+    for (const [i, fields] of validatedCards.entries()) {
       await ctx.db.insert("flashcards", {
         setId: args.targetSetId,
-        fields: validated.value,
+        fields,
         order: maxOrder + 1 + i,
         origin: "ai_generated",
       });
@@ -565,24 +599,25 @@ export const listSetsPublic = query({
     if (!identity) throw new Error("Not authenticated");
     const userId = identity.tokenIdentifier;
     const links = await getUserSetLinks(ctx, userId);
-    const sets = [];
-    for (const link of links) {
-      const set = await ctx.db.get(link.setId);
-      if (!set) continue;
-      const fieldDefinitions = getFieldDefinitions(set);
-      sets.push({
-        setId: set._id,
-        name: set.name,
-        ...(set.description !== undefined ? { description: set.description } : {}),
-        srsEnabled: link.srsEnabled,
-        cardCount: await countCards(ctx, set._id),
-        origin: originSummary(set.origin),
-        ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
-        ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
-        ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, userId, set._id) } : {}),
-      });
-    }
-    return { sets };
+    const sets = await Promise.all(
+      links.map(async (link) => {
+        const set = await ctx.db.get(link.setId);
+        if (!set) return null;
+        const fieldDefinitions = getFieldDefinitions(set);
+        return {
+          setId: set._id,
+          name: set.name,
+          ...(set.description !== undefined ? { description: set.description } : {}),
+          srsEnabled: link.srsEnabled,
+          cardCount: set.cardCount,
+          origin: originSummary(set.origin),
+          ...(args.include?.fieldDefinitions ? { fieldDefinitions } : {}),
+          ...(args.include?.schemaFingerprint ? { schemaFingerprint: schemaFingerprint(fieldDefinitions) } : {}),
+          ...(args.include?.srsSummary ? { srsSummary: await srsSummary(ctx, userId, set._id) } : {}),
+        };
+      }),
+    );
+    return { sets: sets.filter((s) => s !== null) };
   },
 });
 

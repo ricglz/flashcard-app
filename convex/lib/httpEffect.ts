@@ -3,17 +3,18 @@ import * as Schema from "effect/Schema";
 import * as ParseResult from "effect/ParseResult";
 import type { FunctionReturnType } from "convex/server";
 import { internal } from "../_generated/api";
+import type { ActionCtx } from "../_generated/server";
 import type { ApiErrorResponse } from "../../src/lib/aiToolingSchemas";
 
 export type Scope = "sets:read" | "weak_context:read" | "ai_sets:create" | "srs:enroll";
 
-export interface Auth {
+export type Auth = {
   userId: string;
   scopes: Scope[];
   lastUsedAt: number;
   expiresAt: number;
   absoluteExpiresAt: number | undefined;
-}
+};
 
 // Error types for HTTP pipeline
 export class UnauthenticatedError {
@@ -51,7 +52,7 @@ function bearerToken(req: Request): string | null {
  * Effect-based authentication
  */
 export function authenticateEffect(
-  ctx: { runMutation: Function },
+  ctx: Pick<ActionCtx, "runMutation">,
   req: Request,
   requiredScopes: Scope[]
 ): Effect.Effect<Auth, UnauthenticatedError | ForbiddenError> {
@@ -136,12 +137,19 @@ export function httpErrorToResponse(error: HttpError): Response {
   }
 }
 
+function isHttpError(error: unknown): error is HttpError {
+  return error instanceof UnauthenticatedError ||
+    error instanceof ForbiddenError ||
+    error instanceof ParseError ||
+    error instanceof NotFoundError;
+}
+
 /**
  * Main handler for tooling requests
  * Composes authentication, body parsing, and business logic execution
  */
 export function handleToolingRequest<A, I, R>(
-  ctx: { runMutation: Function; runQuery: Function },
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
   req: Request,
   schema: Schema.Schema<A, I, never>,
   scopes: Scope[],
@@ -161,14 +169,8 @@ export function handleToolingRequest<A, I, R>(
 
   return program.pipe(
     Effect.catchAll((error: unknown) => {
-      if (error && typeof error === "object" && "_tag" in error) {
-        const taggedError = error as HttpError;
-        if (taggedError._tag === "Unauthenticated" || 
-            taggedError._tag === "Forbidden" || 
-            taggedError._tag === "ParseError" || 
-            taggedError._tag === "NotFound") {
-          return Effect.succeed(httpErrorToResponse(taggedError));
-        }
+      if (isHttpError(error)) {
+        return Effect.succeed(httpErrorToResponse(error));
       }
       return Effect.succeed(errorResponse("internal_error", "Unexpected error", 500));
     }),
@@ -180,7 +182,7 @@ export function handleToolingRequest<A, I, R>(
  * Handler for requests without body (e.g., token status)
  */
 export function handleToolingRequestNoBody<R>(
-  ctx: { runMutation: Function },
+  ctx: Pick<ActionCtx, "runMutation">,
   req: Request,
   scopes: Scope[],
   handler: (auth: Auth) => Promise<R>
@@ -198,14 +200,8 @@ export function handleToolingRequestNoBody<R>(
 
   return program.pipe(
     Effect.catchAll((error: unknown) => {
-      if (error && typeof error === "object" && "_tag" in error) {
-        const taggedError = error as HttpError;
-        if (taggedError._tag === "Unauthenticated" || 
-            taggedError._tag === "Forbidden" || 
-            taggedError._tag === "ParseError" || 
-            taggedError._tag === "NotFound") {
-          return Effect.succeed(httpErrorToResponse(taggedError));
-        }
+      if (isHttpError(error)) {
+        return Effect.succeed(httpErrorToResponse(error));
       }
       return Effect.succeed(errorResponse("internal_error", "Unexpected error", 500));
     }),
