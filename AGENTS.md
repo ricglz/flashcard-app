@@ -1,7 +1,12 @@
 This file should contain only things that agents will update when they don't understand something, and not as a "cache" or something that they could always find or figure out based on reading the code.
 
 ## Status
-Right now there are no active users, so we can just do changes as we seem fit without needing to think about backfilling. Observability is still important
+Right now there are no active users. This is a side project, so:
+
+* No backfilling is needed for current data changes.
+* Experimental features are acceptable when there is a clear rollback path.
+
+Observability is still important because the app is mainly tested in production.
 
 ## Progress Tracking
 - **PROGRESS.md** is forward-looking only — it tracks what's next, not what's done. Never list completed items; git history is the authoritative record.
