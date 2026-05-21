@@ -3,8 +3,8 @@ This file should contain only things that agents will update when they don't und
 ## Status
 Right now there are no active users. This is a side project, so:
 
-* No backfilling is needed for current data changes.
-* Experimental features are acceptable when there is a clear rollback path.
+- No backfilling is needed for current data changes.
+- Experimental features are acceptable when there is a clear rollback path.
 
 Observability is still important because the app is mainly tested in production.
 
@@ -21,6 +21,7 @@ Observability is still important because the app is mainly tested in production.
   - Prefer `getByRole('textbox', { name: '...' })` over `getByLabel(...)` in Clerk modals — labels like "Password" also match the "Show password" button.
   - Auth is modal-based (Clerk `<SignInButton mode="modal">`), not route-based — there is no `/sign-in` or `/sign-up` page.
   - The CSV file input has `class="hidden"` — assert on the visible drop zone text, not `input[type="file"]`.
+- Right now agents are not able to use e2e test flows. You will need to ask the user
 
 ## Code Style
 - Prefer event handlers or server-side logic over `useEffect` — follow React's "you might not need an effect"
