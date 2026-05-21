@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import type { OptionalRestArgsOrSkip } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { getFunctionName } from "convex/server";
-import { putCachedQuery, getCachedQuery } from "./offlineDb";
+import { putCachedQuery, getCachedQuery } from "@/lib/offlineDb";
 
 export function buildCacheKey(
   queryOrName: FunctionReference<"query"> | string,

@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 
 type Annotation = { cardId: Id<"flashcards">; flagged: boolean; note?: string };
 

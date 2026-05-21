@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePreloadedQuery } from "convex/react";
 import type { Preloaded } from "convex/react";
 import type { FunctionReference } from "convex/server";
-import { putCachedQuery } from "./offlineDb";
+import { putCachedQuery } from "@/lib/offlineDb";
 import { buildCacheKey } from "./useOfflineQuery";
 
 export function useOfflinePreloadedQuery<

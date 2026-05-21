@@ -4,8 +4,8 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import type { FunctionReference, OptionalRestArgs } from "convex/server";
 import { getFunctionName } from "convex/server";
-import { addToOutbox } from "./offlineOutbox";
-import type { AppResult, AppFailure } from "./appResult";
+import { addToOutbox } from "@/lib/offlineOutbox";
+import type { AppResult, AppFailure } from "@/lib/appResult";
 import { useOnlineStatus } from "./useOnlineStatus";
 
 export function useOfflineMutation<

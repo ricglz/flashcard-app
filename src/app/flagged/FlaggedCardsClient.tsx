@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -16,6 +16,14 @@ type Props = {
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
 };
 
+type FlaggedCard = NonNullable<
+  ReturnType<typeof usePreloadedQuery<typeof api.cardAnnotations.getFlagged>>[number]
+>;
+
+function isFlaggedCard(card: FlaggedCard | null): card is FlaggedCard {
+  return card !== null;
+}
+
 export default function FlaggedCardsClient({
   preloaded,
   preloadedTtsConfig,
@@ -25,24 +33,17 @@ export default function FlaggedCardsClient({
   const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useMutation(api.cardAnnotations.setNote);
 
-  // Stable queue: snapshot initial result, only update when live query grows (never shrink)
-  const stableQueue = useRef(liveQuery);
-  if (liveQuery.length > stableQueue.current.length) {
-    stableQueue.current = liveQuery;
-  }
-
   const [unflaggedIds, setUnflaggedIds] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
-  const activeCards = stableQueue.current.filter(
-    (c) => c !== null && !unflaggedIds.has(c.cardId)
-  );
+  const activeCards = liveQuery
+    .filter(isFlaggedCard)
+    .filter((card) => !unflaggedIds.has(card.cardId));
   const safeIndex = Math.min(currentIndex, Math.max(0, activeCards.length - 1));
   const currentCard = activeCards[safeIndex];
 
-  // Empty state: no flagged cards at all
-  if (stableQueue.current.length === 0 && unflaggedIds.size === 0) {
+  if (liveQuery.length === 0 && unflaggedIds.size === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <header className="border-b px-4 sm:px-6 py-4">
@@ -70,7 +71,6 @@ export default function FlaggedCardsClient({
     );
   }
 
-  // Completion state: all cards unflagged this session
   if (activeCards.length === 0 && unflaggedIds.size > 0) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -124,25 +124,21 @@ export default function FlaggedCardsClient({
   };
 
   const handleToggleFlag = () => {
-    if (!currentCard) return;
     const cardId = currentCard.cardId;
     void toggleFlag({
       cardId: asId<"flashcards">(cardId),
       setId: asId<"flashcardSets">(currentCard.setId),
     });
-    // If currently flagged, this is an unflag -- add to unflaggedIds
     if (!unflaggedIds.has(cardId)) {
       const newUnflagged = new Set(unflaggedIds);
       newUnflagged.add(cardId);
       setUnflaggedIds(newUnflagged);
       setRevealed(false);
-      // Adjust index if at end
       const newActiveLength = activeCards.length - 1;
       if (safeIndex >= newActiveLength) {
         setCurrentIndex(Math.max(0, newActiveLength - 1));
       }
     } else {
-      // Re-flagging: remove from unflaggedIds
       const newUnflagged = new Set(unflaggedIds);
       newUnflagged.delete(cardId);
       setUnflaggedIds(newUnflagged);
@@ -150,7 +146,6 @@ export default function FlaggedCardsClient({
   };
 
   const handleSetNote = (note: string) => {
-    if (!currentCard) return;
     void setNoteMutation({
       cardId: asId<"flashcards">(currentCard.cardId),
       setId: asId<"flashcardSets">(currentCard.setId),
@@ -178,7 +173,7 @@ export default function FlaggedCardsClient({
         fieldDefinitions={currentCard.fieldDefinitions}
         frontFields={currentCard.frontFields}
         backFields={currentCard.backFields}
-        ttsOnlyFields={currentCard.ttsOnlyFields ?? []}
+        ttsOnlyFields={currentCard.ttsOnlyFields}
         onRevealed={() => setRevealed(true)}
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}

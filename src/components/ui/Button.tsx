@@ -3,12 +3,12 @@ import React from "react";
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
-}
+};
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary: "bg-accent text-white hover:bg-accent-hover",
@@ -47,7 +47,7 @@ export function Button({
     .join(" ");
 
   return (
-    <button className={combinedClassName} disabled={disabled || loading} {...props}>
+    <button className={combinedClassName} disabled={Boolean(disabled) || loading} {...props}>
       {loading ? "..." : children}
     </button>
   );

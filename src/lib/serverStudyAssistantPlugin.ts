@@ -124,9 +124,9 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
         default:
           return { error: `Unknown tool: ${params.tool}` };
       }
-    } catch (error) {
-      console.error(`[study-assistant] Tool execution failed for ${params.tool}:`, error);
-      return { error: `Tool execution failed: ${error instanceof Error ? error.message : "Unknown error"}` };
+    } catch (err) {
+      console.error(`[study-assistant] Tool execution failed for ${params.tool}:`, err);
+      return { error: `Tool execution failed: ${err instanceof Error ? err.message : "Unknown error"}` };
     }
   }
 }

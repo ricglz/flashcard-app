@@ -2,7 +2,7 @@
 
 import type { Preloaded } from "convex/react";
 import type { api } from "../../convex/_generated/api";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import FlashcardSetListInner from "./FlashcardSetListInner";
 
 export default function FlashcardSetList({

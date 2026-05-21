@@ -55,7 +55,7 @@ export default function CardsTable({
           </tr>
         </thead>
         <tbody>
-          {cards
+          {[...cards]
             .sort((a, b) => a.order - b.order)
             .map((card, idx) => (
               <tr key={card._id} className="border-t hover:bg-surface-hover">

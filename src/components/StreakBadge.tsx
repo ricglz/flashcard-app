@@ -1,7 +1,7 @@
 "use client";
 
 import type { Preloaded } from "convex/react";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import type { api } from "../../convex/_generated/api";
 import StreakBadgeInner from "./StreakBadgeInner";
 

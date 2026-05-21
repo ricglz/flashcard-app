@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

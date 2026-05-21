@@ -3,7 +3,7 @@
 import { useQuery, usePreloadedQuery } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { deriveAiAvailability } from "@/lib/aiAvailability";
 import type { AiAvailability } from "@/lib/aiAvailability";
 

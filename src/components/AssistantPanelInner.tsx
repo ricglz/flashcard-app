@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useAvailableModels } from "@/lib/useAvailableModels";
+import { useState, useRef, useCallback, useEffect, type RefObject } from "react";
+import { useAvailableModels } from "@/hooks/useAvailableModels";
 import {
   streamChat,
   reduceEvent,
@@ -11,6 +11,14 @@ import {
 import type { StudyContext } from "./AssistantPanel";
 import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
+
+function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
+  queueMicrotask(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  });
+}
 
 export default function AssistantPanelInner({ context }: { context: StudyContext }) {
   const [open, setOpen] = useState(false);
@@ -26,14 +34,6 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
-  const scrollToBottom = () => {
-    queueMicrotask(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    });
-  };
-
   const handleSend = useCallback(async () => {
     const text = input.trim();
     if (!text || streaming) return;
@@ -45,7 +45,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
 
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
-    scrollToBottom();
+    scrollToBottom(scrollRef);
 
     const abort = new AbortController();
     abortRef.current = abort;
@@ -57,7 +57,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
       for await (const event of streamChat(text, messages, chatContext, model, abort.signal)) {
         state = reduceEvent(state, event);
         setStreaming({ ...state });
-        scrollToBottom();
+        scrollToBottom(scrollRef);
       }
     } catch (err) {
       if (abort.signal.aborted) return;
@@ -72,7 +72,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
     ]);
     setStreaming(null);
     abortRef.current = null;
-    scrollToBottom();
+    scrollToBottom(scrollRef);
   }, [input, streaming, messages, model, context.setId, context.cardFields]);
 
   const handleClear = useCallback(() => {

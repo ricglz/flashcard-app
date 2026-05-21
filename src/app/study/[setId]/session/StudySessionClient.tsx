@@ -5,8 +5,8 @@ import { useState, useCallback } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { useOfflineMutation } from "@/lib/useOfflineMutation";
-import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
@@ -53,6 +53,7 @@ export default function StudySessionClient({
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localIndexOffset, setLocalIndexOffset] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const effectiveIndex = session.currentIndex + localIndexOffset;
 
@@ -68,10 +69,10 @@ export default function StudySessionClient({
       if (isSubmitting) return;
       const currentCardId = session.cardOrder[effectiveIndex];
       if (!currentCardId) return;
+      setIsSubmitting(true);
+      setError(null);
 
       const isLastCard = effectiveIndex === session.cardOrder.length - 1;
-
-      setIsSubmitting(true);
 
       if (isLastCard) {
         void recordResult({ sessionId, cardId: currentCardId, rating });
@@ -84,7 +85,7 @@ export default function StudySessionClient({
       try {
         const result = await recordResult({ sessionId, cardId: currentCardId, rating });
         if (!result.ok) {
-          console.error(result.error.message);
+          setError(result.error.message);
           return;
         }
         setRevealed(false);
@@ -157,6 +158,11 @@ export default function StudySessionClient({
         />
       }
     >
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+          {error}
+        </div>
+      )}
       <StudyCard
         key={currentCardId}
         card={currentCard}

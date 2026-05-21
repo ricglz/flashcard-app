@@ -1,6 +1,6 @@
 "use client";
 
-import { useOnlineStatus } from "@/lib/useOnlineStatus";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useSyncStatus } from "@/lib/SyncProvider";
 
 export default function OfflineIndicator() {

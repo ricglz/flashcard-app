@@ -7,8 +7,8 @@ export type OutboxOutcome =
   | { ok: false; status: "permanentFailure"; id: number; message: string }
   | { ok: false; status: "authRequiredRetry"; id: number; message: string };
 
-export function normalizeSyncFailure(error: unknown): "authRequiredRetry" | "permanentFailure" {
-  const message = error instanceof Error ? error.message : String(error);
+export function normalizeSyncFailure(err: unknown): "authRequiredRetry" | "permanentFailure" {
+  const message = err instanceof Error ? err.message : String(err);
   if (/auth|sign in|unauthenticated/i.test(message)) return "authRequiredRetry";
   return "permanentFailure";
 }
@@ -28,8 +28,8 @@ export async function addToOutbox(
     } as OutboxEntry);
     window.dispatchEvent(new Event("outbox-changed"));
     return { ok: true, status: "queued", id: id as number };
-  } catch (error) {
-    return { ok: false, status: "permanentFailure", id: -1, message: error instanceof Error ? error.message : "Failed to queue offline action" };
+  } catch (err) {
+    return { ok: false, status: "permanentFailure", id: -1, message: err instanceof Error ? err.message : "Failed to queue offline action" };
   }
 }
 

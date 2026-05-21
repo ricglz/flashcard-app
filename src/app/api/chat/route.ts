@@ -187,7 +187,7 @@ export async function POST(request: Request) {
             catch: (e) => e as Error,
           }).pipe(
             Effect.catchIf(isToolUnsupportedError, () => {
-              console.log(`[chat] Model ${modelName} doesn't support tools, retrying without plugins`);
+              console.warn(`[chat] Model ${modelName} doesn't support tools, retrying without plugins`);
               noToolsCache.set(cacheKey, true);
               
               const noToolsPrompt = systemPrompt + 

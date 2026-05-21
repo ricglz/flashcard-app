@@ -7,8 +7,8 @@ import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import type { CardRating } from "@/lib/types";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
-import { useOfflineMutation } from "@/lib/useOfflineMutation";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 import AssistantPanel from "@/components/AssistantPanel";
@@ -53,6 +53,7 @@ export default function SrsReviewClient({
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const initialQueueSize = useRef(effectiveQueue.length);
 
   const visibleQueue = effectiveQueue.filter((item) => !reviewedIds.has(item._id));
@@ -66,6 +67,7 @@ export default function SrsReviewClient({
     async (rating: CardRating) => {
       if (isSubmitting || !currentItem) return;
       setIsSubmitting(true);
+      setError(null);
 
       try {
         const result = await recordReview({
@@ -73,7 +75,7 @@ export default function SrsReviewClient({
           rating,
         });
         if (!result.ok) {
-          console.error(result.error.message);
+          setError(result.error.message);
           return;
         }
         setRevealed(false);
@@ -93,10 +95,11 @@ export default function SrsReviewClient({
   async function handleLoadMore() {
     setIsLoadingMore(true);
     setNoMoreCards(false);
+    setError(null);
     try {
       const result = await forceRefresh();
       if (!result.ok) {
-        console.error(result.error.message);
+        setError(result.error.message);
         return;
       }
       if (result.value.added === 0) {
@@ -109,20 +112,32 @@ export default function SrsReviewClient({
 
   if (isSessionComplete) {
     return (
-      <SrsReviewComplete
-        reviewedCount={reviewedCount}
-        ratingCounts={ratingCounts}
-        reviewedToday={stats?.reviewedToday ?? reviewedCount}
-        onLoadMore={handleLoadMore}
-        isLoadingMore={isLoadingMore}
-        noMoreCards={noMoreCards}
-      />
+      <>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {error}
+          </div>
+        )}
+        <SrsReviewComplete
+          reviewedCount={reviewedCount}
+          ratingCounts={ratingCounts}
+          reviewedToday={stats?.reviewedToday ?? reviewedCount}
+          onLoadMore={handleLoadMore}
+          isLoadingMore={isLoadingMore}
+          noMoreCards={noMoreCards}
+        />
+      </>
     );
   }
 
   if (!currentItem) {
     return (
       <div className="min-h-screen flex items-center justify-center">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {error}
+          </div>
+        )}
         <p className="text-muted">Reconnecting...</p>
       </div>
     );
@@ -131,36 +146,43 @@ export default function SrsReviewClient({
   const currentAnnotation = annotationMap.get(asId<"flashcards">(currentItem.card._id));
 
   return (
-    <SrsReviewActive
-      currentItem={currentItem}
-      reviewedCount={reviewedCount}
-      totalCards={totalCards}
-      revealed={revealed}
-      isSubmitting={isSubmitting}
-      tts={tts}
-      onReveal={() => setRevealed(true)}
-      onRate={handleRate}
-      annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
-      onToggleFlag={() => {
-        void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
-      }}
-      onSetNote={(note: string) => {
-        void setNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
-      }}
-      onEndSession={() => {
-        if (confirm("End review session? Your progress is saved.")) {
-          router.push("/");
+    <>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+          {error}
+        </div>
+      )}
+      <SrsReviewActive
+        currentItem={currentItem}
+        reviewedCount={reviewedCount}
+        totalCards={totalCards}
+        revealed={revealed}
+        isSubmitting={isSubmitting}
+        tts={tts}
+        onReveal={() => setRevealed(true)}
+        onRate={handleRate}
+        annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
+        onToggleFlag={() => {
+          void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
+        }}
+        onSetNote={(note: string) => {
+          void setNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
+        }}
+        onEndSession={() => {
+          if (confirm("End review session? Your progress is saved.")) {
+            router.push("/");
+          }
+        }}
+        assistant={
+          <AssistantPanel
+            context={{
+              setId: asId<"flashcardSets">(currentItem.setId),
+              setName: currentItem.setName,
+              cardFields: currentItem.card.fields,
+            }}
+          />
         }
-      }}
-      assistant={
-        <AssistantPanel
-          context={{
-            setId: asId<"flashcardSets">(currentItem.setId),
-            setName: currentItem.setName,
-            cardFields: currentItem.card.fields,
-          }}
-        />
-      }
-    />
+      />
+    </>
   );
 }

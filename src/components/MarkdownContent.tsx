@@ -5,11 +5,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { memo, useMemo } from "react";
 
-interface MarkdownContentProps {
+type MarkdownContentProps = {
   children: string;
   className?: string;
   compact?: boolean;
-}
+};
 
 const MarkdownContent = memo(function MarkdownContent({
   children,

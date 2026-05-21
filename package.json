@@ -36,6 +36,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "^1.0.0",
     "commander": "^14.0.2",
     "convex-test": "^0.0.47",
     "esbuild": "^0.28.0",

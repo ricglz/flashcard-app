@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 
 type TtsConfig = FunctionReturnType<typeof api.userSettings.getTtsConfig>;
 

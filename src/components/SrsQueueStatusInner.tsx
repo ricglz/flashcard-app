@@ -38,9 +38,11 @@ export default function SrsQueueStatusInner({
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [noMoreCards, setNoMoreCards] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
     setIsSaving(true);
+    setError(null);
     try {
       const [srsResult, ttsResult] = await Promise.all([
         updateSrsSettings({
@@ -51,11 +53,11 @@ export default function SrsQueueStatusInner({
         updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
       if (!srsResult.ok) {
-        console.error(srsResult.error.message);
+        setError(srsResult.error.message);
         return false;
       }
       if (!ttsResult.ok) {
-        console.error(ttsResult.error.message);
+        setError(ttsResult.error.message);
         return false;
       }
       setShowSettings(false);
@@ -68,10 +70,11 @@ export default function SrsQueueStatusInner({
   async function handleLoadMore() {
     setIsLoadingMore(true);
     setNoMoreCards(false);
+    setError(null);
     try {
       const result = await forceRefresh();
       if (!result.ok) {
-        console.error(result.error.message);
+        setError(result.error.message);
         return;
       }
       if (result.value.added === 0) {
@@ -83,7 +86,10 @@ export default function SrsQueueStatusInner({
   }
 
   const resetTimeStr = formatResetTime(stats.dayResetUtcHour);
-  const onToggleSettings = () => setShowSettings((v) => !v);
+  const onToggleSettings = () => {
+    setShowSettings((v) => !v);
+    setError(null);
+  };
 
   const settingsPanel = showSettings ? (
     <SrsSettingsPanel
@@ -100,34 +106,55 @@ export default function SrsQueueStatusInner({
 
   if (stats.remaining === 0 && stats.reviewedToday === 0) {
     return (
-      <SrsQueueEmpty
-        resetTimeStr={resetTimeStr}
-        onToggleSettings={onToggleSettings}
-        settingsPanel={settingsPanel}
-      />
+      <>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {error}
+          </div>
+        )}
+        <SrsQueueEmpty
+          resetTimeStr={resetTimeStr}
+          onToggleSettings={onToggleSettings}
+          settingsPanel={settingsPanel}
+        />
+      </>
     );
   }
 
   if (stats.remaining === 0) {
     return (
-      <SrsQueueComplete
-        reviewedToday={stats.reviewedToday}
-        resetTimeStr={resetTimeStr}
-        onToggleSettings={onToggleSettings}
-        onLoadMore={handleLoadMore}
-        isLoadingMore={isLoadingMore}
-        noMoreCards={noMoreCards}
-        settingsPanel={settingsPanel}
-      />
+      <>
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {error}
+          </div>
+        )}
+        <SrsQueueComplete
+          reviewedToday={stats.reviewedToday}
+          resetTimeStr={resetTimeStr}
+          onToggleSettings={onToggleSettings}
+          onLoadMore={handleLoadMore}
+          isLoadingMore={isLoadingMore}
+          noMoreCards={noMoreCards}
+          settingsPanel={settingsPanel}
+        />
+      </>
     );
   }
 
   return (
-    <SrsQueueActive
-      remaining={stats.remaining}
-      reviewedToday={stats.reviewedToday}
-      onToggleSettings={onToggleSettings}
-      settingsPanel={settingsPanel}
-    />
+    <>
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+          {error}
+        </div>
+      )}
+      <SrsQueueActive
+        remaining={stats.remaining}
+        reviewedToday={stats.reviewedToday}
+        onToggleSettings={onToggleSettings}
+        settingsPanel={settingsPanel}
+      />
+    </>
   );
 }

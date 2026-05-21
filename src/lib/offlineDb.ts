@@ -2,16 +2,16 @@ import { openDB, type IDBPDatabase, type DBSchema } from "idb";
 
 export type OutboxStatus = "pending" | "syncing" | "failed" | "auth_required";
 
-export interface OutboxEntry {
+export type OutboxEntry = {
   id: number;
   mutationName: string;
   args: unknown;
   createdAt: number;
   status: OutboxStatus;
   retries: number;
-}
+};
 
-interface OfflineCacheSchema extends DBSchema {
+type OfflineCacheSchema = DBSchema & {
   queryCache: {
     key: string;
     value: {
@@ -24,7 +24,7 @@ interface OfflineCacheSchema extends DBSchema {
     key: number;
     value: OutboxEntry;
   };
-}
+};
 
 const DB_NAME = "flashcard-offline";
 const DB_VERSION = 2;

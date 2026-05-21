@@ -5,9 +5,10 @@ import type { Preloaded } from "convex/react";
 import { useState } from "react";
 import { api } from "../../../convex/_generated/api";
 
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { Button } from "@/components/ui/Button";
-import { TextInput, Textarea } from "@/components/ui/TextInput";
+import { TextInput } from "@/components/ui/TextInput";
+import { Textarea } from "@/components/ui/Textarea";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 export default function AiSettingsSection({

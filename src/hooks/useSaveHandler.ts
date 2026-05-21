@@ -3,10 +3,10 @@
 import { useCallback, useState } from "react";
 import type { AppResult, AppFailure } from "@/lib/appResult";
 
-interface UseSaveHandlerOptions<T> {
+type UseSaveHandlerOptions<T> = {
   onSuccess?: (result: T) => void;
   onError?: (error: string) => void;
-}
+};
 
 export function useSaveHandler<T>(options?: UseSaveHandlerOptions<T>) {
   const [isSaving, setIsSaving] = useState(false);

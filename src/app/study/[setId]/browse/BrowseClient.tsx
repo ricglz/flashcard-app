@@ -50,9 +50,7 @@ export default function BrowseClient({
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
   const [revealed, setRevealed] = useState(false);
 
-  const [cardOrder, setCardOrder] = useState<Id<"flashcards">[] | null>(null);
-
-  if (cardOrder === null) {
+  const [cardOrder] = useState<Id<"flashcards">[]>(() => {
     const sorted = [...cards]
       .sort((a, b) => a.order - b.order)
       .map((c) => c._id);
@@ -60,11 +58,10 @@ export default function BrowseClient({
     if (cardLimit && cardLimit > 0 && cardLimit < order.length) {
       order = order.slice(0, cardLimit);
     }
-    setCardOrder(order);
-  }
+    return order;
+  });
 
   const activeCardIds = useMemo(() => {
-    if (!cardOrder) return [];
     return cardOrder.filter((id) => !dismissed.has(id));
   }, [cardOrder, dismissed]);
 

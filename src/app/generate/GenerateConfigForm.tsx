@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Methodology } from "@/lib/types";
 import { METHODOLOGIES, METHODOLOGY_LABELS } from "@/lib/types";
-import { useAvailableModels } from "@/lib/useAvailableModels";
+import { useAvailableModels } from "@/hooks/useAvailableModels";
 import TypedSelect from "@/components/TypedSelect";
 
 type SrsSet = {

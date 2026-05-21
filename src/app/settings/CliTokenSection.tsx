@@ -26,7 +26,7 @@ export default function CliTokenSection({
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   
-  const { execute: executeCreate, isSaving: isCreating, error, setError } = useSaveHandler({
+  const { execute: executeCreate, isSaving: isCreating, error } = useSaveHandler<{ token: string }>({
     onSuccess: (result) => {
       setNewToken(result.token);
       setCopyState("idle");

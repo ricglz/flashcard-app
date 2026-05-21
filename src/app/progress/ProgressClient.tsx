@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useOfflineQuery } from "@/lib/useOfflineQuery";
-import { useOfflinePreloadedQuery } from "@/lib/useOfflinePreloadedQuery";
+import { useOfflineQuery } from "@/hooks/useOfflineQuery";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import StreakBadge from "@/components/StreakBadge";
 import DailyGoalRing from "@/components/DailyGoalRing";
 import DailyActivityChart from "@/components/DailyActivityChart";

@@ -11,7 +11,7 @@ import {
 import { useConvex, type ConvexReactClient } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { FunctionReference } from "convex/server";
-import { useOnlineStatus } from "./useOnlineStatus";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { toast } from "sonner";
 import {
   getPendingEntries,
@@ -25,10 +25,10 @@ import {
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 2000;
 
-interface SyncContextValue {
+type SyncContextValue = {
   pendingCount: number;
   isSyncing: boolean;
-}
+};
 
 const SyncContext = createContext<SyncContextValue>({
   pendingCount: 0,
@@ -63,8 +63,8 @@ async function flushEntries(client: ConvexReactClient): Promise<boolean> {
         continue;
       }
       await removeEntry(entry.id);
-    } catch (error) {
-      await markFailed(entry.id, (entry.retries || 0) + 1, normalizeSyncFailure(error));
+    } catch (err) {
+      await markFailed(entry.id, (entry.retries || 0) + 1, normalizeSyncFailure(err));
       allSucceeded = false;
     }
   }
