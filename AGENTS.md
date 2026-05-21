@@ -36,8 +36,11 @@ When making plans don't
 
 * Over-explain things. There's no need for fluff
 * Give time estimates. Related to the prior, it's just fluff
-* Don't prioritize. This doesn't mean that don't propose phases, but there's no higher/smaller priority. Just items that we should execute on
-* Consider how to organize commits
+* Prioritize. This doesn't mean that don't propose phases, but there's no higher/smaller priority. Just items that we should execute on
+
+But do:
+
+* Consider how to organize the atomic commits
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
