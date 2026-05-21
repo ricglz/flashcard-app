@@ -8,6 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: "html",
   globalSetup: require.resolve("./e2e/global-setup"),
+  globalTeardown: require.resolve("./e2e/global-teardown"),
   use: {
     baseURL: "http://localhost:3000",
     screenshot: "on",
