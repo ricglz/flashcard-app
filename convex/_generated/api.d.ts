@@ -33,6 +33,7 @@ import type * as srs from "../srs.js";
 import type * as srsEngine from "../srsEngine.js";
 import type * as srsReviewQueue from "../srsReviewQueue.js";
 import type * as studySessions from "../studySessions.js";
+import type * as testing from "../testing.js";
 import type * as tooling from "../tooling.js";
 import type * as userSets from "../userSets.js";
 import type * as userSettings from "../userSettings.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   srsEngine: typeof srsEngine;
   srsReviewQueue: typeof srsReviewQueue;
   studySessions: typeof studySessions;
+  testing: typeof testing;
   tooling: typeof tooling;
   userSets: typeof userSets;
   userSettings: typeof userSettings;
