@@ -19,6 +19,16 @@
 ### TTS / External Integration Boundary
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
 
+## Code Quality — Convex Performance
+
+### SRS Queue Population
+- [ ] Move toward incremental SRS enrollment so queue population does not need to repeatedly scan full flashcard sets and existing SRS cards.
+- [ ] Revisit queue selection indexes if production signals show due/new card selection becoming hot.
+
+### Large Set Study Paths
+- [ ] Rework study session setup for large sets if full-card loading or stored `cardOrder` arrays become a practical limit.
+- [ ] Consider count or summary tables only if production signals show queue/progress counts becoming hot.
+
 ## Marketplace & Multi-User
 
 ### Marketplace / Browse
@@ -39,8 +49,10 @@
 
 ## Code Quality — Error Handling
 
-### Effect-Based Error Patterns
-- [ ] Audit try/catch patterns across the codebase and discuss migrating to Effect-based error handling for more typed, composable error flows (especially in AI actions and frontend async code).
+### Effect Boundary Cleanup
+- [ ] Define an Effect usage policy: use Effect for domain validation and external/HTTP/AI boundaries; avoid Services/Layers until dependency composition becomes real.
+- [ ] Audit async boundaries and use `Effect.tryPromise` where rejected promises should become typed failures; keep unexpected Convex DB/runtime failures as defects unless there is a concrete recovery path.
+- [ ] Consider `Data.TaggedError` for new Effect-heavy modules, but do not migrate existing plain `{ _tag, message }` failures without a clear reason.
 
 ## Code Quality — Card Navigation
 

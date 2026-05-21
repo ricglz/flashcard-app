@@ -278,3 +278,52 @@ describe("getCardStatusBreakdown", () => {
     expect(breakdown!.review).toBe(0);
   });
 });
+
+describe("getSrsProgressSummary", () => {
+  it("returns combined breakdown and per-set mastery", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 3);
+
+    await t.mutation(internal.userSets.enrollCardsForSet, {
+      userId: TEST_USER.tokenIdentifier,
+      setId,
+    });
+
+    await t.run(async (ctx) => {
+      const cards = await ctx.db
+        .query("srsCards")
+        .withIndex("by_userId_and_setId", (q) =>
+          q
+            .eq("userId", TEST_USER.tokenIdentifier)
+            .eq("setId", setId)
+        )
+        .take(10);
+      await ctx.db.patch(cards[0]!._id, {
+        status: "learning",
+        easeFactor: 2.0,
+      });
+    });
+
+    const [summary, breakdown, mastery] = await Promise.all([
+      as.query(api.progress.getSrsProgressSummary, {}),
+      as.query(api.progress.getCardStatusBreakdown, {}),
+      as.query(api.progress.getPerSetMastery, {}),
+    ]);
+
+    expect(summary.breakdown).toEqual(breakdown);
+    expect(summary.mastery).toEqual(mastery);
+  });
+
+  it("returns empty summary when no sets are SRS-enabled", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const summary = await as.query(api.progress.getSrsProgressSummary, {});
+
+    expect(summary).toEqual({
+      breakdown: { new: 0, learning: 0, review: 0 },
+      mastery: [],
+    });
+  });
+});

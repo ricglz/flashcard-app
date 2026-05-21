@@ -53,9 +53,18 @@ export const getHydratedQueue = query({
     if (queueItems.length === 0) return [];
 
     const uniqueSetIds = [...new Set(queueItems.map((qi) => qi.setId))];
+    const uniqueCardIds = [...new Set(queueItems.map((qi) => qi.cardId))];
+    const cardMap = new Map<string, { _id: string; fields: Record<string, string> }>();
+    await Promise.all(
+      uniqueCardIds.map(async (cardId) => {
+        const card = await ctx.db.get(cardId);
+        if (card) cardMap.set(cardId, { _id: card._id, fields: card.fields });
+      })
+    );
+
     const perSetData = await Promise.all(
       uniqueSetIds.map(async (setId) => {
-        const [set, userSet, cards] = await Promise.all([
+        const [set, userSet] = await Promise.all([
           ctx.db.get(setId),
           ctx.db
             .query("userSets")
@@ -63,19 +72,16 @@ export const getHydratedQueue = query({
               q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
             )
             .first(),
-          ctx.db.query("flashcards").withIndex("by_setId", (q) => q.eq("setId", setId)).take(1000),
         ]);
-        return { setId, set, userSet, cards };
+        return { setId, set, userSet };
       })
     );
 
-    const cardMap = new Map<string, { _id: string; fields: Record<string, string> }>();
     const setMap = new Map<string, { name: string; fieldDefinitions: FieldDefinition[] }>();
     const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
 
-    for (const { setId, set, userSet, cards } of perSetData) {
+    for (const { setId, set, userSet } of perSetData) {
       if (!set || !userSet) continue;
-      for (const card of cards) cardMap.set(card._id, { _id: card._id, fields: card.fields });
       setMap.set(setId, { name: set.name, fieldDefinitions: getFieldDefinitions(set) });
       userSetMap.set(setId, {
         defaultFrontFields: userSet.defaultFrontFields,
@@ -187,13 +193,7 @@ export const recordReview = mutation({
         incrementDailyStats(ctx, identity.tokenIdentifier, "srs", CARD_RATING_SCORES[args.rating]),
       );
 
-      const remaining = yield* Effect.promise(() =>
-        ctx.db.query("reviewQueue")
-          .withIndex("by_userId_and_order", (q) => q.eq("userId", identity.tokenIdentifier))
-          .take(500),
-      );
-
-      return { remaining: remaining.length, outcome: "recorded" as const };
+      return { outcome: "recorded" as const };
     }),
   ),
 });

@@ -1,9 +1,26 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { computeDayStartMs, computeDayKey, SRS_DEFAULTS } from "./srs";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+type CardStatusBreakdown = {
+  new: number;
+  learning: number;
+  review: number;
+};
+
+type SetMastery = {
+  setId: Id<"flashcardSets">;
+  setName: string;
+  total: number;
+  new: number;
+  learning: number;
+  review: number;
+  avgEase: number;
+};
 
 export async function incrementDailyStats(
   ctx: MutationCtx,
@@ -212,6 +229,107 @@ export const getDailyHistory = query({
         accuracy: totalCards > 0 ? row.correctCount / totalCards : 0,
       };
     });
+  },
+});
+
+export const getSrsProgressSummary = query({
+  args: {},
+  handler: async (ctx): Promise<{
+    breakdown: CardStatusBreakdown;
+    mastery: SetMastery[];
+  }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    const empty = {
+      breakdown: { new: 0, learning: 0, review: 0 },
+      mastery: [],
+    };
+    if (!identity) return empty;
+
+    const userSets = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId", (q) =>
+        q.eq("userId", identity.tokenIdentifier)
+      )
+      .take(100);
+
+    const enabledSets = userSets.filter((us) => us.srsEnabled);
+    if (enabledSets.length === 0) return empty;
+
+    const setIds = enabledSets.map((us) => us.setId);
+    const [sets, cardsBySet] = await Promise.all([
+      Promise.all(setIds.map((id) => ctx.db.get(id))),
+      Promise.all(
+        setIds.map((setId) =>
+          ctx.db
+            .query("srsCards")
+            .withIndex("by_userId_and_setId", (q) =>
+              q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
+            )
+            .take(2000)
+        )
+      ),
+    ]);
+
+    const breakdown: CardStatusBreakdown = { new: 0, learning: 0, review: 0 };
+    const setNameMap = new Map<string, string>();
+    for (const set of sets) {
+      if (set) setNameMap.set(set._id, set.name);
+    }
+
+    const perSet = new Map<string, {
+      setId: Id<"flashcardSets">;
+      newCount: number;
+      learningCount: number;
+      reviewCount: number;
+      totalEase: number;
+      total: number;
+    }>();
+    for (const setId of setIds) {
+      perSet.set(setId, {
+        setId,
+        newCount: 0,
+        learningCount: 0,
+        reviewCount: 0,
+        totalEase: 0,
+        total: 0,
+      });
+    }
+
+    for (const cards of cardsBySet) {
+      for (const card of cards) {
+        const entry = perSet.get(card.setId);
+        if (!entry) continue;
+        entry.total++;
+        entry.totalEase += card.easeFactor;
+        if (card.status === "new") {
+          breakdown.new++;
+          entry.newCount++;
+        } else if (card.status === "learning") {
+          breakdown.learning++;
+          entry.learningCount++;
+        } else {
+          breakdown.review++;
+          entry.reviewCount++;
+        }
+      }
+    }
+
+    const mastery: SetMastery[] = [];
+    for (const [setId, stats] of perSet) {
+      const setName = setNameMap.get(setId);
+      if (!setName) continue;
+      mastery.push({
+        setId: stats.setId,
+        setName,
+        total: stats.total,
+        new: stats.newCount,
+        learning: stats.learningCount,
+        review: stats.reviewCount,
+        avgEase: stats.total > 0 ? stats.totalEase / stats.total : 0,
+      });
+    }
+
+    return { breakdown, mastery };
   },
 });
 

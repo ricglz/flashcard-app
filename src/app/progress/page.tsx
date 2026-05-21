@@ -9,10 +9,9 @@ export default async function ProgressPage() {
   const token = await getAuthToken();
   if (!token) redirect("/");
 
-  const [preloadedBreakdown, preloadedMastery, preloadedStreak, preloadedGoal] =
+  const [preloadedSrsSummary, preloadedStreak, preloadedGoal] =
     await Promise.all([
-      preloadQuery(api.progress.getCardStatusBreakdown, {}, { token }),
-      preloadQuery(api.progress.getPerSetMastery, {}, { token }),
+      preloadQuery(api.progress.getSrsProgressSummary, {}, { token }),
       preloadQuery(api.progress.getStreakStats, {}, { token }),
       preloadQuery(api.progress.getDailyGoalProgress, {}, { token }),
     ]);
@@ -33,8 +32,7 @@ export default async function ProgressPage() {
 
       <main className="flex-1 p-4 sm:p-6 max-w-3xl mx-auto w-full">
         <ProgressClient
-          preloadedBreakdown={preloadedBreakdown}
-          preloadedMastery={preloadedMastery}
+          preloadedSrsSummary={preloadedSrsSummary}
           preloadedStreak={preloadedStreak}
           preloadedGoal={preloadedGoal}
         />

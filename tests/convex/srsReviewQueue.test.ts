@@ -115,6 +115,52 @@ describe("getHydratedQueue", () => {
     const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
     expect(queue).toEqual([]);
   });
+
+  it("hydrates only queued cards from a larger set", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
+      name: "Large Set",
+      fieldDefinitions: fieldDefs,
+    }));
+
+    await as.mutation(api.flashcards.batchCreate, {
+      setId,
+      cards: [
+        { fields: { Front: "Queued", Back: "Included" }, order: 0 },
+        { fields: { Front: "Unqueued", Back: "Excluded" }, order: 1 },
+      ],
+    });
+    const cardList = await as.query(api.flashcards.list, { setId });
+
+    await t.run(async (ctx) => {
+      const srsCardId = await ctx.db.insert("srsCards", {
+        userId: TEST_USER.tokenIdentifier,
+        cardId: cardList[0]!._id,
+        setId,
+        easeFactor: 2.5,
+        interval: 1,
+        repetitions: 1,
+        nextReviewAt: 0,
+        status: "learning",
+      });
+
+      await ctx.db.insert("reviewQueue", {
+        userId: TEST_USER.tokenIdentifier,
+        cardId: cardList[0]!._id,
+        srsCardId,
+        setId,
+        queuedAt: Date.now(),
+        order: 0,
+      });
+    });
+
+    const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
+
+    expect(queue).toHaveLength(1);
+    expect(queue[0]!.card.fields).toEqual({ Front: "Queued", Back: "Included" });
+  });
 });
 
 describe("getQueueStats", () => {
@@ -272,7 +318,7 @@ describe("recordReview", () => {
       rating: "good",
     });
 
-    expect(result).toEqual({ ok: true, value: { remaining: 0, outcome: "recorded" } });
+    expect(result).toEqual({ ok: true, value: { outcome: "recorded" } });
 
     const srsCard = await t.run(async (ctx) => await ctx.db.get(srsCardId));
     expect(srsCard).toMatchObject({

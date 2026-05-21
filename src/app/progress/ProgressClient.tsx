@@ -13,31 +13,28 @@ import CardStatusBreakdown from "@/components/CardStatusBreakdown";
 import SetMasteryList from "@/components/SetMasteryList";
 
 type Props = {
-  preloadedBreakdown: Preloaded<typeof api.progress.getCardStatusBreakdown>;
-  preloadedMastery: Preloaded<typeof api.progress.getPerSetMastery>;
+  preloadedSrsSummary: Preloaded<typeof api.progress.getSrsProgressSummary>;
   preloadedStreak: Preloaded<typeof api.progress.getStreakStats>;
   preloadedGoal: Preloaded<typeof api.progress.getDailyGoalProgress>;
 };
 
 export default function ProgressClient({
-  preloadedBreakdown,
-  preloadedMastery,
+  preloadedSrsSummary,
   preloadedStreak,
   preloadedGoal,
 }: Props) {
   const [days, setDays] = useState<7 | 30>(7);
   const history = useOfflineQuery(api.progress.getDailyHistory, { days });
-  const breakdown = useOfflinePreloadedQuery(preloadedBreakdown);
-  const mastery = useOfflinePreloadedQuery(preloadedMastery);
+  const srsSummary = useOfflinePreloadedQuery(preloadedSrsSummary);
+  const breakdown = srsSummary.breakdown;
+  const mastery = srsSummary.mastery;
 
   const maxCards =
     history && history.length > 0
       ? Math.max(...history.map((d) => d.totalCards))
       : 0;
 
-  const totalBreakdown = breakdown
-    ? breakdown.new + breakdown.learning + breakdown.review
-    : 0;
+  const totalBreakdown = breakdown.new + breakdown.learning + breakdown.review;
 
   return (
     <div className="space-y-8">
@@ -61,7 +58,7 @@ export default function ProgressClient({
 
       {history && history.length > 0 && <AccuracyChart history={history} />}
 
-      {breakdown && totalBreakdown > 0 && (
+      {totalBreakdown > 0 && (
         <CardStatusBreakdown breakdown={breakdown} />
       )}
 
