@@ -1,12 +1,11 @@
 "use client";
 
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
@@ -18,7 +17,9 @@ import type { CardRating, ActiveStudySession } from "@/lib/types";
 import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
-import Link from "next/link";
+import StudySessionLocalResults, {
+  type LocalStudyResult,
+} from "./StudySessionLocalResults";
 
 type Props = {
   setId: string;
@@ -40,47 +41,36 @@ export default function StudySessionClient({
   preloadedAnnotations,
 }: Props) {
   const router = useRouter();
-  const isOnline = useOnlineStatus();
 
   const session = usePreloadedQuery(preloadedSession) as ActiveStudySession;
   const { set } = useTypedFlashcardSet(preloadedSet);
   const cards = usePreloadedQuery(preloadedCards);
-  const recordResult = useOfflineMutation(api.studySessions.recordResult);
+  const recordResult = useOfflineMutation(api.studySessions.recordResult, {
+    strategy: "queue-first",
+  });
   const abandonSession = useMutation(api.studySessions.abandon);
   const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [localIndexOffset, setLocalIndexOffset] = useState(0);
+  const [localIndex, setLocalIndex] = useState(() => session.currentIndex);
+  const [localResults, setLocalResults] = useState<LocalStudyResult[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const effectiveIndex = session.currentIndex + localIndexOffset;
-
-  if (session.currentIndex > 0 && localIndexOffset > 0) {
-    const serverAdvanced = session.currentIndex >= effectiveIndex;
-    if (serverAdvanced) {
-      setLocalIndexOffset(0);
-    }
-  }
+  useEffect(() => {
+    setLocalIndex((index) =>
+      session.currentIndex > index ? session.currentIndex : index,
+    );
+  }, [session.currentIndex]);
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
       if (isSubmitting) return;
-      const currentCardId = session.cardOrder[effectiveIndex];
+      const currentCardId = session.cardOrder[localIndex];
       if (!currentCardId) return;
       setIsSubmitting(true);
       setError(null);
-
-      const isLastCard = effectiveIndex === session.cardOrder.length - 1;
-
-      if (isLastCard) {
-        void recordResult({ sessionId, cardId: currentCardId, rating });
-        if (isOnline) {
-          router.push(`/study/${setId}/results?sessionId=${sessionId}`);
-        }
-        return;
-      }
 
       try {
         const result = await recordResult({ sessionId, cardId: currentCardId, rating });
@@ -89,7 +79,8 @@ export default function StudySessionClient({
           return;
         }
         setRevealed(false);
-        setLocalIndexOffset((o) => o + 1);
+        setLocalResults((previous) => [...previous, { cardId: currentCardId, rating }]);
+        setLocalIndex((index) => Math.max(index, localIndex + 1));
       } finally {
         setIsSubmitting(false);
       }
@@ -97,37 +88,36 @@ export default function StudySessionClient({
     [
       session,
       sessionId,
-      effectiveIndex,
+      localIndex,
       isSubmitting,
-      isOnline,
       recordResult,
-      router,
-      setId,
     ],
   );
 
-  const cardsMap = new Map(cards.map((c) => [c._id, c]));
-  const currentCardId = session.cardOrder[effectiveIndex];
+  const cardsMap = useMemo(() => new Map(cards.map((c) => [c._id, c])), [cards]);
+  const currentCardId = session.cardOrder[localIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
   const fieldDefs = set.fieldDefinitions;
+  const sessionComplete = localIndex >= session.cardOrder.length;
+  const completedCards = Math.min(
+    session.cardOrder.length,
+    Math.max(localIndex, session.currentIndex),
+  );
+
+  if (sessionComplete) {
+    return (
+      <StudySessionLocalResults
+        setId={setId}
+        setName={set.name}
+        results={localResults}
+        cards={cards}
+        completedCards={completedCards}
+        totalCards={session.cardOrder.length}
+      />
+    );
+  }
 
   if (!currentCard) {
-    if (!isOnline) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-          <h2 className="text-2xl font-bold mb-2">Session complete!</h2>
-          <p className="text-muted mb-4">
-            Results will be available when you reconnect.
-          </p>
-          <Link
-            href="/"
-            className="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
-      );
-    }
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
@@ -137,11 +127,15 @@ export default function StudySessionClient({
 
   return (
     <StudyLayout
-      progress={{ current: effectiveIndex, total: session.cardOrder.length }}
+      progress={{ current: localIndex, total: session.cardOrder.length }}
       tts={tts}
       actionButton={{
-        label: "Abandon",
+        label: localResults.length > 0 ? "End Session" : "Abandon",
         onClick: () => {
+          if (localResults.length > 0) {
+            router.push(`/study/${setId}`);
+            return;
+          }
           if (confirm("Abandon this session?")) {
             void abandonSession({ sessionId });
             router.push(`/study/${setId}`);
