@@ -48,10 +48,9 @@ test.describe("Wizard — CSV path", () => {
     // Create set
     await page.getByRole("button", { name: "Create Set" }).click();
 
-    // Should redirect to set detail page
+    // Should show success page
     await page.waitForURL(/\/sets\/.+/, { timeout: 10000 });
-    await expect(page.getByText("Test Chinese Set")).toBeVisible();
-    await expect(page.getByText("5 cards")).toBeVisible();
+    await expect(page.getByText("Set created!")).toBeVisible();
     await page.screenshot({ path: "test-results/wizard-csv-done.png" });
   });
 });
