@@ -72,8 +72,10 @@ describe("appendGeneratedCardsForTool", () => {
       cards: makeCards(3),
     });
 
-    const set = await as.query(api.flashcardSets.get, { id: setId });
-    expect(set!.cardCount).toBe(5);
+    const result = await as.query(api.flashcardSets.get, { id: setId });
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.cardCount).toBe(5);
   });
 
   it("changes manual set origin to mixed", async () => {
@@ -87,8 +89,10 @@ describe("appendGeneratedCardsForTool", () => {
       cards: makeCards(1),
     });
 
-    const set = await as.query(api.flashcardSets.get, { id: setId });
-    expect(set!.origin).toEqual({ kind: "mixed" });
+    const result = await as.query(api.flashcardSets.get, { id: setId });
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.origin).toEqual({ kind: "mixed" });
   });
 
   it("tags new cards with origin ai_generated", async () => {

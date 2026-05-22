@@ -46,10 +46,11 @@ describe("flashcardSets.get viewer info", () => {
     const as = t.withIdentity(OWNER);
 
     const result = await as.query(api.flashcardSets.get, { id: setId });
-    expect(result).not.toBeNull();
-    expect(result!.viewer.role).toBe("owner");
-    expect(result!.viewer.userSet).not.toBeNull();
-    expect(result!.viewer.userSet!.role).toBe("owner");
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.viewer.role).toBe("owner");
+    expect(set.viewer.userSet).not.toBeNull();
+    expect(set.viewer.userSet!.role).toBe("owner");
   });
 
   it("returns visitor role for a non-member", async () => {
@@ -58,9 +59,10 @@ describe("flashcardSets.get viewer info", () => {
     const as = t.withIdentity(VISITOR);
 
     const result = await as.query(api.flashcardSets.get, { id: setId });
-    expect(result).not.toBeNull();
-    expect(result!.viewer.role).toBe("visitor");
-    expect(result!.viewer.userSet).toBeNull();
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.viewer.role).toBe("visitor");
+    expect(set.viewer.userSet).toBeNull();
   });
 
   it("returns member role after addToLibrary", async () => {
@@ -71,18 +73,19 @@ describe("flashcardSets.get viewer info", () => {
     await as.mutation(api.sharing.addToLibrary, { setId });
 
     const result = await as.query(api.flashcardSets.get, { id: setId });
-    expect(result).not.toBeNull();
-    expect(result!.viewer.role).toBe("member");
-    expect(result!.viewer.userSet).not.toBeNull();
-    expect(result!.viewer.userSet!.role).toBe("member");
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.viewer.role).toBe("member");
+    expect(set.viewer.userSet).not.toBeNull();
+    expect(set.viewer.userSet!.role).toBe("member");
   });
 
-  it("returns null for unauthenticated users", async () => {
+  it("returns Unauthenticated for unauthenticated users", async () => {
     const t = convexTest(schema, modules);
     const setId = await createSetWithCards(t);
 
     const result = await t.query(api.flashcardSets.get, { id: setId });
-    expect(result).toBeNull();
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
 });
 

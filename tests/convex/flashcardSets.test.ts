@@ -62,9 +62,11 @@ describe("flashcardSets.create", () => {
     }));
     expect(id).toBeDefined();
 
-    const set = await as.query(api.flashcardSets.get, { id });
-    expect(set?.name).toBe("Test Set");
-    expect(set?.fieldDefinitions).toHaveLength(2);
+    const result = await as.query(api.flashcardSets.get, { id });
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.name).toBe("Test Set");
+    expect(set.fieldDefinitions).toHaveLength(2);
   });
 
   it("rejects unauthenticated users", async () => {
@@ -98,8 +100,10 @@ describe("flashcardSets.update", () => {
 
     await as.mutation(api.flashcardSets.update, { id, name: "Updated" });
 
-    const set = await as.query(api.flashcardSets.get, { id });
-    expect(set?.name).toBe("Updated");
+    const result = await as.query(api.flashcardSets.get, { id });
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.name).toBe("Updated");
   });
 
   it("rejects non-owner", async () => {
@@ -118,7 +122,21 @@ describe("flashcardSets.update", () => {
 });
 
 describe("flashcardSets.get visibility gating", () => {
-  it("returns null for an ID-shaped value that is not a valid Convex ID", async () => {
+  it("returns Unauthenticated when there is no identity", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
+      name: "Public Set",
+      fieldDefinitions: fieldDefs,
+    }));
+    await as.mutation(api.flashcardSets.updateVisibility, { id, visibility: "public" });
+
+    const result = await t.query(api.flashcardSets.get, { id });
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
+  });
+
+  it("returns NotFound for an ID-shaped value that is not a valid Convex ID", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
@@ -126,10 +144,24 @@ describe("flashcardSets.get visibility gating", () => {
       id: "j0000000000000000000000000000000",
     });
 
-    expect(result).toBeNull();
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
   });
 
-  it("returns null for private set when viewer is non-member", async () => {
+  it("returns NotFound for a missing set", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
+      name: "Deleted Set",
+      fieldDefinitions: fieldDefs,
+    }));
+    await as.mutation(api.flashcardSets.remove, { id });
+
+    const result = await as.query(api.flashcardSets.get, { id });
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns Forbidden for private set when viewer is non-member", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
     const other = t.withIdentity(OTHER_USER);
@@ -140,7 +172,7 @@ describe("flashcardSets.get visibility gating", () => {
     }));
 
     const result = await other.query(api.flashcardSets.get, { id });
-    expect(result).toBeNull();
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Forbidden" } });
   });
 
   it("returns public set for non-member with visitor role", async () => {
@@ -155,8 +187,9 @@ describe("flashcardSets.get visibility gating", () => {
     await as.mutation(api.flashcardSets.updateVisibility, { id, visibility: "public" });
 
     const result = await other.query(api.flashcardSets.get, { id });
-    expect(result).not.toBeNull();
-    expect(result!.viewer.role).toBe("visitor");
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.viewer.role).toBe("visitor");
   });
 
   it("returns unlisted set for non-member with visitor role", async () => {
@@ -171,8 +204,9 @@ describe("flashcardSets.get visibility gating", () => {
     await as.mutation(api.flashcardSets.updateVisibility, { id, visibility: "unlisted" });
 
     const result = await other.query(api.flashcardSets.get, { id });
-    expect(result).not.toBeNull();
-    expect(result!.viewer.role).toBe("visitor");
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.viewer.role).toBe("visitor");
   });
 
   it("returns private set for owner", async () => {
@@ -185,8 +219,9 @@ describe("flashcardSets.get visibility gating", () => {
     }));
 
     const result = await as.query(api.flashcardSets.get, { id });
-    expect(result).not.toBeNull();
-    expect(result!.viewer.role).toBe("owner");
+    expect(result.ok).toBe(true);
+    const set = await unwrap(result);
+    expect(set.viewer.role).toBe("owner");
   });
 });
 
@@ -233,7 +268,7 @@ describe("flashcardSets.remove", () => {
     const deletedSet = await as.query(api.flashcardSets.get, {
       id: setId,
     });
-    expect(deletedSet).toBeNull();
+    expect(deletedSet).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
 
     const cards = await as.query(api.flashcards.list, { setId });
     expect(cards).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
@@ -271,11 +306,12 @@ describe("flashcardSets.fork", () => {
     const newSetId = (result as { ok: true; value: string }).value;
 
     const forkedSet = await other.query(api.flashcardSets.get, { id: asId<"flashcardSets">(newSetId) });
-    expect(forkedSet).not.toBeNull();
-    expect(forkedSet!.name).toBe("Copy of Original Set");
-    expect(forkedSet!.fieldDefinitions).toHaveLength(2);
-    expect(forkedSet!.cardCount).toBe(2);
-    expect(forkedSet!.origin).toMatchObject({ kind: "forked", sourceSetId });
+    expect(forkedSet.ok).toBe(true);
+    const set = await unwrap(forkedSet);
+    expect(set.name).toBe("Copy of Original Set");
+    expect(set.fieldDefinitions).toHaveLength(2);
+    expect(set.cardCount).toBe(2);
+    expect(set.origin).toMatchObject({ kind: "forked", sourceSetId });
 
     const cards = await unwrap(await other.query(api.flashcards.list, { setId: asId<"flashcardSets">(newSetId) }));
     expect(cards).toHaveLength(2);
