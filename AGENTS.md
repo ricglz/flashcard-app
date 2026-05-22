@@ -28,6 +28,7 @@ Observability is still important because the app is mainly tested in production.
 ## Code Style
 - Prefer event handlers or server-side logic over `useEffect` — follow React's "you might not need an effect"
 - Use `useOfflineQuery` for offline-capable features (study, SRS, settings, progress). Use `useQuery` for online-dependent gating (AI/LLM key checks, real-time search, transient state) — it returns `undefined` when offline, correctly hiding features that require connectivity.
+- Comments should be essential-only: explain non-obvious intent, external constraints, generated/tooling requirements, suppression rationale, or behavior the code/types cannot express. Delete comments that restate names, JSX structure, test steps, or architecture facts discoverable from the code.
 
 ## Data Privacy
 - Minimize user-sensitive data in the database. No PII storage (names, emails, avatars). User identity stays in Clerk; the DB stores only `tokenIdentifier` as an opaque reference.
