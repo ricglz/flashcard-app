@@ -4,10 +4,11 @@ import type { WizardState } from "./wizardState";
 type Props = {
   state: WizardState;
   isSubmitting: boolean;
+  canSubmit: boolean;
   onSubmit: () => void;
 };
 
-export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
+export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }: Props) {
   const sorted = [...state.fieldDefinitions].sort((a, b) => a.order - b.order);
 
   return (
@@ -99,7 +100,7 @@ export default function StepReview({ state, isSubmitting, onSubmit }: Props) {
       {/* Submit */}
       <button
         onClick={onSubmit}
-        disabled={isSubmitting}
+        disabled={isSubmitting || !canSubmit}
         className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
       >
         {isSubmitting ? "Creating..." : "Create Set"}

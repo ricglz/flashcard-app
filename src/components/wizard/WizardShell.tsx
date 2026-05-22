@@ -2,7 +2,7 @@
 
 
 import { useReducer, useState } from "react";
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
@@ -28,6 +28,7 @@ export default function WizardShell({
 }) {
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
+  const convexAuth = useConvexAuth();
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const [state, dispatch] = useReducer(wizardReducer, initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,6 +37,10 @@ export default function WizardShell({
 
   const handleCreate = async () => {
     if (isSubmitting) return;
+    if (!convexAuth.isAuthenticated) {
+      setSubmitError("Please sign in to continue.");
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     const validation = validateWizardStep({ ...state, step: STEP_COUNT });
@@ -126,6 +131,7 @@ export default function WizardShell({
             <StepReview
               state={state}
               isSubmitting={isSubmitting}
+              canSubmit={!convexAuth.isLoading && convexAuth.isAuthenticated}
               onSubmit={handleCreate}
             />
             {submitError && (
