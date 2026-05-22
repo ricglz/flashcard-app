@@ -11,6 +11,7 @@ type Entry = {
   createdAt: number;
   status: string;
   retries: number;
+  queuedWhileOnline?: boolean;
 };
 
 function createMockDb() {
@@ -202,11 +203,47 @@ describe("getPendingCount", () => {
   });
 });
 
+describe("getVisiblePendingCount", () => {
+  it("excludes entries queued while online", async () => {
+    await outboxModule.addToOutbox("mutation.online", {}, { queuedWhileOnline: true });
+    await outboxModule.addToOutbox("mutation.offline", {}, { queuedWhileOnline: false });
+
+    const count = await outboxModule.getVisiblePendingCount();
+    expect(count).toBe(1);
+  });
+
+  it("counts legacy entries with no origin metadata as visible", async () => {
+    await outboxModule.addToOutbox("mutation.legacy", {});
+
+    const count = await outboxModule.getVisiblePendingCount();
+    expect(count).toBe(1);
+  });
+
+  it("does not count failed or auth-required entries", async () => {
+    const failed = await outboxModule.addToOutbox("mutation.failed", {}, { queuedWhileOnline: false });
+    const authRequired = await outboxModule.addToOutbox("mutation.auth", {}, { queuedWhileOnline: false });
+    if (!failed.ok || !authRequired.ok) throw new Error("addToOutbox failed");
+
+    await outboxModule.markFailed(failed.id, 3, "permanentFailure");
+    await outboxModule.markFailed(authRequired.id, 1, "authRequiredRetry");
+
+    const count = await outboxModule.getVisiblePendingCount();
+    expect(count).toBe(0);
+  });
+});
+
 describe("addToOutbox", () => {
   it("returns queued outcome with a positive id", async () => {
     const result = await outboxModule.addToOutbox("mutation.x", { key: "val" });
     expect(result).toMatchObject({ ok: true, status: "queued", id: expect.any(Number) });
     expect(result.id).toBeGreaterThan(0);
+  });
+
+  it("stores queuedWhileOnline metadata", async () => {
+    await outboxModule.addToOutbox("mutation.x", {}, { queuedWhileOnline: true });
+
+    const entries = await outboxModule.getPendingEntries();
+    expect(entries[0]!.queuedWhileOnline).toBe(true);
   });
 
   it("dispatches outbox-changed event on success", async () => {

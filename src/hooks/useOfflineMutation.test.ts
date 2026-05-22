@@ -16,7 +16,9 @@ describe("executeOfflineMutation", () => {
     });
 
     expect(runMutation).not.toHaveBeenCalled();
-    expect(queueMutation).toHaveBeenCalledWith("studySessions.recordResult", { rating: "good" });
+    expect(queueMutation).toHaveBeenCalledWith("studySessions.recordResult", { rating: "good" }, {
+      queuedWhileOnline: true,
+    });
     expect(result).toEqual({ ok: true, value: { status: "queued", id: 1 } });
   });
 
@@ -34,6 +36,9 @@ describe("executeOfflineMutation", () => {
     });
 
     expect(runMutation).not.toHaveBeenCalled();
+    expect(queueMutation).toHaveBeenCalledWith("srsReviewQueue.recordReview", { rating: "hard" }, {
+      queuedWhileOnline: false,
+    });
     expect(result).toEqual({ ok: true, value: { status: "queued", id: 2 } });
   });
 

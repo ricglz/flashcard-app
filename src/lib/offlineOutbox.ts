@@ -7,15 +7,28 @@ export type OutboxOutcome =
   | { ok: false; status: "permanentFailure"; id: number; message: string }
   | { ok: false; status: "authRequiredRetry"; id: number; message: string };
 
+type AddToOutboxOptions = {
+  queuedWhileOnline?: boolean;
+};
+
 export function normalizeSyncFailure(err: unknown): "authRequiredRetry" | "permanentFailure" {
   const message = err instanceof Error ? err.message : String(err);
   if (/auth|sign in|unauthenticated/i.test(message)) return "authRequiredRetry";
   return "permanentFailure";
 }
 
+function isPendingForCount(entry: OutboxEntry): boolean {
+  return entry.status !== "failed" && entry.status !== "auth_required";
+}
+
+function isUserVisibleEntry(entry: OutboxEntry): boolean {
+  return entry.queuedWhileOnline !== true;
+}
+
 export async function addToOutbox(
   mutationName: string,
-  args: unknown
+  args: unknown,
+  options: AddToOutboxOptions = {},
 ): Promise<OutboxOutcome> {
   try {
     const db = await getDb();
@@ -25,6 +38,7 @@ export async function addToOutbox(
       createdAt: Date.now(),
       status: "pending",
       retries: 0,
+      queuedWhileOnline: options.queuedWhileOnline,
     } as OutboxEntry);
     window.dispatchEvent(new Event("outbox-changed"));
     return { ok: true, status: "queued", id: id as number };
@@ -85,7 +99,17 @@ export async function getPendingCount(): Promise<number> {
   try {
     const db = await getDb();
     const all = await db.getAll("outbox");
-    return all.filter((e) => e.status !== "failed" && e.status !== "auth_required").length;
+    return all.filter(isPendingForCount).length;
+  } catch {
+    return 0;
+  }
+}
+
+export async function getVisiblePendingCount(): Promise<number> {
+  try {
+    const db = await getDb();
+    const all = await db.getAll("outbox");
+    return all.filter((entry) => isPendingForCount(entry) && isUserVisibleEntry(entry)).length;
   } catch {
     return 0;
   }

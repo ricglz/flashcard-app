@@ -9,6 +9,7 @@ export type OutboxEntry = {
   createdAt: number;
   status: OutboxStatus;
   retries: number;
+  queuedWhileOnline?: boolean;
 };
 
 type OfflineCacheSchema = DBSchema & {
