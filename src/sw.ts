@@ -8,6 +8,7 @@ declare const self: ServiceWorkerGlobalScope & {
 
 const PRECACHE_NAME = "precache-v1";
 const RUNTIME_NAME = "runtime-v1";
+const CACHE_NAMES = [PRECACHE_NAME, RUNTIME_NAME];
 
 self.addEventListener("install", (event: ExtendableEvent) => {
   self.skipWaiting();
@@ -18,7 +19,7 @@ self.addEventListener("install", (event: ExtendableEvent) => {
       Promise.all(
         manifest.map(({ url }) =>
           cache.add(new Request(url, { cache: "reload" })).catch(() => {
-            // Non-critical — some assets may not exist at install time
+            // Non-critical; some assets may not exist at install time.
           }),
         ),
       ),
@@ -31,7 +32,7 @@ self.addEventListener("activate", (event: ExtendableEvent) => {
     caches.keys().then((names) =>
       Promise.all(
         names
-          .filter((n) => n !== PRECACHE_NAME && n !== RUNTIME_NAME)
+          .filter((n) => !CACHE_NAMES.includes(n))
           .map((n) => caches.delete(n)),
       ),
     ),
@@ -47,13 +48,13 @@ self.addEventListener("fetch", (event: FetchEvent) => {
 
   if (!url.protocol.startsWith("http")) return;
 
-  // Cache-first for hashed static assets (immutable)
+  // Cache-first for hashed static assets.
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(request));
     return;
   }
 
-  // Network-first for same-origin navigations and other requests
+  // Network-first for same-origin navigations and other requests.
   if (url.origin === self.location.origin) {
     event.respondWith(networkFirst(request));
     return;

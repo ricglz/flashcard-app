@@ -45,14 +45,13 @@ function collectPrecacheEntries() {
   return entries;
 }
 
-const isDev = process.argv.includes("--dev");
-const manifest = isDev ? [] : collectPrecacheEntries();
+const manifest = collectPrecacheEntries();
 
 buildSync({
   entryPoints: [SW_SRC],
   outfile: SW_DEST,
   bundle: true,
-  minify: !isDev,
+  minify: true,
   format: "esm",
   define: {
     "self.__SW_MANIFEST": JSON.stringify(manifest),
