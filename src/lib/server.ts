@@ -2,7 +2,11 @@ import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 
 export async function getAuthToken() {
-  const token = await (await auth()).getToken();
+  const authData = await auth();
+  const token =
+    authData.sessionClaims?.aud === "convex"
+      ? await authData.getToken()
+      : await authData.getToken({ template: "convex" });
   if (!token) {
     const h = await headers();
     console.warn(
