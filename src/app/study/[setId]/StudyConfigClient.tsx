@@ -31,6 +31,19 @@ type Props = {
   userSet: Doc<"userSets">;
 };
 
+function updateModeInUrl(
+  mode: "study" | "browse",
+  replace: (href: string) => void,
+) {
+  const url = new URL(window.location.href);
+  if (mode === "browse") {
+    url.searchParams.set("mode", "browse");
+  } else {
+    url.searchParams.delete("mode");
+  }
+  replace(url.pathname + url.search);
+}
+
 export default function StudyConfigClient({
   setId,
   initialMode,
@@ -149,13 +162,7 @@ export default function StudyConfigClient({
               key={m}
               onClick={() => {
                 setMode(m);
-                const url = new URL(window.location.href);
-                if (m === "browse") {
-                  url.searchParams.set("mode", "browse");
-                } else {
-                  url.searchParams.delete("mode");
-                }
-                router.replace(url.pathname + url.search);
+                updateModeInUrl(m, (href) => router.replace(href));
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 mode === m
