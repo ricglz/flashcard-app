@@ -6,7 +6,7 @@ import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
-import { asId } from "@/lib/convexHelpers";
+import { parseId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 import { METHODOLOGIES, type Methodology } from "@/lib/types";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
@@ -46,9 +46,17 @@ export default function GenerateClient({
     setStep("loading");
     setError(null);
     try {
+      const selectedSetId = config.selectedSetId
+        ? parseId<"flashcardSets">(config.selectedSetId)
+        : null;
+      if (config.selectedSetId && !selectedSetId) {
+        setError("Invalid source set.");
+        setStep("config");
+        return;
+      }
       const result = await generateCards({
         methodology: config.methodology,
-        ...(config.selectedSetId ? { setId: asId<"flashcardSets">(config.selectedSetId) } : {}),
+        ...(selectedSetId ? { setId: selectedSetId } : {}),
         targetCardCount: config.targetCount,
         name: config.setName,
         ...(config.model ? { model: config.model } : {}),

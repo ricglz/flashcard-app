@@ -5,7 +5,7 @@ import { getAuthToken } from "@/lib/server";
 import { ServerStudyAssistantPlugin } from "@/lib/serverStudyAssistantPlugin";
 import { DEFAULT_MODELS } from "@/lib/aiDefaults";
 import { stripHallucinatedFnCalls } from "@/lib/stripHallucinatedFnCalls";
-import { asId } from "@/lib/convexHelpers";
+import { parseId } from "@/lib/convexHelpers";
 import * as Schema from "effect/Schema";
 import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
@@ -28,7 +28,6 @@ function sseEvent(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-// Cache for models known to not support tools
 const noToolsCache = new Map<string, boolean>();
 
 function getCacheKey(provider: string, modelName: string): string {
@@ -143,9 +142,13 @@ export async function POST(request: Request) {
     "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful. When you want to use a tool, invoke it through the tool-calling mechanism provided by the API. Never write function-call syntax like <function=name></function> in your responses.";
 
   if (body.context?.setId) {
+    const setId = parseId<"flashcardSets">(body.context.setId);
+    if (!setId) {
+      return Response.json({ error: "Invalid set context." }, { status: 400 });
+    }
     const set = await fetchQuery(
       api.flashcardSets.get,
-      { id: asId<"flashcardSets">(body.context.setId) },
+      { id: setId },
       { token },
     );
     if (set.ok) {

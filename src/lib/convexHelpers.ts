@@ -2,13 +2,9 @@ import type { Id, TableNames } from "../../convex/_generated/dataModel";
 
 const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/;
 
-/**
- * Cast a raw string (e.g. from URL params) to a Convex Id.
- * Convex rejects invalid IDs at query time, so this is safe
- * as long as queries handle null/not-found gracefully.
- */
+/** Use only for values already sourced from Convex IDs; use parseId at string boundaries. */
 export function asId<T extends TableNames>(raw: string): Id<T> {
-  // @ts-expect-error — safe runtime coercion; Convex validates at query time
+  // @ts-expect-error — Convex IDs are branded strings at compile time.
   return raw;
 }
 
