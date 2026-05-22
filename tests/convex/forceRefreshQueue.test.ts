@@ -73,7 +73,6 @@ describe("forceRefreshQueue", () => {
     const first = await unwrap(await as.mutation(api.srsReviewQueue.forceRefreshQueue, {}));
     expect(first.added).toBe(2);
 
-    // Review all cards to empty the queue
     const queue = await getQueueItems(t);
     for (const item of queue) {
       await as.mutation(api.srsReviewQueue.recordReview, {

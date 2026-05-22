@@ -71,8 +71,6 @@ describe("computeOverallScore", () => {
   });
 
   it("computes correct score for mixed ratings", () => {
-    // wrong=0, hard=1, good=2, easy=3
-    // total = 0+1+2+3 = 6, max = 4*3 = 12, score = 0.5
     const results = [
       { rating: "wrong" },
       { rating: "hard" },
@@ -315,7 +313,6 @@ describe("studySessions.recordResult", () => {
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
-    // Try to submit result for card at index 1 when we're at index 0
     expect(await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[1]!,
@@ -472,7 +469,6 @@ describe("studySessions.getActiveSession", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    // Create and abandon one session
     const abandonedId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
@@ -483,7 +479,6 @@ describe("studySessions.getActiveSession", () => {
       sessionId: abandonedId,
     });
 
-    // Create an active session
     const activeId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],

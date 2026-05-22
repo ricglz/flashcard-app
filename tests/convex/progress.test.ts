@@ -98,7 +98,6 @@ describe("getDailyGoalProgress", () => {
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 4, dailyGoal: 10 });
 
-    // Re-read settings to verify dailyGoal persisted
     const settings = await as.query(api.userSettings.get, {});
     expect(settings?.dailyGoal).toBe(10);
 
@@ -220,7 +219,6 @@ describe("getPerSetMastery", () => {
       setId,
     });
 
-    // Promote one card to "learning" with a different ease
     await t.run(async (ctx) => {
       const cards = await ctx.db
         .query("srsCards")
@@ -243,7 +241,6 @@ describe("getPerSetMastery", () => {
     expect(mastery[0]!.new).toBe(2);
     expect(mastery[0]!.learning).toBe(1);
     expect(mastery[0]!.review).toBe(0);
-    // avgEase: (2.0 + 2.5 + 2.5) / 3 ≈ 2.333
     expect(mastery[0]!.avgEase).toBeCloseTo(2.333, 2);
   });
 
@@ -262,7 +259,6 @@ describe("getCardStatusBreakdown", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 3);
 
-    // Enroll cards into SRS (normally done by cron)
     await t.mutation(internal.userSets.enrollCardsForSet, {
       userId: TEST_USER.tokenIdentifier,
       setId,

@@ -230,7 +230,6 @@ describe("flashcardSets.remove", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    // Create set with cards
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Test",
       fieldDefinitions: fieldDefs,
@@ -243,7 +242,6 @@ describe("flashcardSets.remove", () => {
       ],
     });
 
-    // Create a study session
     const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
       setId,
       frontFields: ["Front"],
@@ -251,7 +249,6 @@ describe("flashcardSets.remove", () => {
       shuffle: false,
     }));
 
-    // Record a result
     const session = await as.query(api.studySessions.get, {
       id: sessionId,
     });
@@ -261,10 +258,8 @@ describe("flashcardSets.remove", () => {
       rating: "good",
     });
 
-    // Delete the set
     await as.mutation(api.flashcardSets.remove, { id: setId });
 
-    // Verify everything is gone
     const deletedSet = await as.query(api.flashcardSets.get, {
       id: setId,
     });
@@ -355,9 +350,6 @@ describe("flashcardSets.fork", () => {
     const other = t.withIdentity(OTHER_USER);
     await other.mutation(api.sharing.addToLibrary, { setId });
 
-    // addToLibrary fails on private sets now, so let's make it public first then private after adding
-    // Actually, let's test via the lower-level userSets.add
-    // Re-approach: make the set public, add to library, then make private, then fork
     const t2 = convexTest(schema, modules);
     const owner = t2.withIdentity(TEST_USER);
     const member = t2.withIdentity(OTHER_USER);
