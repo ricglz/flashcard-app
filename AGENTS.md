@@ -8,9 +8,11 @@ Right now there are no active users. This is a side project, so:
 
 Observability is still important because the app is mainly tested in production.
 
-## Progress Tracking
-- **PROGRESS.md** is forward-looking only — it tracks what's next, not what's done. Never list completed items; git history is the authoritative record.
-- Testing strategy and current coverage gaps live in `docs/testing-strategy.md`
+## Source control
+- Prefer rebasing over merging branches
+
+## Backlog
+- **BACKLOG.md** is forward-looking only — it tracks what's next, not what's done. Never list completed items; git history is the authoritative record.
 
 ## Testing
 - **Testing hierarchy**: types > unit tests > e2e. Prioritize enforcing correctness through the type system first — consider architecture changes or more thoughtful type representations before reaching for runtime checks.
