@@ -49,6 +49,9 @@
 
 ## Code Quality — Error Handling
 
+### Query Result Contracts
+- [ ] Replace ambiguous access-control `null` query returns with domain results where clients need to distinguish unauthenticated, forbidden, not found, and invalid input states. Start with `flashcardSets.get`, then update consuming pages/hooks to handle typed failures without frontend throws.
+
 ### Effect Boundary Cleanup
 - [ ] Define an Effect usage policy: use Effect for domain validation and external/HTTP/AI boundaries; avoid Services/Layers until dependency composition becomes real.
 - [ ] Audit async boundaries and use `Effect.tryPromise` where rejected promises should become typed failures; keep unexpected Convex DB/runtime failures as defects unless there is a concrete recovery path.
@@ -70,14 +73,9 @@
 ### Infrastructure
 - [ ] Dedicated Clerk + Convex test instances so e2e tests don't write to the dev database
 - [ ] Playwright CI integration (GitHub Actions)
-- [ ] Test data seeding utilities (create sets, cards, sessions programmatically to avoid UI-dependent setup)
-
-### Core User Flows
-- [ ] Study session — abandon flow (start → abandon → confirm dialog → verify session marked abandoned)
 
 ### SRS Queue Flows
 - [ ] SRS enrollment (add set to library → enable SRS → verify srsCards created)
-- [ ] Daily queue review (open queue → review cards → rate → verify scheduling updates)
 - [ ] New card introduction (verify daily limit, round-robin across sets)
 - [ ] Queue carry-over (unfinished cards persist to next day)
 
