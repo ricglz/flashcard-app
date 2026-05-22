@@ -1,12 +1,12 @@
-import { clerkSetup } from "@clerk/testing/playwright";
 import { createClerkClient } from "@clerk/backend";
+import path from "path";
+
+process.loadEnvFile(path.resolve(__dirname, "../.env.local"));
 
 export const TEST_EMAIL = "e2e+clerk_test@example.com";
 const TEST_PASSWORD = "E2eFlashcard$9xQm!";
 
 export default async function globalSetup() {
-  await clerkSetup();
-
   const clerk = createClerkClient({
     secretKey: process.env.CLERK_SECRET_KEY,
   });

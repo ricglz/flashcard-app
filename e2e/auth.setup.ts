@@ -1,8 +1,12 @@
 import { test as setup } from "@playwright/test";
-import { clerk } from "@clerk/testing/playwright";
+import { clerkSetup, clerk } from "@clerk/testing/playwright";
 import { TEST_EMAIL } from "./global-setup";
 
 const authFile = "e2e/.auth/user.json";
+
+setup("clerkSetup", async ({}) => {
+  await clerkSetup();
+});
 
 setup("authenticate", async ({ page }) => {
   await page.goto("/");

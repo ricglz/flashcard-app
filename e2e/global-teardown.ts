@@ -1,6 +1,9 @@
 import { execSync } from "child_process";
 import { createClerkClient } from "@clerk/backend";
+import path from "path";
 import { TEST_EMAIL } from "./global-setup";
+
+process.loadEnvFile(path.resolve(__dirname, "../.env.local"));
 
 export default async function globalTeardown() {
   console.log("[teardown] starting cleanup...");
