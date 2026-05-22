@@ -40,7 +40,8 @@ export default async function ResultsPage({
   ]);
 
   const results = preloadedQueryResult(preloadedResults);
-  if (!results || !preloadedQueryResult(preloadedSet)) {
+  const setData = preloadedQueryResult(preloadedSet);
+  if (!results || !setData) {
     redirect("/");
   }
 
@@ -64,6 +65,7 @@ export default async function ResultsPage({
       preloadedResults={preloadedResults}
       preloadedCards={preloadedCards}
       preloadedSet={preloadedSet}
+      initialSet={setData}
     />
   );
 }

@@ -3,12 +3,15 @@
 
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
-import { usePreloadedQuery, useMutation } from "convex/react";
+import { useConvexAuth, usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getTtsConfig } from "@/lib/types";
-import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import {
+  type FlashcardSetWithViewer,
+  useTypedFlashcardSet,
+} from "@/hooks/convex/useTypedFlashcardSet";
 import { asId } from "@/lib/convexHelpers";
 import { cycleFieldAssignment } from "@/lib/fieldToggle";
 import ResumeSessionBanner from "./ResumeSessionBanner";
@@ -24,6 +27,7 @@ type Props = {
   preloadedActiveSession: Preloaded<
     typeof api.studySessions.getActiveSession
   >;
+  initialSet: FlashcardSetWithViewer;
   userSet: Doc<"userSets">;
 };
 
@@ -33,13 +37,15 @@ export default function StudyConfigClient({
   preloadedSet,
   preloadedCards,
   preloadedActiveSession,
+  initialSet,
   userSet,
 }: Props) {
-  const { set } = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const activeSession = usePreloadedQuery(preloadedActiveSession);
   const startSession = useMutation(api.studySessions.start);
+  const convexAuth = useConvexAuth();
   const router = useRouter();
   const flashcardSetId = asId<"flashcardSets">(setId);
 
@@ -77,6 +83,10 @@ export default function StudyConfigClient({
 
   const handleStart = async () => {
     if (frontFields.length === 0 || backFields.length === 0) return;
+    if (!convexAuth.isAuthenticated) {
+      setError("Please sign in to continue.");
+      return;
+    }
     setError(null);
     setIsNavigating(true);
     try {
@@ -192,7 +202,8 @@ export default function StudyConfigClient({
             disabled={
               frontFields.length === 0 ||
               backFields.length === 0 ||
-              cards.length === 0
+              cards.length === 0 ||
+              (mode === "study" && !convexAuth.isAuthenticated)
             }
             className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
           >

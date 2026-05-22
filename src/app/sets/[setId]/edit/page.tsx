@@ -22,7 +22,8 @@ export default async function EditSetPage({
     { token }
   );
 
-  if (!preloadedQueryResult(preloadedSet)) {
+  const setData = preloadedQueryResult(preloadedSet);
+  if (!setData) {
     redirect("/");
   }
 
@@ -41,6 +42,7 @@ export default async function EditSetPage({
     <EditSetClient
       setId={setId}
       preloadedSet={preloadedSet}
+      initialSet={setData}
       preloadedCards={preloadedCards}
     />
   );

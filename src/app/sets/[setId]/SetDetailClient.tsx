@@ -12,7 +12,10 @@ import { useRouter } from "next/navigation";
 import { VISIBILITIES, VISIBILITY_LABELS, type Visibility } from "@/lib/types";
 import TypedSelect from "@/components/TypedSelect";
 import SrsSetConfig from "@/components/SrsSetConfig";
-import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import {
+  type FlashcardSetWithViewer,
+  useTypedFlashcardSet,
+} from "@/hooks/convex/useTypedFlashcardSet";
 import CardsTable from "./CardsTable";
 import SetDetailHeader from "./SetDetailHeader";
 import VisitorActions from "./VisitorActions";
@@ -22,6 +25,7 @@ import ForkSyncBanner from "./ForkSyncBanner";
 type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
+  initialSet: FlashcardSetWithViewer;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
@@ -31,12 +35,13 @@ type Props = {
 export default function SetDetailClient({
   setId,
   preloadedSet,
+  initialSet,
   preloadedCards,
   preloadedTtsConfig,
   preloadedHasLlmKey,
   preloadedForkSyncStatus,
 }: Props) {
-  const { set, viewer } = useTypedFlashcardSet(preloadedSet);
+  const { set, viewer } = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const router = useRouter();

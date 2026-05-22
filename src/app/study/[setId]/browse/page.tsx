@@ -33,7 +33,8 @@ export default async function BrowsePage({
       preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
     ]);
 
-  if (!preloadedQueryResult(preloadedSet)) {
+  const setData = preloadedQueryResult(preloadedSet);
+  if (!setData) {
     redirect("/");
   }
   const cardsResult = preloadedQueryResult(preloadedCards);
@@ -60,6 +61,7 @@ export default async function BrowsePage({
       shuffle={shuffle}
       cardLimit={cardLimit}
       preloadedSet={preloadedSet}
+      initialSet={setData}
       preloadedCards={preloadedCards}
       preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}

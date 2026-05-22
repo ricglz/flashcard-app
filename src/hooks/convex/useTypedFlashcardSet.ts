@@ -1,10 +1,15 @@
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import type { api } from "../../../convex/_generated/api";
 import type { TypedFlashcardSet, Viewer } from "@/lib/types";
 import type { Doc } from "../../../convex/_generated/dataModel";
 
 type SetWithViewer = { set: TypedFlashcardSet; viewer: Viewer };
+type RawSetWithViewer = Record<string, unknown> & { viewer: unknown };
+export type FlashcardSetWithViewer = NonNullable<
+  FunctionReturnType<typeof api.flashcardSets.get>
+>;
 
 const VALID_ROLES = new Set<string>(["owner", "member", "visitor"]);
 
@@ -30,10 +35,12 @@ function parseViewer(raw: unknown): Viewer {
 }
 
 export function useTypedFlashcardSet(
-  preloaded: Preloaded<typeof api.flashcardSets.get>
+  preloaded: Preloaded<typeof api.flashcardSets.get>,
+  initialSet: FlashcardSetWithViewer,
 ): SetWithViewer {
   const raw = usePreloadedQuery(preloaded);
-  const { viewer: rawViewer, ...setData } = raw as Record<string, unknown> & { viewer: unknown };
+  const resolved = (raw ?? initialSet) as RawSetWithViewer;
+  const { viewer: rawViewer, ...setData } = resolved;
   return {
     set: setData as TypedFlashcardSet,
     viewer: parseViewer(rawViewer),

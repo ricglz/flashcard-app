@@ -52,7 +52,8 @@ export default async function StudySessionPage({
     redirect(`/study/${setId}`);
   }
 
-  if (!preloadedQueryResult(preloadedSet)) {
+  const setData = preloadedQueryResult(preloadedSet);
+  if (!setData) {
     redirect("/");
   }
   const cardsResult = preloadedQueryResult(preloadedCards);
@@ -66,6 +67,7 @@ export default async function StudySessionPage({
       sessionId={typedSessionId}
       preloadedSession={preloadedSession}
       preloadedSet={preloadedSet}
+      initialSet={setData}
       preloadedCards={preloadedCards}
       preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}

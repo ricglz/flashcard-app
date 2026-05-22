@@ -45,6 +45,7 @@ export default async function StudyConfigPage({
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
       preloadedActiveSession={preloadedActiveSession}
+      initialSet={result}
       userSet={result.viewer.userSet}
     />
   );

@@ -37,6 +37,7 @@ export default async function SetDetailPage({
     <SetDetailClient
       setId={setId}
       preloadedSet={preloadedSet}
+      initialSet={setData}
       preloadedCards={preloadedCards}
       preloadedTtsConfig={preloadedTtsConfig}
       preloadedHasLlmKey={preloadedHasLlmKey}

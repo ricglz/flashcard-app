@@ -14,7 +14,10 @@ import CardRatingButtons from "@/components/CardRatingButtons";
 import AssistantPanel from "@/components/AssistantPanel";
 import StudyLayout from "@/components/StudyLayout";
 import type { CardRating, ActiveStudySession } from "@/lib/types";
-import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import {
+  type FlashcardSetWithViewer,
+  useTypedFlashcardSet,
+} from "@/hooks/convex/useTypedFlashcardSet";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import StudySessionLocalResults, {
@@ -28,6 +31,7 @@ type Props = {
   sessionId: Id<"studySessions">;
   preloadedSession: Preloaded<typeof api.studySessions.get>;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
+  initialSet: FlashcardSetWithViewer;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
@@ -38,6 +42,7 @@ export default function StudySessionClient({
   sessionId,
   preloadedSession,
   preloadedSet,
+  initialSet,
   preloadedCards,
   preloadedTtsConfig,
   preloadedAnnotations,
@@ -45,7 +50,7 @@ export default function StudySessionClient({
   const router = useRouter();
 
   const session = usePreloadedQuery(preloadedSession) as ActiveStudySession;
-  const { set } = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : EMPTY_CARDS;
   const recordResult = useOfflineMutation(api.studySessions.recordResult, {

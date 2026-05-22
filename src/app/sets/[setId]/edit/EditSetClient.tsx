@@ -8,21 +8,26 @@ import { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
 import CardForm from "@/components/CardForm";
 import CsvImporter from "@/components/CsvImporter";
-import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import {
+  type FlashcardSetWithViewer,
+  useTypedFlashcardSet,
+} from "@/hooks/convex/useTypedFlashcardSet";
 import SetInfoEditor from "./SetInfoEditor";
 
 type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
+  initialSet: FlashcardSetWithViewer;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
 };
 
 export default function EditSetClient({
   setId,
   preloadedSet,
+  initialSet,
   preloadedCards,
 }: Props) {
-  const { set } = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const updateSet = useMutation(api.flashcardSets.update);

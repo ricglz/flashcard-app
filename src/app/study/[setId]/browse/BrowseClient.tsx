@@ -11,7 +11,10 @@ import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
 import StudyLayout from "@/components/StudyLayout";
-import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import {
+  type FlashcardSetWithViewer,
+  useTypedFlashcardSet,
+} from "@/hooks/convex/useTypedFlashcardSet";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { shuffleArray } from "@/lib/shuffle";
@@ -24,6 +27,7 @@ type Props = {
   shuffle: boolean;
   cardLimit: number | null;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
+  initialSet: FlashcardSetWithViewer;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
@@ -37,11 +41,12 @@ export default function BrowseClient({
   shuffle,
   cardLimit,
   preloadedSet,
+  initialSet,
   preloadedCards,
   preloadedTtsConfig,
   preloadedAnnotations,
 }: Props) {
-  const { set } = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const tts = useTtsControls(preloadedTtsConfig);

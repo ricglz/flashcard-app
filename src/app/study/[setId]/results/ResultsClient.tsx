@@ -12,13 +12,17 @@ import {
   CARD_RATING_SCORES,
   CARD_RATINGS
 } from "@/lib/types";
-import { useTypedFlashcardSet } from "@/hooks/convex/useTypedFlashcardSet";
+import {
+  type FlashcardSetWithViewer,
+  useTypedFlashcardSet,
+} from "@/hooks/convex/useTypedFlashcardSet";
 
 type Props = {
   setId: string;
   preloadedResults: Preloaded<typeof api.studySessions.getResults>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
+  initialSet: FlashcardSetWithViewer;
 };
 
 export default function ResultsClient({
@@ -26,11 +30,12 @@ export default function ResultsClient({
   preloadedResults,
   preloadedCards,
   preloadedSet,
+  initialSet,
 }: Props) {
   const data = usePreloadedQuery(preloadedResults);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
-  const { set } = useTypedFlashcardSet(preloadedSet);
+  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
 
   if (!cardsResult.ok) return null;
   if (!data) return null;

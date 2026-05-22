@@ -1,15 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
 export default function StudyError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   const params = useParams<{ setId: string }>();
+
+  useEffect(() => {
+    console.error("Study session error boundary caught an error", {
+      message: error.message,
+      stack: error.stack,
+      digest: error.digest,
+      setId: params.setId,
+    });
+  }, [error, params.setId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
