@@ -1,11 +1,5 @@
 import type { FieldDefinition } from "./types";
 
-/**
- * Language-specific field definition presets.
- * Used when creating a new flashcard set — user picks a language,
- * gets sensible defaults they can customize.
- */
-
 export type LanguagePreset = {
   label: string;
   fieldDefinitions: FieldDefinition[];

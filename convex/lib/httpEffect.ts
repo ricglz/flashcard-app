@@ -22,7 +22,6 @@ type AuthResult =
       readonly error: { readonly _tag: string; readonly message: string };
     };
 
-// Error types for HTTP pipeline
 export class UnauthenticatedError {
   readonly _tag = "Unauthenticated";
   constructor(readonly message: string) {}
@@ -45,9 +44,6 @@ export class NotFoundError {
 
 export type HttpError = UnauthenticatedError | ForbiddenError | ParseError | NotFoundError;
 
-/**
- * Extract bearer token from Authorization header
- */
 function bearerToken(req: Request): string | null {
   const header = req.headers.get("authorization") ?? "";
   const match = header.match(/^Bearer\s+(.+)$/i);
@@ -65,9 +61,6 @@ function parseErrorMessage(error: unknown): string {
     .join("; ");
 }
 
-/**
- * Effect-based authentication
- */
 export function authenticateEffect(
   ctx: Pick<ActionCtx, "runMutation">,
   req: Request,
@@ -94,9 +87,6 @@ export function authenticateEffect(
   });
 }
 
-/**
- * Effect-based body parsing with Schema validation
- */
 export function parseBodyEffect<A, I>(
   req: Request,
   schema: Schema.Schema<A, I, never>
@@ -116,9 +106,6 @@ export function parseBodyEffect<A, I>(
   });
 }
 
-/**
- * Create JSON response
- */
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
@@ -126,17 +113,11 @@ export function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-/**
- * Create error response
- */
 export function errorResponse(code: string, message: string, status: number): Response {
   const body: ApiErrorResponse = { error: { code, message } };
   return jsonResponse(body, status);
 }
 
-/**
- * Map HttpError to Response
- */
 export function httpErrorToResponse(error: HttpError): Response {
   switch (error._tag) {
     case "Unauthenticated":
@@ -157,10 +138,6 @@ function isHttpError(error: unknown): error is HttpError {
     error instanceof NotFoundError;
 }
 
-/**
- * Main handler for tooling requests
- * Composes authentication, body parsing, and business logic execution
- */
 export function handleToolingRequest<A, I, R>(
   ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
   req: Request,
@@ -191,9 +168,6 @@ export function handleToolingRequest<A, I, R>(
   );
 }
 
-/**
- * Handler for requests without body (e.g., token status)
- */
 export function handleToolingRequestNoBody<R>(
   ctx: Pick<ActionCtx, "runMutation">,
   req: Request,

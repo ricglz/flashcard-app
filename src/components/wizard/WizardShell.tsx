@@ -115,7 +115,6 @@ export default function WizardShell({
     <div className="space-y-8">
       <WizardStepIndicator currentStep={state.step} />
 
-      {/* Step content */}
       <div>
         {state.step === 1 && (
           <StepNameAndSource state={state} dispatch={dispatch} aiAvailable={ai.available} />
@@ -141,7 +140,6 @@ export default function WizardShell({
         )}
       </div>
 
-      {/* Navigation */}
       {state.step < STEP_COUNT && (
         <div className="flex justify-between pt-4 border-t">
           <button

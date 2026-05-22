@@ -33,12 +33,6 @@ export type ParsedCsvFailure = {
 
 export type ParsedCsvResult = ParsedCsvSuccess | ParsedCsvFailure;
 
-/**
- * Parse a CSV file/string into flashcard data.
- * - Headers become field definition names
- * - Each row becomes a card with fields keyed by header names
- * - Infers basic field roles from common column names
- */
 export function parseCsv(csvText: string): ParsedCsvResult {
   const result = Papa.parse<Record<string, string>>(csvText, {
     header: true,

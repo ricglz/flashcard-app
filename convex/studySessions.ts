@@ -12,7 +12,6 @@ import type { CardRating, ActiveStudySession } from "../src/lib/types";
 import { CARD_RATING_SCORES } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 
-/** Compute overall score from an array of card result ratings. */
 export function computeOverallScore(
   ratings: ReadonlyArray<{ readonly rating: CardRating }>
 ): number {

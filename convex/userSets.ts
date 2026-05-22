@@ -17,10 +17,6 @@ import { validateStudySessionSetupEffect } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 
-// ---------------------------------------------------------------------------
-// Access control helpers — used by other Convex function files
-// ---------------------------------------------------------------------------
-
 export async function assertMember(
   ctx: QueryCtx | MutationCtx,
   userId: string,
@@ -98,10 +94,6 @@ export function requireSetContentAccessEffect(
   });
 }
 
-// ---------------------------------------------------------------------------
-// Public queries
-// ---------------------------------------------------------------------------
-
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -135,10 +127,6 @@ export const get = query({
       .first();
   },
 });
-
-// ---------------------------------------------------------------------------
-// Public mutations
-// ---------------------------------------------------------------------------
 
 export const add = mutation({
   args: {
@@ -277,10 +265,6 @@ export const remove = mutation({
     return ok(null);
   },
 });
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
 
 export async function enrollCardsForSetHelper(
   ctx: MutationCtx,

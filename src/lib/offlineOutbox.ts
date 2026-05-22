@@ -63,7 +63,7 @@ export async function markSyncing(id: number): Promise<void> {
     const entry = await db.get("outbox", id);
     if (entry) await db.put("outbox", { ...entry, status: "syncing" });
   } catch {
-    // ignore
+    return;
   }
 }
 
@@ -81,7 +81,7 @@ export async function markFailed(
       window.dispatchEvent(new Event("outbox-changed"));
     }
   } catch {
-    // ignore
+    return;
   }
 }
 
@@ -91,7 +91,7 @@ export async function removeEntry(id: number): Promise<void> {
     await db.delete("outbox", id);
     window.dispatchEvent(new Event("outbox-changed"));
   } catch {
-    // ignore
+    return;
   }
 }
 

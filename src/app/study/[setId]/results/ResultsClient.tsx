@@ -49,7 +49,6 @@ export default function ResultsClient({
   const results = data.results as TypedCardResult[];
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
 
-  // Count ratings
   const ratingCounts: Record<CardRating, number> = {
     wrong: 0,
     hard: 0,
@@ -92,7 +91,6 @@ export default function ResultsClient({
         <h1 className="text-2xl font-bold">Session Results</h1>
         <p className="text-sm text-muted">{set.name}</p>
 
-        {/* Score circle */}
         <div className="flex justify-center">
           <div className="w-32 h-32 rounded-full border-4 border-accent flex items-center justify-center">
             <div className="text-center">
@@ -102,7 +100,6 @@ export default function ResultsClient({
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 bg-raised rounded-lg text-center">
             <p className="text-2xl font-bold">{completedCards}</p>
@@ -120,7 +117,6 @@ export default function ResultsClient({
           )}
         </div>
 
-        {/* Rating breakdown */}
         <div className="space-y-2">
           <h2 className="font-semibold">Breakdown</h2>
           {CARD_RATINGS.map((rating) => {
@@ -154,7 +150,6 @@ export default function ResultsClient({
           })}
         </div>
 
-        {/* Per-card results */}
         {results.length > 0 && (
           <div>
             <h2 className="font-semibold mb-2">Card Details</h2>
@@ -192,7 +187,6 @@ export default function ResultsClient({
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-3">
           <Link
             href={`/study/${setId}`}

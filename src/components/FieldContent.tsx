@@ -11,7 +11,6 @@ type Props = {
   fieldNames: string[];
   fields: Record<string, string>;
   fieldDefsMap: Map<string, FieldDefinition>;
-  /** Text size classes for primary vs non-primary fields */
   primaryClassName: string;
   secondaryClassName: string;
   ttsRate?: number;

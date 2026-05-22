@@ -80,7 +80,6 @@ export default function StudyCard({
 
   return (
     <div className="w-full max-w-lg mx-auto">
-      {/* Front */}
       <div className="bg-card-bg border-2 border-card-border rounded-xl p-4 sm:p-8 shadow-sm">
         <FieldContent
           fieldNames={frontFields}
@@ -92,7 +91,6 @@ export default function StudyCard({
           onTtsEvent={updateTtsStatus}
         />
 
-        {/* Divider + Back */}
         {revealed ? (
           <>
             <hr className="my-6 border-dashed" />

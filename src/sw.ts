@@ -48,13 +48,11 @@ self.addEventListener("fetch", (event: FetchEvent) => {
 
   if (!url.protocol.startsWith("http")) return;
 
-  // Cache-first for hashed static assets.
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(request));
     return;
   }
 
-  // Network-first for same-origin navigations and other requests.
   if (url.origin === self.location.origin) {
     event.respondWith(networkFirst(request));
     return;

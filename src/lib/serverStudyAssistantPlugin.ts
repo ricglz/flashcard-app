@@ -39,7 +39,6 @@ const TOOL_DEFINITIONS: PluginTool[] = [
   },
 ];
 
-// Schema for get_weak_cards parameters with validation
 const GetWeakCardsParamsSchema = Schema.Struct({
   methodology: Schema.optional(
     Schema.Literal("balanced", "recent_lapses", "low_ease", "learning_stuck")
@@ -96,7 +95,6 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
           );
 
         case "get_weak_cards": {
-          // Parse parameters with schema, fallback to defaults on error
           const paramsResult = Schema.decodeUnknownEither(GetWeakCardsParamsSchema)(
             params.parameters ?? {}
           );

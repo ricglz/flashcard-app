@@ -44,13 +44,11 @@ export const cleanupTestUser = internalMutation({
       await ctx.db.delete(set._id);
     }
 
-    // Tables with by_userId index
     for (const table of ["userSets", "srsReviews", "userSettings", "cliAccessTokens", "cardAnnotations"] as const) {
       const docs = await ctx.db.query(table).withIndex("by_userId", (q) => q.eq("userId", userId)).collect();
       for (const doc of docs) await ctx.db.delete(doc._id);
     }
 
-    // Tables with compound userId indexes (prefix match)
     const srsCards = await ctx.db.query("srsCards").withIndex("by_userId_and_nextReviewAt", (q) => q.eq("userId", userId)).collect();
     for (const doc of srsCards) await ctx.db.delete(doc._id);
 

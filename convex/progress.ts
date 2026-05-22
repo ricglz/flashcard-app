@@ -127,7 +127,6 @@ export const getStreakStats = query({
       }
     }
 
-    // Compute longest streak by walking all rows
     let run = 0;
     let prevMs: number | null = null;
     for (const row of rows) {

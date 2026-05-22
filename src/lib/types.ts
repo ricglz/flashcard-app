@@ -1,15 +1,3 @@
-/**
- * Shared types and constants — single source of truth.
- *
- * FieldRole, FieldMetadata, and related types are the canonical definitions
- * used by the DB schema, UI, and TTS engine. Extend them here.
- */
-
-// ---------------------------------------------------------------------------
-// Field Roles
-// ---------------------------------------------------------------------------
-
-/** Semantic roles a field can play within a flashcard set. */
 export const FIELD_ROLES = [
   "primary",
   "pronunciation",
@@ -29,24 +17,10 @@ export function isFieldRole(value: unknown): value is FieldRole {
   return typeof value === "string" && FIELD_ROLES.includes(value as FieldRole);
 }
 
-// ---------------------------------------------------------------------------
-// Field Metadata — typed blocks, presence = enabled
-// ---------------------------------------------------------------------------
-
-/**
- * Structured metadata for a field definition.
- * Each optional block enables a feature. Extend this type when adding new
- * metadata-driven features — this is THE canonical list.
- */
 export type FieldMetadata = {
-  /** If present, TTS is enabled for this field. */
   tts?: {
-    /** BCP-47 language tag, e.g. "zh-CN", "es", "en-US" */
     lang: string;
   };
-  // Future blocks — extend here:
-  // display?: { fontSize: "small" | "normal" | "large" };
-  // validation?: { pattern: string };
 };
 
 export function isFieldMetadata(value: unknown): value is FieldMetadata {
@@ -72,10 +46,6 @@ export function normalizeFieldMetadata(value: unknown): FieldMetadata {
   return metadata.tts ? { tts: { lang: metadata.tts.lang.trim() } } : {};
 }
 
-// ---------------------------------------------------------------------------
-// Field Definitions
-// ---------------------------------------------------------------------------
-
 export type FieldDefinition = {
   name: string;
   role: FieldRole;
@@ -83,11 +53,6 @@ export type FieldDefinition = {
   order: number;
 };
 
-// ---------------------------------------------------------------------------
-// Metadata Accessors
-// ---------------------------------------------------------------------------
-
-/** Returns TTS config if enabled for this field, null otherwise. */
 export function getTtsConfig(
   field: FieldDefinition
 ): { lang: string } | null {
@@ -124,10 +89,6 @@ export function getDefaultFieldLayout(fieldDefinitions: readonly FieldDefinition
   };
 }
 
-// ---------------------------------------------------------------------------
-// Card Ratings
-// ---------------------------------------------------------------------------
-
 export const CARD_RATINGS = ["wrong", "hard", "good", "easy"] as const;
 export type CardRating = (typeof CARD_RATINGS)[number];
 
@@ -145,17 +106,12 @@ export const SRS_RATING_LABELS: Record<CardRating, string> = {
   easy: "Easy",
 };
 
-/** Numeric score per rating for computing session averages. */
 export const CARD_RATING_SCORES = {
   wrong: 0,
   hard: 1,
   good: 2,
   easy: 3,
 } as const satisfies Record<CardRating, number>;
-
-// ---------------------------------------------------------------------------
-// Weak Context Methodology
-// ---------------------------------------------------------------------------
 
 export const METHODOLOGIES = [
   "balanced",
@@ -172,10 +128,6 @@ export const METHODOLOGY_LABELS: Record<Methodology, string> = {
   learning_stuck: "Learning Stuck",
 };
 
-// ---------------------------------------------------------------------------
-// Visibility
-// ---------------------------------------------------------------------------
-
 export const VISIBILITIES = ["private", "unlisted", "public"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
 
@@ -185,10 +137,6 @@ export const VISIBILITY_LABELS: Record<Visibility, string> = {
   public: "Public",
 };
 
-// ---------------------------------------------------------------------------
-// Session Status
-// ---------------------------------------------------------------------------
-
 export const SESSION_STATUSES = [
   "in_progress",
   "completed",
@@ -196,39 +144,25 @@ export const SESSION_STATUSES = [
 ] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 
-// ---------------------------------------------------------------------------
-// Narrowed Convex document types
-// ---------------------------------------------------------------------------
-// Convex returns metadata as Record<string, any> and rating as string.
-// These types narrow once at the query boundary so downstream code is typed.
-
 import type { Doc } from "../../convex/_generated/dataModel";
-
-// ---------------------------------------------------------------------------
-// Viewer (set access role for the current user)
-// ---------------------------------------------------------------------------
 
 export type Viewer =
   | { role: "owner"; userSet: Doc<"userSets"> }
   | { role: "member"; userSet: Doc<"userSets"> }
   | { role: "visitor"; userSet: null };
 
-/** Flashcard set with typed fieldDefinitions (narrows Convex's any metadata). */
 export type TypedFlashcardSet = Omit<Doc<"flashcardSets">, "fieldDefinitions"> & {
   fieldDefinitions: FieldDefinition[];
 };
 
-/** Card result with typed rating (narrows Convex's string to CardRating). */
 export type TypedCardResult = Omit<Doc<"cardResults">, "rating"> & {
   rating: CardRating;
 };
 
-/** Flashcard set guaranteed to have public visibility (from listPublic/searchPublic). */
 export type PublicFlashcardSet = Omit<Doc<"flashcardSets">, "visibility"> & {
   visibility: "public";
 };
 
-/** Study session guaranteed to be in progress (from getActiveSession). */
 export type ActiveStudySession = Omit<Doc<"studySessions">, "status"> & {
   status: "in_progress";
 };

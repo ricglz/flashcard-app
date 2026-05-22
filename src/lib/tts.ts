@@ -1,8 +1,3 @@
-/**
- * Web Speech API wrapper for text-to-speech.
- * TTS config is derived from FieldMetadata — see types.ts.
- */
-
 export type TtsStatus =
   | "idle"
   | "preparing"
@@ -61,7 +56,6 @@ export type SpeakOptions = {
 let cachedVoices: SpeechSynthesisVoice[] = [];
 let voicesLoadPromise: Promise<SpeechSynthesisVoice[]> | null = null;
 
-/** Check if the browser supports speech synthesis. */
 export function isTtsSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window;
 }
@@ -503,7 +497,6 @@ export function speakSequence(
   });
 }
 
-/** Get available voices for a language. */
 export async function getAvailableVoices(
   lang: string,
 ): Promise<SpeechSynthesisVoice[]> {

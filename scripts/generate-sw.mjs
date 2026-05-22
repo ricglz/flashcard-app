@@ -16,7 +16,6 @@ function fileHash(filePath) {
 function collectPrecacheEntries() {
   const entries = [];
 
-  // Static build assets
   const staticDir = join(ROOT, DIST_DIR, "static");
   if (existsSync(staticDir)) {
     const staticFiles = globSync("**/*.{js,css,html,ico,png,jpg,jpeg,gif,svg,webp,json,webmanifest,woff,woff2}", { cwd: staticDir });
@@ -28,7 +27,6 @@ function collectPrecacheEntries() {
     }
   }
 
-  // Public directory assets
   const publicDir = join(ROOT, PUBLIC_DIR);
   const publicFiles = globSync("**/*", { cwd: publicDir });
   const ignore = new Set(["sw.js", "sw.js.map"]);

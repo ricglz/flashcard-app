@@ -13,7 +13,6 @@ export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }:
 
   return (
     <div className="space-y-6">
-      {/* Set info */}
       <div>
         <h3 className="text-lg font-semibold">{state.name}</h3>
         {state.description && (
@@ -21,7 +20,6 @@ export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }:
         )}
       </div>
 
-      {/* Field definitions */}
       <div>
         <h4 className="text-sm font-medium mb-2">Fields</h4>
         <div className="border rounded overflow-hidden">
@@ -51,7 +49,6 @@ export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }:
         </div>
       </div>
 
-      {/* Cards preview */}
       <div>
         <h4 className="text-sm font-medium mb-2">
           Cards ({state.cards.length})
@@ -97,7 +94,6 @@ export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }:
         </div>
       </div>
 
-      {/* Submit */}
       <button
         onClick={onSubmit}
         disabled={isSubmitting || !canSubmit}
