@@ -31,7 +31,9 @@ export async function executeOfflineMutation<MutationReturn>({
     return runMutation();
   }
 
-  const queued = await queueMutation(mutationName, mutationArgs[0]);
+  const queued = await queueMutation(mutationName, mutationArgs[0], {
+    queuedWhileOnline: isOnline,
+  });
   if (!queued.ok) {
     return {
       ok: false,
