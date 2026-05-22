@@ -41,6 +41,7 @@ When making plans don't
 But do:
 
 * Consider how to organize the atomic commits
+* Assume that other agents may also be making changes, so consider using separate worktree
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
