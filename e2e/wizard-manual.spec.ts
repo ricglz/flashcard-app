@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test.describe("Wizard — Manual path", () => {
   test("creates a set by adding cards manually", async ({ page }) => {
@@ -52,9 +52,11 @@ test.describe("Wizard — Manual path", () => {
 
     // Create set
     await page.getByRole("button", { name: "Create Set" }).click();
+    await expect(page.getByText("Set created!")).toBeVisible({ timeout: 15000 });
 
-    // Should redirect to set detail page
-    await page.waitForURL(/\/sets\/.+/, { timeout: 10000 });
+    // Go to set detail page
+    await page.getByRole("link", { name: "View Set" }).click();
+    await page.waitForURL(/\/sets\/(?!new$)[^/]+$/, { timeout: 10000 });
     await expect(page.getByText("Manual Test Set")).toBeVisible();
     await page.screenshot({ path: "test-results/wizard-manual-done.png" });
   });

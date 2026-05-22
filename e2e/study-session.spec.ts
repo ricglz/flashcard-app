@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test.describe("Study session — happy path", () => {
   test("completes a study session and sees results", async ({ page }) => {
@@ -30,6 +30,7 @@ test.describe("Study session — happy path", () => {
 
     // Go to set detail
     await page.getByRole("link", { name: "View Set" }).click();
+    await page.waitForURL(/\/sets\/(?!new$)[^/]+$/, { timeout: 10000 });
     await expect(page.getByText("E2E Study Set")).toBeVisible();
 
     // Navigate to study config

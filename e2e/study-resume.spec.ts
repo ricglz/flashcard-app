@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test.describe("Study session — resume", () => {
   test("resumes an in-progress session", async ({ page }) => {
@@ -29,6 +29,7 @@ test.describe("Study session — resume", () => {
 
     // Go to set detail → study config
     await page.getByRole("link", { name: "View Set" }).click();
+    await page.waitForURL(/\/sets\/(?!new$)[^/]+$/, { timeout: 10000 });
     await expect(page.getByText("E2E Resume Set")).toBeVisible();
     const setUrl = page.url();
     const setId = setUrl.match(/\/sets\/([^/?]+)/)?.[1];

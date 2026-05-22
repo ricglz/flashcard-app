@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import path from "path";
 
 test.describe("Wizard — CSV path", () => {
@@ -49,8 +49,10 @@ test.describe("Wizard — CSV path", () => {
     await page.getByRole("button", { name: "Create Set" }).click();
 
     // Should show success page
-    await page.waitForURL(/\/sets\/.+/, { timeout: 10000 });
-    await expect(page.getByText("Set created!")).toBeVisible();
+    await expect(page.getByText("Set created!")).toBeVisible({ timeout: 15000 });
+    await page.getByRole("link", { name: "View Set" }).click();
+    await page.waitForURL(/\/sets\/(?!new$)[^/]+$/, { timeout: 10000 });
+    await expect(page.getByText("Test Chinese Set")).toBeVisible();
     await page.screenshot({ path: "test-results/wizard-csv-done.png" });
   });
 });
