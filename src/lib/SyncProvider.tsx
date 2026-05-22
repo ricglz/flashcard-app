@@ -21,6 +21,7 @@ import {
   normalizeSyncFailure,
   removeEntry,
   getPendingCount,
+  getVisiblePendingCount,
 } from "./offlineOutbox";
 import { shouldDrainOutbox } from "./syncState";
 
@@ -29,11 +30,13 @@ const RETRY_DELAY_MS = 2000;
 
 type SyncContextValue = {
   pendingCount: number;
+  visiblePendingCount: number;
   isSyncing: boolean;
 };
 
 const SyncContext = createContext<SyncContextValue>({
   pendingCount: 0,
+  visiblePendingCount: 0,
   isSyncing: false,
 });
 
@@ -77,11 +80,17 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   const client = useConvex();
   const isOnline = useOnlineStatus();
   const [pendingCount, setPendingCount] = useState(0);
+  const [visiblePendingCount, setVisiblePendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const isSyncingRef = useRef(false);
 
   const refreshCount = useCallback(async () => {
-    setPendingCount(await getPendingCount());
+    const [pending, visiblePending] = await Promise.all([
+      getPendingCount(),
+      getVisiblePendingCount(),
+    ]);
+    setPendingCount(pending);
+    setVisiblePendingCount(visiblePending);
   }, []);
 
   const drainOutbox = useCallback(async () => {
@@ -128,15 +137,15 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   }, [refreshCount, drainOutbox]);
 
   useEffect(() => {
-    void getPendingCount().then(setPendingCount);
-  }, []);
+    void refreshCount();
+  }, [refreshCount]);
 
   useEffect(() => {
     void drainOutbox();
   }, [drainOutbox]);
 
   return (
-    <SyncContext.Provider value={{ pendingCount, isSyncing }}>
+    <SyncContext.Provider value={{ pendingCount, visiblePendingCount, isSyncing }}>
       {children}
     </SyncContext.Provider>
   );
