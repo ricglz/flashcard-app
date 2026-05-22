@@ -64,6 +64,10 @@
   - All three solve "which card am I on" with optimistic local state — divergent patterns
 - [ ] Initialize from server state (e.g. `session.currentIndex` for resumed sessions) via `useState` initializer rather than render-time `setLocalIndexOffset(0)`
 - [ ] Use a ref to track last-seen server index, reconcile only on unexpected jumps (multi-device edge case)
+
+## Code Quality — Error Handling for Invalid Routes
+- [ ] Validate Convex IDs in server page components before calling `preloadQuery` — catch invalid/non-existent set IDs and redirect to `/` instead of falling through to the error boundary
+
 ## E2E Testing
 
 ### Infrastructure
@@ -72,8 +76,7 @@
 - [ ] Test data seeding utilities (create sets, cards, sessions programmatically to avoid UI-dependent setup)
 
 ### Core User Flows
-- [ ] Study session happy path (create set → add cards → study → rate cards → complete → view results)
-- [ ] Session resume (start → navigate away → return → resume prompt)
+- [ ] Study session — abandon flow (start → abandon → confirm dialog → verify session marked abandoned)
 
 ### SRS Queue Flows
 - [ ] SRS enrollment (add set to library → enable SRS → verify srsCards created)
