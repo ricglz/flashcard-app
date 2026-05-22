@@ -4,7 +4,16 @@ import { paginationOptsValidator } from "convex/server";
 import * as Effect from "effect/Effect";
 import { fieldDefinitionValidator } from "./schema";
 import { assertOwnerEffect, enrollCardsForSetHelper } from "./userSets";
-import { type CommonFailure } from "./domain/result";
+import type { Doc } from "./_generated/dataModel";
+import {
+  fail,
+  forbidden,
+  notFound,
+  ok,
+  unauthenticated,
+  type CommonFailure,
+  type DomainResult,
+} from "./domain/result";
 import {
   fromDomainResult,
   requireAuth,
@@ -19,6 +28,13 @@ import type { FieldDefinition, PublicFlashcardSet } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
+
+export type SetWithViewer = Doc<"flashcardSets"> & {
+  viewer:
+    | { role: "owner"; userSet: Doc<"userSets"> }
+    | { role: "member"; userSet: Doc<"userSets"> }
+    | { role: "visitor"; userSet: null };
+};
 
 export const list = query({
   args: {},
@@ -42,13 +58,13 @@ export const list = query({
 
 export const get = query({
   args: { id: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<DomainResult<SetWithViewer, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const setId = ctx.db.normalizeId("flashcardSets", args.id);
-    if (!setId) return null;
+    if (!setId) return fail(notFound("Set not found"));
     const set = await ctx.db.get(setId);
-    if (!set) return null;
+    if (!set) return fail(notFound("Set not found"));
     const link = await ctx.db
       .query("userSets")
       .withIndex("by_userId_and_setId", (q) =>
@@ -56,11 +72,13 @@ export const get = query({
       )
       .first();
     if (link) {
-      return { ...set, viewer: { role: link.role, userSet: link } };
+      return ok({ ...set, viewer: { role: link.role, userSet: link } });
     }
     const visibility = set.visibility;
-    if (visibility === "private") return null;
-    return { ...set, viewer: { role: "visitor" as const, userSet: null } };
+    if (visibility === "private") {
+      return fail(forbidden("You do not have access to this set."));
+    }
+    return ok({ ...set, viewer: { role: "visitor" as const, userSet: null } });
   },
 });
 

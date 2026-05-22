@@ -40,10 +40,11 @@ export default async function ResultsPage({
   ]);
 
   const results = preloadedQueryResult(preloadedResults);
-  const setData = preloadedQueryResult(preloadedSet);
-  if (!results || !setData) {
+  const setResult = preloadedQueryResult(preloadedSet);
+  if (!results || !setResult.ok) {
     redirect("/");
   }
+  const setData = setResult.value;
 
   if (results.session.setId !== flashcardSetId) {
     redirect(`/study/${results.session.setId}/results?sessionId=${sessionId}`);

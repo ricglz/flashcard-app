@@ -15,6 +15,7 @@ import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
+import SetAccessError from "@/components/SetAccessError";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { shuffleArray } from "@/lib/shuffle";
@@ -46,7 +47,7 @@ export default function BrowseClient({
   preloadedTtsConfig,
   preloadedAnnotations,
 }: Props) {
-  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
+  const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const tts = useTtsControls(preloadedTtsConfig);
@@ -71,8 +72,12 @@ export default function BrowseClient({
     return cardOrder.filter((id) => !dismissed.has(id));
   }, [cardOrder, dismissed]);
 
+  if (!setResult.ok) {
+    return <SetAccessError message={setResult.error.message} href={`/study/${setId}`} label="Back to study" />;
+  }
   if (!cardsResult.ok) return null;
 
+  const { set } = setResult.value;
   const fieldDefs = set.fieldDefinitions;
   const validFieldNames = new Set(fieldDefs.map((fd) => fd.name));
   const validFrontFields = frontFields.filter((f) => validFieldNames.has(f));

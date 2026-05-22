@@ -13,6 +13,7 @@ import {
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
 import { asId } from "@/lib/convexHelpers";
+import SetAccessError from "@/components/SetAccessError";
 import { cycleFieldAssignment } from "@/lib/fieldToggle";
 import ResumeSessionBanner from "./ResumeSessionBanner";
 import FieldSelectionList from "./FieldSelectionList";
@@ -53,7 +54,7 @@ export default function StudyConfigClient({
   initialSet,
   userSet,
 }: Props) {
-  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
+  const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const activeSession = usePreloadedQuery(preloadedActiveSession);
@@ -72,6 +73,10 @@ export default function StudyConfigClient({
   const [error, setError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
 
+  if (!setResult.ok) {
+    return <SetAccessError message={setResult.error.message} href={`/sets/${setId}`} label="Back to set" />;
+  }
+  const { set } = setResult.value;
   const fieldDefs = set.fieldDefinitions;
 
   if (!initialized && fieldDefs.length > 0) {

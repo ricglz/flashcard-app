@@ -22,10 +22,11 @@ export default async function EditSetPage({
     { token }
   );
 
-  const setData = preloadedQueryResult(preloadedSet);
-  if (!setData) {
+  const setResult = preloadedQueryResult(preloadedSet);
+  if (!setResult.ok) {
     redirect("/");
   }
+  const setData = setResult.value;
 
   const preloadedCards = await preloadQuery(
     api.flashcards.list,

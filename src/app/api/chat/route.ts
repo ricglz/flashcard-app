@@ -148,11 +148,11 @@ export async function POST(request: Request) {
       { id: asId<"flashcardSets">(body.context.setId) },
       { token },
     );
-    if (set) {
-      const fieldNames = set.fieldDefinitions
+    if (set.ok) {
+      const fieldNames = set.value.fieldDefinitions
         .map((f: { name: string }) => f.name)
         .join(", ");
-      systemPrompt += `\n\nThe user is studying the set "${set.name}" with fields: ${fieldNames}.`;
+      systemPrompt += `\n\nThe user is studying the set "${set.value.name}" with fields: ${fieldNames}.`;
     }
   }
 

@@ -33,10 +33,11 @@ export default async function BrowsePage({
       preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
     ]);
 
-  const setData = preloadedQueryResult(preloadedSet);
-  if (!setData) {
+  const setResult = preloadedQueryResult(preloadedSet);
+  if (!setResult.ok) {
     redirect("/");
   }
+  const setData = setResult.value;
   const cardsResult = preloadedQueryResult(preloadedCards);
   if (!cardsResult.ok) {
     redirect("/");

@@ -16,6 +16,7 @@ import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
+import SetAccessError from "@/components/SetAccessError";
 
 type Props = {
   setId: string;
@@ -35,11 +36,15 @@ export default function ResultsClient({
   const data = usePreloadedQuery(preloadedResults);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
-  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
+  const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
 
+  if (!setResult.ok) {
+    return <SetAccessError message={setResult.error.message} href={`/study/${setId}`} label="Back to study" />;
+  }
   if (!cardsResult.ok) return null;
   if (!data) return null;
 
+  const { set } = setResult.value;
   const { session } = data;
   const results = data.results as TypedCardResult[];
   const cardsMap = new Map(cards.map((c) => [c._id, c]));

@@ -18,6 +18,7 @@ import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
+import SetAccessError from "@/components/SetAccessError";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import StudySessionLocalResults, {
@@ -50,7 +51,7 @@ export default function StudySessionClient({
   const router = useRouter();
 
   const session = usePreloadedQuery(preloadedSession) as ActiveStudySession;
-  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
+  const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : EMPTY_CARDS;
   const recordResult = useOfflineMutation(api.studySessions.recordResult, {
@@ -105,14 +106,19 @@ export default function StudySessionClient({
   const cardsMap = useMemo(() => new Map(cards.map((c) => [c._id, c])), [cards]);
   const currentCardId = session.cardOrder[localIndex];
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
-  const fieldDefs = set.fieldDefinitions;
   const sessionComplete = localIndex >= session.cardOrder.length;
   const completedCards = Math.min(
     session.cardOrder.length,
     Math.max(localIndex, session.currentIndex),
   );
 
+  if (!setResult.ok) {
+    return <SetAccessError message={setResult.error.message} href={`/study/${setId}`} label="Back to study" />;
+  }
   if (!cardsResult.ok) return null;
+
+  const { set } = setResult.value;
+  const fieldDefs = set.fieldDefinitions;
 
   if (sessionComplete) {
     return (

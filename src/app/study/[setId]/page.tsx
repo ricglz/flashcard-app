@@ -31,10 +31,11 @@ export default async function StudyConfigPage({
     ]);
 
   const result = preloadedQueryResult(preloadedSet);
-  if (!result) redirect("/");
+  if (!result.ok) redirect("/");
   const cardsResult = preloadedQueryResult(preloadedCards);
   if (!cardsResult.ok) redirect("/");
-  if (result.viewer.role === "visitor") redirect(`/sets/${setId}`);
+  const setData = result.value;
+  if (setData.viewer.role === "visitor") redirect(`/sets/${setId}`);
 
   const initialMode = modeParam === "browse" ? "browse" : "study";
 
@@ -45,8 +46,8 @@ export default async function StudyConfigPage({
       preloadedSet={preloadedSet}
       preloadedCards={preloadedCards}
       preloadedActiveSession={preloadedActiveSession}
-      initialSet={result}
-      userSet={result.viewer.userSet}
+      initialSet={setData}
+      userSet={setData.viewer.userSet}
     />
   );
 }

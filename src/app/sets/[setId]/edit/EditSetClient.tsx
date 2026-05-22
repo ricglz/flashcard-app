@@ -12,6 +12,7 @@ import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
+import SetAccessError from "@/components/SetAccessError";
 import SetInfoEditor from "./SetInfoEditor";
 
 type Props = {
@@ -27,7 +28,7 @@ export default function EditSetClient({
   initialSet,
   preloadedCards,
 }: Props) {
-  const { set } = useTypedFlashcardSet(preloadedSet, initialSet);
+  const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const updateSet = useMutation(api.flashcardSets.update);
@@ -37,6 +38,11 @@ export default function EditSetClient({
 
   const [editingSet, setEditingSet] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!setResult.ok) {
+    return <SetAccessError message={setResult.error.message} href={`/sets/${setId}`} label="Back to set" />;
+  }
+  const { set } = setResult.value;
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order

@@ -16,6 +16,7 @@ import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
+import SetAccessError from "@/components/SetAccessError";
 import CardsTable from "./CardsTable";
 import SetDetailHeader from "./SetDetailHeader";
 import VisitorActions from "./VisitorActions";
@@ -41,7 +42,7 @@ export default function SetDetailClient({
   preloadedHasLlmKey,
   preloadedForkSyncStatus,
 }: Props) {
-  const { set, viewer } = useTypedFlashcardSet(preloadedSet, initialSet);
+  const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const router = useRouter();
@@ -52,6 +53,11 @@ export default function SetDetailClient({
   const [isForking, setIsForking] = useState(false);
   const [forkError, setForkError] = useState<string | null>(null);
   const [showAiAppend, setShowAiAppend] = useState(false);
+
+  if (!setResult.ok) {
+    return <SetAccessError message={setResult.error.message} />;
+  }
+  const { set, viewer } = setResult.value;
 
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
