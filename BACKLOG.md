@@ -50,7 +50,11 @@
 ## Code Quality — Error Handling
 
 ### Query Result Contracts
-- [ ] Replace ambiguous access-control `null` query returns with domain results where clients need to distinguish unauthenticated, forbidden, not found, and invalid input states. Start with `flashcardSets.get`, then update consuming pages/hooks to handle typed failures without frontend throws.
+- [ ] Continue replacing ambiguous access-control `null` query returns with domain results where clients need to distinguish unauthenticated, forbidden, not found, and invalid input states.
+  - `studySessions.get` and `studySessions.getResults`: split unauthenticated, invalid/missing session, and wrong-user access while preserving current redirects at route boundaries.
+  - `userSets.get`: return a typed failure for unauthenticated/missing membership if callers need to show access or library state explicitly.
+  - Auth-gated dashboard/query surfaces such as `srsReviewQueue.getQueueStats`, `weakAnalysis.getMyWeakCards`, and progress queries should either return a domain result or be documented as intentionally empty/hidden when signed out.
+  - Keep valid optional-state queries nullable where `null` is the useful domain value, such as “no active study session” or “no fork sync status”.
 
 ### Effect Boundary Cleanup
 - [ ] Define an Effect usage policy: use Effect for domain validation and external/HTTP/AI boundaries; avoid Services/Layers until dependency composition becomes real.
