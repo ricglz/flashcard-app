@@ -65,9 +65,6 @@
 - [ ] Initialize from server state (e.g. `session.currentIndex` for resumed sessions) via `useState` initializer rather than render-time `setLocalIndexOffset(0)`
 - [ ] Use a ref to track last-seen server index, reconcile only on unexpected jumps (multi-device edge case)
 
-## Code Quality — Error Handling for Invalid Routes
-- [ ] Validate Convex IDs in server page components before calling `preloadQuery` — catch invalid/non-existent set IDs and redirect to `/` instead of falling through to the error boundary
-
 ## E2E Testing
 
 ### Infrastructure
@@ -89,6 +86,11 @@
 - [ ] Fork a shared set → verify independent copy with editable cards
 - [ ] Browse public marketplace → search → preview → fork
 - [ ] Visibility toggle (private ↔ public) and verify marketplace listing
+- [ ] Access-control route coverage:
+  - multi-user private set denial
+  - public/unlisted visitor access
+  - mismatched `setId`/`sessionId` study route redirects
+  - denial pages/routes do not expose card contents
 
 ### Offline → Online Flows
 - [ ] Auth recovery after reconnect
