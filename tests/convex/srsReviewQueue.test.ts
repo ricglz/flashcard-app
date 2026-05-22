@@ -25,7 +25,7 @@ async function setupSetWithSrsReviews(
   }));
   await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
 
-  const cardList = await as.query(api.flashcards.list, { setId });
+  const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
 
   for (let i = 0; i < reviewTimestamps.length; i++) {
     await t.run(async (ctx) => {
@@ -71,7 +71,7 @@ describe("getHydratedQueue", () => {
       { fields: { Front: "Q2", Back: "A2" }, order: 2 },
     ];
     await as.mutation(api.flashcards.batchCreate, { setId, cards });
-    const cardList = await as.query(api.flashcards.list, { setId });
+    const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
 
     await t.run(async (ctx) => {
       for (let i = 0; i < cardList.length; i++) {
@@ -132,7 +132,7 @@ describe("getHydratedQueue", () => {
         { fields: { Front: "Unqueued", Back: "Excluded" }, order: 1 },
       ],
     });
-    const cardList = await as.query(api.flashcards.list, { setId });
+    const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
 
     await t.run(async (ctx) => {
       const srsCardId = await ctx.db.insert("srsCards", {
@@ -261,7 +261,7 @@ async function setupQueuedReview(t: TestDb, user = TEST_USER) {
       { fields: { Front: "Q1", Back: "A1" }, order: 1 },
     ],
   }));
-  const cardList = await as.query(api.flashcards.list, { setId });
+  const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
   const srsCardId = await t.run(async (ctx) => {
     const id = await ctx.db.insert("srsCards", {
       userId: user.tokenIdentifier,

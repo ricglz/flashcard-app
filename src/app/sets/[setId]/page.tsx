@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { getAuthToken } from "@/lib/server";
-import { asId } from "@/lib/convexHelpers";
+import { parseId } from "@/lib/convexHelpers";
 import SetDetailClient from "./SetDetailClient";
 
 export default async function SetDetailPage({
@@ -11,7 +11,8 @@ export default async function SetDetailPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = await params;
-  const flashcardSetId = asId<"flashcardSets">(setId);
+  const flashcardSetId = parseId<"flashcardSets">(setId);
+  if (!flashcardSetId) redirect("/");
   const token = await getAuthToken();
   if (!token) redirect("/");
 
@@ -25,6 +26,10 @@ export default async function SetDetailPage({
 
   const setData = preloadedQueryResult(preloadedSet);
   if (!setData) {
+    redirect("/");
+  }
+  const cardsResult = preloadedQueryResult(preloadedCards);
+  if (!cardsResult.ok) {
     redirect("/");
   }
 

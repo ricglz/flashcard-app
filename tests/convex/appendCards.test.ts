@@ -54,7 +54,7 @@ describe("appendGeneratedCardsForTool", () => {
       cards: makeCards(2),
     });
 
-    const cards = await t.withIdentity(TEST_USER).query(api.flashcards.list, { setId });
+    const cards = await unwrap(await t.withIdentity(TEST_USER).query(api.flashcards.list, { setId }));
     expect(cards).toHaveLength(5);
     expect(cards[3]!.order).toBe(3);
     expect(cards[4]!.order).toBe(4);
@@ -102,7 +102,7 @@ describe("appendGeneratedCardsForTool", () => {
       cards: makeCards(1),
     });
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     const appended = cards[cards.length - 1]!;
     expect(appended.origin).toBe("ai_generated");
   });
@@ -159,7 +159,7 @@ describe("appendGeneratedCardsForTool", () => {
       cards: makeCards(2),
     });
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards).toHaveLength(3);
   });
 

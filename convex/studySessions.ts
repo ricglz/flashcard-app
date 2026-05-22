@@ -26,15 +26,17 @@ export function computeOverallScore(
 }
 
 export const getActiveSession = query({
-  args: { setId: v.id("flashcardSets") },
+  args: { setId: v.string() },
   handler: async (ctx, args): Promise<ActiveStudySession | null> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
+    const setId = ctx.db.normalizeId("flashcardSets", args.setId);
+    if (!setId) return null;
     const session = await ctx.db
       .query("studySessions")
       .withIndex("by_setId_and_userId_and_status", (q) =>
         q
-          .eq("setId", args.setId)
+          .eq("setId", setId)
           .eq("userId", identity.tokenIdentifier)
           .eq("status", "in_progress")
       )
@@ -45,26 +47,30 @@ export const getActiveSession = query({
 });
 
 export const get = query({
-  args: { id: v.id("studySessions") },
+  args: { id: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const session = await ctx.db.get(args.id);
+    const sessionId = ctx.db.normalizeId("studySessions", args.id);
+    if (!sessionId) return null;
+    const session = await ctx.db.get(sessionId);
     if (!session || session.userId !== identity.tokenIdentifier) return null;
     return session;
   },
 });
 
 export const getResults = query({
-  args: { sessionId: v.id("studySessions") },
+  args: { sessionId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const session = await ctx.db.get(args.sessionId);
+    const sessionId = ctx.db.normalizeId("studySessions", args.sessionId);
+    if (!sessionId) return null;
+    const session = await ctx.db.get(sessionId);
     if (!session || session.userId !== identity.tokenIdentifier) return null;
     const results = await ctx.db
       .query("cardResults")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
       .take(1000);
     return { session, results };
   },

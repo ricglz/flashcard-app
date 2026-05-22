@@ -42,7 +42,8 @@ export default function BrowseClient({
   preloadedAnnotations,
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
-  const cards = usePreloadedQuery(preloadedCards);
+  const cardsResult = usePreloadedQuery(preloadedCards);
+  const cards = cardsResult.ok ? cardsResult.value : [];
   const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
 
@@ -64,6 +65,8 @@ export default function BrowseClient({
   const activeCardIds = useMemo(() => {
     return cardOrder.filter((id) => !dismissed.has(id));
   }, [cardOrder, dismissed]);
+
+  if (!cardsResult.ok) return null;
 
   const fieldDefs = set.fieldDefinitions;
   const validFieldNames = new Set(fieldDefs.map((fd) => fd.name));

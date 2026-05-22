@@ -6,7 +6,7 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
-import type { Id } from "../../../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
 import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
@@ -20,6 +20,8 @@ import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import StudySessionLocalResults, {
   type LocalStudyResult,
 } from "./StudySessionLocalResults";
+
+const EMPTY_CARDS: Doc<"flashcards">[] = [];
 
 type Props = {
   setId: string;
@@ -44,7 +46,8 @@ export default function StudySessionClient({
 
   const session = usePreloadedQuery(preloadedSession) as ActiveStudySession;
   const { set } = useTypedFlashcardSet(preloadedSet);
-  const cards = usePreloadedQuery(preloadedCards);
+  const cardsResult = usePreloadedQuery(preloadedCards);
+  const cards = cardsResult.ok ? cardsResult.value : EMPTY_CARDS;
   const recordResult = useOfflineMutation(api.studySessions.recordResult, {
     strategy: "queue-first",
   });
@@ -103,6 +106,8 @@ export default function StudySessionClient({
     session.cardOrder.length,
     Math.max(localIndex, session.currentIndex),
   );
+
+  if (!cardsResult.ok) return null;
 
   if (sessionComplete) {
     return (

@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as Effect from "effect/Effect";
-import { assertOwnerEffect } from "./userSets";
+import { assertOwnerEffect, requireSetContentAccessEffect } from "./userSets";
 import { validateCardFieldsEffect, type CardFieldsValidationFailure } from "./domain/cardFields";
 import type { CommonFailure } from "./domain/result";
-import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
+import { normalizeIdEffect, requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 
 function validateAgainstSetEffect(
   set: { fieldDefinitions: Array<{ name: string }> },
@@ -17,15 +17,24 @@ function validateAgainstSetEffect(
 }
 
 export const list = query({
-  args: { setId: v.id("flashcardSets") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    return await ctx.db
-      .query("flashcards")
-      .withIndex("by_setId", (q) => q.eq("setId", args.setId))
-      .take(1000);
-  },
+  args: { setId: v.string() },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const setId = yield* normalizeIdEffect<"flashcardSets">(
+        ctx,
+        "flashcardSets",
+        args.setId,
+        "Set not found",
+      );
+      yield* requireSetContentAccessEffect(ctx, setId);
+      return yield* Effect.promise(() =>
+        ctx.db
+          .query("flashcards")
+          .withIndex("by_setId", (q) => q.eq("setId", setId))
+          .take(1000),
+      );
+    }),
+  ),
 });
 
 export const create = mutation({
@@ -136,3 +145,4 @@ export const remove = mutation({
 });
 
 export type FlashcardMutationFailure = CommonFailure | CardFieldsValidationFailure;
+export type FlashcardListFailure = CommonFailure;

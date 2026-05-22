@@ -29,7 +29,7 @@ describe("flashcards.create", () => {
       order: 0,
     }));
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards).toHaveLength(1);
     expect(cards[0]!._id).toBe(cardId);
     expect(cards[0]!.fields).toEqual({ Front: "Question", Back: "Answer" });
@@ -46,7 +46,7 @@ describe("flashcards.create", () => {
       order: 0,
     }));
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards[0]!.fields).toEqual({ Front: "Question" });
   });
 
@@ -99,7 +99,7 @@ describe("flashcards.batchCreate", () => {
     });
     expect(result).toMatchObject({ ok: false, error: { message: "Unknown field: Extra" } });
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards).toEqual([]);
   });
 
@@ -117,7 +117,7 @@ describe("flashcards.batchCreate", () => {
     });
     expect(result).toMatchObject({ ok: false, error: { message: "At least one field value is required" } });
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards).toEqual([]);
   });
 });
@@ -172,7 +172,141 @@ describe("flashcards.update", () => {
       order: 2,
     }));
 
-    const cards = await as.query(api.flashcards.list, { setId });
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards[0]!.order).toBe(2);
+  });
+});
+
+describe("flashcards.list access control", () => {
+  const OTHER_USER = {
+    tokenIdentifier: "test-user-2",
+    subject: "user2",
+  };
+
+  async function createSetWithCards(as: TestIdentity) {
+    const setId = await createSet(as);
+    await unwrap(await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "Question", Back: "Answer" },
+      order: 0,
+    }));
+    return setId;
+  }
+
+  it("allows the owner to read private cards", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as);
+
+    const result = await as.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(await unwrap(result)).toHaveLength(1);
+  });
+
+  it("allows a member to read cards", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity(TEST_USER);
+    const member = t.withIdentity(OTHER_USER);
+    const setId = await createSetWithCards(owner);
+    await unwrap(await owner.mutation(api.flashcardSets.updateVisibility, {
+      id: setId,
+      visibility: "public",
+    }));
+    await unwrap(await member.mutation(api.sharing.addToLibrary, { setId }));
+    await unwrap(await owner.mutation(api.flashcardSets.updateVisibility, {
+      id: setId,
+      visibility: "private",
+    }));
+
+    const result = await member.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(await unwrap(result)).toHaveLength(1);
+  });
+
+  it("allows authenticated visitors to read public cards", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity(TEST_USER);
+    const visitor = t.withIdentity(OTHER_USER);
+    const setId = await createSetWithCards(owner);
+    await unwrap(await owner.mutation(api.flashcardSets.updateVisibility, {
+      id: setId,
+      visibility: "public",
+    }));
+
+    const result = await visitor.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(await unwrap(result)).toHaveLength(1);
+  });
+
+  it("allows authenticated visitors to read unlisted cards", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity(TEST_USER);
+    const visitor = t.withIdentity(OTHER_USER);
+    const setId = await createSetWithCards(owner);
+    await unwrap(await owner.mutation(api.flashcardSets.updateVisibility, {
+      id: setId,
+      visibility: "unlisted",
+    }));
+
+    const result = await visitor.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: true });
+    expect(await unwrap(result)).toHaveLength(1);
+  });
+
+  it("returns Forbidden for a private non-member", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity(TEST_USER);
+    const other = t.withIdentity(OTHER_USER);
+    const setId = await createSetWithCards(owner);
+
+    const result = await other.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Forbidden" } });
+  });
+
+  it("returns Unauthenticated for signed-out reads", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(owner);
+
+    const result = await t.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
+  });
+
+  it("returns NotFound for a missing set", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as);
+    await unwrap(await as.mutation(api.flashcardSets.remove, { id: setId }));
+
+    const result = await as.query(api.flashcards.list, { setId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns NotFound for an ID-shaped value that is not a valid Convex ID", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const result = await as.query(api.flashcards.list, {
+      setId: "j0000000000000000000000000000000",
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns success with an empty array for an accessible empty set", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    const result = await as.query(api.flashcards.list, { setId });
+
+    expect(result).toEqual({ ok: true, value: [] });
   });
 });

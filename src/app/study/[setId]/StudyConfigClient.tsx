@@ -36,7 +36,8 @@ export default function StudyConfigClient({
   userSet,
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
-  const cards = usePreloadedQuery(preloadedCards);
+  const cardsResult = usePreloadedQuery(preloadedCards);
+  const cards = cardsResult.ok ? cardsResult.value : [];
   const activeSession = usePreloadedQuery(preloadedActiveSession);
   const startSession = useMutation(api.studySessions.start);
   const router = useRouter();
@@ -110,6 +111,8 @@ export default function StudyConfigClient({
     });
     router.push(`/study/${setId}/browse?${params}`);
   };
+
+  if (!cardsResult.ok) return null;
 
   if (isNavigating) {
     return (

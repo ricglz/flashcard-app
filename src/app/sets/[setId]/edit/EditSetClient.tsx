@@ -23,7 +23,8 @@ export default function EditSetClient({
   preloadedCards,
 }: Props) {
   const { set } = useTypedFlashcardSet(preloadedSet);
-  const cards = usePreloadedQuery(preloadedCards);
+  const cardsResult = usePreloadedQuery(preloadedCards);
+  const cards = cardsResult.ok ? cardsResult.value : [];
   const updateSet = useMutation(api.flashcardSets.update);
   const createCard = useMutation(api.flashcards.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
@@ -35,6 +36,8 @@ export default function EditSetClient({
   const sortedFieldDefs = [...set.fieldDefinitions].sort(
     (a, b) => a.order - b.order
   );
+
+  if (!cardsResult.ok) return null;
 
   return (
     <div className="min-h-screen">

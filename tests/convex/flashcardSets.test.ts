@@ -118,6 +118,17 @@ describe("flashcardSets.update", () => {
 });
 
 describe("flashcardSets.get visibility gating", () => {
+  it("returns null for an ID-shaped value that is not a valid Convex ID", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+
+    const result = await as.query(api.flashcardSets.get, {
+      id: "j0000000000000000000000000000000",
+    });
+
+    expect(result).toBeNull();
+  });
+
   it("returns null for private set when viewer is non-member", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
@@ -225,7 +236,7 @@ describe("flashcardSets.remove", () => {
     expect(deletedSet).toBeNull();
 
     const cards = await as.query(api.flashcards.list, { setId });
-    expect(cards).toHaveLength(0);
+    expect(cards).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
   });
 });
 
@@ -266,7 +277,7 @@ describe("flashcardSets.fork", () => {
     expect(forkedSet!.cardCount).toBe(2);
     expect(forkedSet!.origin).toMatchObject({ kind: "forked", sourceSetId });
 
-    const cards = await other.query(api.flashcards.list, { setId: asId<"flashcardSets">(newSetId) });
+    const cards = await unwrap(await other.query(api.flashcards.list, { setId: asId<"flashcardSets">(newSetId) }));
     expect(cards).toHaveLength(2);
   });
 

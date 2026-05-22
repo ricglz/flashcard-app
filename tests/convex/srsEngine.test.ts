@@ -139,7 +139,7 @@ describe("populateQueueForUser respects dayResetUtcHour", () => {
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
 
-    const cardList = await as.query(api.flashcards.list, { setId });
+    const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
 
     await insertDueReviewCard(t, { setId, cardId: cardList[0]!._id });
 
@@ -191,7 +191,7 @@ describe("populateQueueForUser queue population edge cases", () => {
     const t = convexTest(schema, modules);
     const { setId, as } = await setupSrsSet(t, 2);
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
-    const cardList = await as.query(api.flashcards.list, { setId });
+    const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
     const firstSrsCardId = await insertDueReviewCard(t, {
       setId,
       cardId: cardList[0]!._id,

@@ -28,9 +28,11 @@ export default function ResultsClient({
   preloadedSet,
 }: Props) {
   const data = usePreloadedQuery(preloadedResults);
-  const cards = usePreloadedQuery(preloadedCards);
+  const cardsResult = usePreloadedQuery(preloadedCards);
+  const cards = cardsResult.ok ? cardsResult.value : [];
   const { set } = useTypedFlashcardSet(preloadedSet);
 
+  if (!cardsResult.ok) return null;
   if (!data) return null;
 
   const { session } = data;

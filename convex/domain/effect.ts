@@ -1,7 +1,9 @@
 import * as Effect from "effect/Effect";
 import * as Either from "effect/Either";
 import type { UserIdentity } from "convex/server";
+import type { Id, TableNames } from "../_generated/dataModel";
 import type { AnyDomainFailure, CommonFailure, DomainResult } from "./result";
+import { notFound } from "./result";
 
 export function fromDomainResult<T, E extends AnyDomainFailure>(
   result: DomainResult<T, E>,
@@ -62,4 +64,20 @@ export function requireEntity<T>(
           }),
     ),
   );
+}
+
+export function normalizeIdEffect<T extends TableNames>(
+  ctx: {
+    db: {
+      normalizeId(tableName: T, id: string): Id<T> | null;
+    };
+  },
+  tableName: T,
+  raw: string,
+  message?: string,
+): Effect.Effect<Id<T>, CommonFailure> {
+  const id = ctx.db.normalizeId(tableName, raw);
+  return id !== null
+    ? Effect.succeed(id)
+    : Effect.fail(notFound(message ?? "That item was not found."));
 }

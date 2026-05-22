@@ -10,6 +10,23 @@ import type { TestDb, TestIdentity } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
+describe("studySessions route-facing queries", () => {
+  it("return null for ID-shaped values that are not valid Convex IDs", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const invalidId = "j0000000000000000000000000000000";
+
+    await expect(
+      as.query(api.studySessions.getActiveSession, { setId: invalidId }),
+    ).resolves.toBeNull();
+    await expect(
+      as.query(api.studySessions.get, { id: invalidId }),
+    ).resolves.toBeNull();
+    await expect(
+      as.query(api.studySessions.getResults, { sessionId: invalidId }),
+    ).resolves.toBeNull();
+  });
+});
 
 async function createSetWithCards(
   as: TestIdentity,

@@ -37,7 +37,8 @@ export default function SetDetailClient({
   preloadedForkSyncStatus,
 }: Props) {
   const { set, viewer } = useTypedFlashcardSet(preloadedSet);
-  const cards = usePreloadedQuery(preloadedCards);
+  const cardsResult = usePreloadedQuery(preloadedCards);
+  const cards = cardsResult.ok ? cardsResult.value : [];
   const router = useRouter();
   const ttsConfig = useOfflinePreloadedQuery(preloadedTtsConfig);
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
@@ -53,6 +54,8 @@ export default function SetDetailClient({
 
   const isOwner = viewer.role === "owner";
   const isMember = viewer.role !== "visitor";
+
+  if (!cardsResult.ok) return null;
 
   const handleFork = async () => {
     setIsForking(true);

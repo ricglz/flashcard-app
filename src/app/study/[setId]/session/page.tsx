@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import { getAuthToken } from "@/lib/server";
-import { asId } from "@/lib/convexHelpers";
+import { parseId } from "@/lib/convexHelpers";
 import StudySessionClient from "./StudySessionClient";
 
 export default async function StudySessionPage({
@@ -14,13 +14,15 @@ export default async function StudySessionPage({
 }) {
   const { setId } = await params;
   const { sessionId } = await searchParams;
+  const flashcardSetId = parseId<"flashcardSets">(setId);
+  if (!flashcardSetId) redirect("/");
 
   if (!sessionId) {
     redirect(`/study/${setId}`);
   }
 
-  const typedSessionId = asId<"studySessions">(sessionId);
-  const flashcardSetId = asId<"flashcardSets">(setId);
+  const typedSessionId = parseId<"studySessions">(sessionId);
+  if (!typedSessionId) redirect("/");
   const token = await getAuthToken();
   if (!token) redirect("/");
 
@@ -38,12 +40,24 @@ export default async function StudySessionPage({
     redirect(`/study/${setId}`);
   }
 
+  if (session.setId !== flashcardSetId) {
+    redirect(`/study/${session.setId}/session?sessionId=${sessionId}`);
+  }
+
   if (session.status === "completed") {
     redirect(`/study/${setId}/results?sessionId=${sessionId}`);
   }
 
   if (session.status === "abandoned") {
     redirect(`/study/${setId}`);
+  }
+
+  if (!preloadedQueryResult(preloadedSet)) {
+    redirect("/");
+  }
+  const cardsResult = preloadedQueryResult(preloadedCards);
+  if (!cardsResult.ok) {
+    redirect("/");
   }
 
   return (

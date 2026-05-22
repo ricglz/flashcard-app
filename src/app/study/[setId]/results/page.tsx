@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import { getAuthToken } from "@/lib/server";
-import { asId } from "@/lib/convexHelpers";
+import { parseId } from "@/lib/convexHelpers";
 import ResultsClient from "./ResultsClient";
 
 export default async function ResultsPage({
@@ -14,7 +14,8 @@ export default async function ResultsPage({
 }) {
   const { setId } = await params;
   const { sessionId } = await searchParams;
-  const flashcardSetId = asId<"flashcardSets">(setId);
+  const flashcardSetId = parseId<"flashcardSets">(setId);
+  if (!flashcardSetId) redirect("/");
   const token = await getAuthToken();
   if (!token) redirect(`/`);
 
@@ -22,7 +23,8 @@ export default async function ResultsPage({
     redirect(`/study/${setId}`);
   }
 
-  const typedSessionId = asId<"studySessions">(sessionId);
+  const typedSessionId = parseId<"studySessions">(sessionId);
+  if (!typedSessionId) redirect("/");
 
   const [preloadedResults, preloadedSet] = await Promise.all([
     preloadQuery(
@@ -37,8 +39,13 @@ export default async function ResultsPage({
     ),
   ]);
 
-  if (!preloadedQueryResult(preloadedResults) || !preloadedQueryResult(preloadedSet)) {
+  const results = preloadedQueryResult(preloadedResults);
+  if (!results || !preloadedQueryResult(preloadedSet)) {
     redirect("/");
+  }
+
+  if (results.session.setId !== flashcardSetId) {
+    redirect(`/study/${results.session.setId}/results?sessionId=${sessionId}`);
   }
 
   const preloadedCards = await preloadQuery(
@@ -46,6 +53,10 @@ export default async function ResultsPage({
     { setId: flashcardSetId },
     { token }
   );
+  const cardsResult = preloadedQueryResult(preloadedCards);
+  if (!cardsResult.ok) {
+    redirect("/");
+  }
 
   return (
     <ResultsClient

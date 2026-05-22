@@ -41,16 +41,18 @@ export const list = query({
 });
 
 export const get = query({
-  args: { id: v.id("flashcardSets") },
+  args: { id: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const set = await ctx.db.get(args.id);
+    const setId = ctx.db.normalizeId("flashcardSets", args.id);
+    if (!setId) return null;
+    const set = await ctx.db.get(setId);
     if (!set) return null;
     const link = await ctx.db
       .query("userSets")
       .withIndex("by_userId_and_setId", (q) =>
-        q.eq("userId", identity.tokenIdentifier).eq("setId", args.id)
+        q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
       )
       .first();
     if (link) {
@@ -193,11 +195,13 @@ export const remove = mutation({
 export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;
 
 export const getForkSyncStatus = query({
-  args: { setId: v.id("flashcardSets") },
+  args: { setId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const set = await ctx.db.get(args.setId);
+    const setId = ctx.db.normalizeId("flashcardSets", args.setId);
+    if (!setId) return null;
+    const set = await ctx.db.get(setId);
     const origin = set?.origin;
     if (!set || origin?.kind !== "forked") return null;
     const { sourceSetId, forkedAt } = origin;

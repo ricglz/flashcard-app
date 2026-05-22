@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { UserIdentity } from "convex/server";
 import * as Effect from "effect/Effect";
 import { userSetRoleValidator } from "./schema";
 import { SRS_DEFAULTS } from "./srs";
-import { fail, ok, unauthenticated, notFound, forbidden, conflict } from "./domain/result";
+import { fail, ok, unauthenticated, notFound, forbidden, conflict, type CommonFailure } from "./domain/result";
 import {
   fromAsyncDomainResult,
   requireAuth,
@@ -60,6 +61,41 @@ export function assertOwnerEffect(
   setId: Id<"flashcardSets">,
 ) {
   return fromAsyncDomainResult(assertOwner(ctx, userId, setId));
+}
+
+export type SetContentAccess = {
+  identity: UserIdentity;
+  set: Doc<"flashcardSets">;
+  userSet: Doc<"userSets"> | null;
+  role: "owner" | "member" | "visitor";
+};
+
+export function requireSetContentAccessEffect(
+  ctx: QueryCtx | MutationCtx,
+  setId: Id<"flashcardSets">,
+): Effect.Effect<SetContentAccess, CommonFailure> {
+  return Effect.gen(function* () {
+    const identity = yield* requireAuth(ctx);
+    const set = yield* requireEntity(ctx.db.get(setId), "Set not found");
+    const link = yield* Effect.promise(() =>
+      ctx.db
+        .query("userSets")
+        .withIndex("by_userId_and_setId", (q) =>
+          q.eq("userId", identity.tokenIdentifier).eq("setId", setId),
+        )
+        .first(),
+    );
+
+    if (link) {
+      return { identity, set, userSet: link, role: link.role };
+    }
+
+    if (set.visibility === "private") {
+      return yield* Effect.fail(forbidden("You do not have access to this set."));
+    }
+
+    return { identity, set, userSet: null, role: "visitor" as const };
+  });
 }
 
 // ---------------------------------------------------------------------------

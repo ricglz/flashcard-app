@@ -5,16 +5,18 @@ import { assertMember } from "./userSets";
 import { getFieldDefinitions } from "./lib/typed";
 
 export const getForSet = query({
-  args: { setId: v.id("flashcardSets") },
+  args: { setId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
+    const setId = ctx.db.normalizeId("flashcardSets", args.setId);
+    if (!setId) return [];
     const userId = identity.tokenIdentifier;
 
     return ctx.db
       .query("cardAnnotations")
       .withIndex("by_userId_and_setId", (q) =>
-        q.eq("userId", userId).eq("setId", args.setId)
+        q.eq("userId", userId).eq("setId", setId)
       )
       .collect();
   },
