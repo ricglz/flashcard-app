@@ -1,34 +1,9 @@
 import { test, expect } from "./fixtures";
+import { createManualChineseSet } from "./helpers";
 
 test.describe("Study session — happy path", () => {
   test("completes a study session and sees results", async ({ page }) => {
-    await page.goto("/sets/new");
-
-    await page.getByPlaceholder("e.g., 100 Common Chinese Characters").fill("E2E Study Set");
-    await page.getByText("Add Manually").click();
-    await page.getByRole("combobox").selectOption("chinese");
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-
-    await page.getByPlaceholder("Enter character...").fill("好");
-    await page.getByPlaceholder("Enter pinyin...").fill("hǎo");
-    await page.getByPlaceholder("Enter meaning...").fill("good");
-    await page.getByRole("button", { name: "Add Card" }).click();
-    await expect(page.getByText("1 card added")).toBeVisible();
-
-    await page.getByPlaceholder("Enter character...").fill("你");
-    await page.getByPlaceholder("Enter pinyin...").fill("nǐ");
-    await page.getByPlaceholder("Enter meaning...").fill("you");
-    await page.getByRole("button", { name: "Add Card" }).click();
-    await expect(page.getByText("2 cards added")).toBeVisible();
-
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(page.getByText("Configure the role and TTS")).toBeVisible();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page.getByRole("button", { name: "Create Set" }).click();
-    await expect(page.getByText("Set created!")).toBeVisible({ timeout: 15000 });
-
-    await page.getByRole("link", { name: "View Set" }).click();
-    await page.waitForURL(/\/sets\/(?!new$)[^/]+$/, { timeout: 10000 });
+    await createManualChineseSet(page, "E2E Study Set");
     await expect(page.getByText("E2E Study Set")).toBeVisible();
 
     await page.getByRole("link", { name: "Study" }).click();

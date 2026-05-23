@@ -1,30 +1,15 @@
 import { test, expect } from "./fixtures";
+import {
+  addStandardChineseCards,
+  startManualChineseSet,
+} from "./helpers";
 
 test.describe("Wizard — Manual path", () => {
   test("creates a set by adding cards manually", async ({ page }) => {
-    await page.goto("/sets/new");
-
-    await page.getByPlaceholder("e.g., 100 Common Chinese Characters").fill("Manual Test Set");
-    await page.getByText("Add Manually").click();
-
-    await page.getByRole("combobox").selectOption("chinese");
+    await startManualChineseSet(page, "Manual Test Set");
     await page.screenshot({ path: "test-results/wizard-manual-step1.png" });
 
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-
-    await page.getByPlaceholder("Enter character...").fill("好");
-    await page.getByPlaceholder("Enter pinyin...").fill("hǎo");
-    await page.getByPlaceholder("Enter meaning...").fill("good");
-    await page.getByRole("button", { name: "Add Card" }).click();
-
-    await expect(page.getByText("1 card added")).toBeVisible();
-
-    await page.getByPlaceholder("Enter character...").fill("你");
-    await page.getByPlaceholder("Enter pinyin...").fill("nǐ");
-    await page.getByPlaceholder("Enter meaning...").fill("you");
-    await page.getByRole("button", { name: "Add Card" }).click();
-
-    await expect(page.getByText("2 cards added")).toBeVisible();
+    await addStandardChineseCards(page);
     await page.screenshot({ path: "test-results/wizard-manual-step2.png" });
 
     await page.getByRole("button", { name: "Next", exact: true }).click();
