@@ -60,6 +60,7 @@ export default function GenerateClient({
         targetCardCount: config.targetCount,
         name: config.setName,
         ...(config.model ? { model: config.model } : {}),
+        ...(config.instructions ? { instructions: config.instructions } : {}),
         addToSrs: config.addToSrs,
       });
       if (!result.ok) {

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
+import AiGenerationConfig, {
+  type AiGenerationConfigValue,
+} from "@/components/AiGenerationConfig";
 import AiCardPreview from "./AiCardPreview";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
@@ -23,10 +26,12 @@ export default function AiPath({
 }) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
 
-  const [prompt, setPrompt] = useState("");
-  const [targetCount, setTargetCount] = useState(20);
-  const [model, setModel] = useState("");
-  const [instructions, setInstructions] = useState("");
+  const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({
+    prompt: "",
+    instructions: "",
+    targetCount: 20,
+    model: "",
+  });
   const [localFieldDefs, setLocalFieldDefs] = useState<FieldDefinition[]>(state.fieldDefinitions);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,17 +40,19 @@ export default function AiPath({
   const hasGenerated = generatedCards.length > 0;
 
   const handleGenerate = async () => {
-    if (!prompt.trim() || localFieldDefs.length === 0) return;
+    const prompt = aiConfig.prompt.trim();
+    const instructions = aiConfig.instructions.trim();
+    if (!prompt || localFieldDefs.length === 0) return;
     setIsGenerating(true);
     setError(null);
     try {
       const result = await generateFromPrompt({
-        prompt: prompt.trim(),
+        prompt,
         fieldDefinitions: localFieldDefs,
-        targetCardCount: targetCount,
+        targetCardCount: aiConfig.targetCount,
         name: state.name || "AI Generated Set",
-        ...(model ? { model } : {}),
-        ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
+        ...(aiConfig.model ? { model: aiConfig.model } : {}),
+        ...(instructions ? { instructions } : {}),
         addToSrs: true,
       });
       if (!result.ok) {
@@ -97,17 +104,6 @@ export default function AiPath({
       {!hasGenerated && (
         <>
           <div>
-            <label className="block text-sm font-medium mb-1">Prompt</label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder='e.g., "Generate 20 basic Mandarin greetings" or "Common Japanese food vocabulary"'
-              className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-            />
-          </div>
-
-          <div>
             <label className="block text-sm font-medium mb-1">Field Definitions</label>
             <p className="text-xs text-muted mb-2">
               Define the fields each card should have. Select a preset in Step 1 to pre-fill.
@@ -118,40 +114,15 @@ export default function AiPath({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Card Count</label>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={targetCount}
-                onChange={(e) => setTargetCount(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Model (optional)</label>
-              <input
-                type="text"
-                placeholder="Use default for provider"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Additional Instructions (optional)</label>
-            <textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              rows={2}
-              placeholder='e.g., "Include example sentences" or "Use simplified Chinese only"'
-              className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-            />
-          </div>
+          <AiGenerationConfig
+            value={aiConfig}
+            onChange={setAiConfig}
+            promptPlaceholder='e.g., "Generate 20 basic Mandarin greetings" or "Common Japanese food vocabulary"'
+            instructionsPlaceholder='e.g., "Include example sentences" or "Use simplified Chinese only"'
+            countLabel="Card Count"
+            modelLabel="Model (optional)"
+            modelDefaultLabel="Use default for provider"
+          />
 
           {error && (
             <div className="p-3 border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 rounded-lg text-sm text-red-800 dark:text-red-200">
@@ -161,7 +132,7 @@ export default function AiPath({
 
           <button
             onClick={() => void handleGenerate()}
-            disabled={isGenerating || !prompt.trim() || localFieldDefs.length === 0}
+            disabled={isGenerating || !aiConfig.prompt.trim() || localFieldDefs.length === 0}
             className="w-full px-4 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors disabled:opacity-50"
           >
             {isGenerating ? "Generating..." : "Generate Cards"}

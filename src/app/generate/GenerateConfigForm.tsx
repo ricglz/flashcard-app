@@ -3,8 +3,10 @@
 import { useState } from "react";
 import type { Methodology } from "@/lib/types";
 import { METHODOLOGIES, METHODOLOGY_LABELS } from "@/lib/types";
-import { useAvailableModels } from "@/hooks/useAvailableModels";
 import TypedSelect from "@/components/TypedSelect";
+import AiGenerationConfig, {
+  type AiGenerationConfigValue,
+} from "@/components/AiGenerationConfig";
 
 type SrsSet = {
   _id: string;
@@ -17,6 +19,7 @@ export type GenerateConfig = {
   selectedSetId: string;
   targetCount: number;
   model: string;
+  instructions: string;
   addToSrs: boolean;
 };
 
@@ -34,10 +37,13 @@ export default function GenerateConfigForm({
   const [setName, setSetName] = useState("Remedial Cards");
   const [methodology, setMethodology] = useState<Methodology>(initialMethodology);
   const [selectedSetId, setSelectedSetId] = useState(initialSetId);
-  const [targetCount, setTargetCount] = useState(20);
-  const [model, setModel] = useState("");
+  const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({
+    prompt: "",
+    instructions: "",
+    targetCount: 20,
+    model: "",
+  });
   const [addToSrs, setAddToSrs] = useState(true);
-  const { models: availableModels } = useAvailableModels();
 
   return (
     <div className="space-y-4">
@@ -75,32 +81,13 @@ export default function GenerateConfigForm({
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Target Card Count</label>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={targetCount}
-            onChange={(e) => setTargetCount(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Model</label>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          >
-            <option value="">Default for provider</option>
-            {availableModels.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <AiGenerationConfig
+        value={aiConfig}
+        onChange={setAiConfig}
+        showPrompt={false}
+        countLabel="Target Card Count"
+        instructionsPlaceholder="Add guidance for the generated remedial cards."
+      />
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -110,7 +97,17 @@ export default function GenerateConfigForm({
         Enable SRS for generated set
       </label>
       <button
-        onClick={() => onGenerate({ setName, methodology, selectedSetId, targetCount, model, addToSrs })}
+        onClick={() =>
+          onGenerate({
+            setName,
+            methodology,
+            selectedSetId,
+            targetCount: aiConfig.targetCount,
+            model: aiConfig.model,
+            instructions: aiConfig.instructions.trim(),
+            addToSrs,
+          })
+        }
         className="w-full px-4 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
       >
         Generate Cards
