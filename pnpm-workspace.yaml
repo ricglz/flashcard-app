@@ -1,6 +1,7 @@
 allowBuilds:
   '@clerk/shared': false
   '@google/genai': true
+  '@sentry/cli': true
   esbuild: false
   protobufjs: true
   sharp: false
