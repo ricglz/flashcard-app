@@ -1,18 +1,21 @@
-import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
-import schema from "../../convex/schema";
-import { computeOverallScore } from "../../convex/studySessions";
+import { computeOverallScore } from "../../src/lib/studyResults";
 import { CARD_RATING_SCORES } from "../../src/lib/types";
-import { unwrap, TEST_USER, fieldDefs, fieldDefsWithTts } from "./helpers";
+import {
+  createSetWithCards as createSharedSetWithCards,
+  createTestDb,
+  unwrap,
+  TEST_USER,
+  fieldDefs,
+  fieldDefsWithTts,
+} from "./helpers";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { TestDb, TestIdentity } from "./testTypes";
 
-const modules = import.meta.glob("../../convex/**/*.ts");
-
 describe("studySessions route-facing queries", () => {
   it("return null for ID-shaped values that are not valid Convex IDs", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const invalidId = "j0000000000000000000000000000000";
 
@@ -33,16 +36,10 @@ async function createSetWithCards(
   cardCount: number,
   defs = fieldDefs
 ) {
-  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
-    name: "Test",
+  const { setId } = await createSharedSetWithCards(as, {
+    cardCount,
     fieldDefinitions: defs,
-  }));
-  const fieldNames = defs.map((d) => d.name);
-  const cards = Array.from({ length: cardCount }, (_, i) => ({
-    fields: Object.fromEntries(fieldNames.map((n) => [n, `${n}${i}`])),
-    order: i,
-  }));
-  await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
+  });
   return setId;
 }
 
@@ -92,7 +89,7 @@ describe("CARD_RATING_SCORES", () => {
 
 describe("studySessions.start", () => {
   it("creates a session with correct card order", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 3);
 
@@ -113,7 +110,7 @@ describe("studySessions.start", () => {
   });
 
   it("applies cardLimit", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 5);
 
@@ -132,7 +129,7 @@ describe("studySessions.start", () => {
   });
 
   it("rejects invalid cardLimit values", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 5);
 
@@ -162,7 +159,7 @@ describe("studySessions.start", () => {
   });
 
   it("returns existing active session instead of creating a duplicate", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 3);
 
@@ -192,7 +189,7 @@ describe("studySessions.start", () => {
   });
 
   it("rejects empty frontFields", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -205,7 +202,7 @@ describe("studySessions.start", () => {
   });
 
   it("rejects invalid field names", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -218,7 +215,7 @@ describe("studySessions.start", () => {
   });
 
   it("rejects empty set", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
       name: "Empty",
@@ -236,7 +233,7 @@ describe("studySessions.start", () => {
 
 describe("studySessions.recordResult", () => {
   it("advances currentIndex", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
@@ -267,7 +264,7 @@ describe("studySessions.recordResult", () => {
   });
 
   it("completes session and computes score on last card", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -299,7 +296,7 @@ describe("studySessions.recordResult", () => {
   });
 
   it("rejects wrong cardId", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
@@ -321,7 +318,7 @@ describe("studySessions.recordResult", () => {
   });
 
   it("treats replay for an already recorded card as a duplicate", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
@@ -357,7 +354,7 @@ describe("studySessions.recordResult", () => {
   });
 
   it("replays ordered queued results and completes the session", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
@@ -393,7 +390,7 @@ describe("studySessions.recordResult", () => {
   });
 
   it("rejects recording result on abandoned session", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 2);
 
@@ -419,7 +416,7 @@ describe("studySessions.recordResult", () => {
 
 describe("studySessions.abandon", () => {
   it("sets status to abandoned", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -439,7 +436,7 @@ describe("studySessions.abandon", () => {
   });
 
   it("rejects abandoning a completed session", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -465,7 +462,7 @@ describe("studySessions.abandon", () => {
 
 describe("studySessions.getActiveSession", () => {
   it("returns only in-progress sessions", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -494,7 +491,7 @@ describe("studySessions.getActiveSession", () => {
   });
 
   it("returns null when no active sessions", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -505,7 +502,7 @@ describe("studySessions.getActiveSession", () => {
   });
 
   it("finds an active session after many historical sessions", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
@@ -537,7 +534,7 @@ describe("studySessions.getActiveSession", () => {
 
 describe("studySessions.start — ttsOnlyFields", () => {
   it("accepts ttsOnlyFields for TTS-capable fields", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
@@ -554,7 +551,7 @@ describe("studySessions.start — ttsOnlyFields", () => {
   });
 
   it("works without ttsOnlyFields (backward compat)", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
@@ -570,7 +567,7 @@ describe("studySessions.start — ttsOnlyFields", () => {
   });
 
   it("rejects fields without TTS config in ttsOnlyFields", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
@@ -584,7 +581,7 @@ describe("studySessions.start — ttsOnlyFields", () => {
   });
 
   it("rejects fields appearing in both ttsOnlyFields and frontFields", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 
@@ -598,7 +595,7 @@ describe("studySessions.start — ttsOnlyFields", () => {
   });
 
   it("rejects invalid field names in ttsOnlyFields", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1, fieldDefsWithTts);
 

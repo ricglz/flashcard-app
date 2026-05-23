@@ -8,21 +8,10 @@ import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
 import { type CommonFailure } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
-import type { CardRating, ActiveStudySession } from "../src/lib/types";
+import type { ActiveStudySession } from "../src/lib/types";
 import { CARD_RATING_SCORES } from "../src/lib/types";
+import { computeOverallScore } from "../src/lib/studyResults";
 import { getFieldDefinitions } from "./lib/typed";
-
-export function computeOverallScore(
-  ratings: ReadonlyArray<{ readonly rating: CardRating }>
-): number {
-  if (ratings.length === 0) return 0;
-  const totalScore = ratings.reduce(
-    (sum, r) => sum + CARD_RATING_SCORES[r.rating],
-    0
-  );
-  const maxScore = ratings.length * 3;
-  return maxScore > 0 ? totalScore / maxScore : 0;
-}
 
 export const getActiveSession = query({
   args: { setId: v.string() },
