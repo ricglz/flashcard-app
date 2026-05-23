@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import RegisterSW from "@/components/RegisterSW";
+import SentryUserContext from "@/components/SentryUserContext";
 import Toaster from "@/components/Toaster";
 import "./globals.css";
 
@@ -50,6 +51,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
+          <SentryUserContext />
           <ConvexClientProvider>
             {children}
           </ConvexClientProvider>

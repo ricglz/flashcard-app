@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
+import * as Sentry from "@sentry/nextjs";
 
 export async function getAuthToken() {
   const authData = await auth();
+  Sentry.setUser(authData.userId ? { id: authData.userId } : null);
   const token =
     authData.sessionClaims?.aud === "convex"
       ? await authData.getToken()
