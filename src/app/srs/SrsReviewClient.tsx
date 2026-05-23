@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { Preloaded } from "convex/react";
-import { usePreloadedQuery, useMutation } from "convex/react";
+import { usePreloadedQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import type { CardRating } from "@/lib/types";
@@ -15,6 +15,8 @@ import AssistantPanel from "@/components/AssistantPanel";
 import { asId } from "@/lib/convexHelpers";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
+import InlineError from "@/components/InlineError";
+import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
 
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
@@ -34,7 +36,13 @@ export default function SrsReviewClient({
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview, {
     strategy: "queue-first",
   });
-  const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
+  const {
+    handleLoadMore,
+    isLoadingMore,
+    noMoreCards,
+    error: refreshError,
+    clearError: clearRefreshError,
+  } = useForceRefreshQueue();
   const stats = useOfflinePreloadedQuery(preloadedStats);
   const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsAllPreloaded(preloadedAnnotations);
@@ -53,9 +61,8 @@ export default function SrsReviewClient({
     easy: 0,
   });
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [noMoreCards, setNoMoreCards] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const displayError = error ?? refreshError;
   const initialQueueSize = useRef(effectiveQueue.length);
   const initialReviewedToday = useRef<number | null>(null);
   if (initialReviewedToday.current === null && stats) {
@@ -78,6 +85,7 @@ export default function SrsReviewClient({
       if (isSubmitting || !currentItem) return;
       setIsSubmitting(true);
       setError(null);
+      clearRefreshError();
 
       try {
         const result = await recordReview({
@@ -99,35 +107,13 @@ export default function SrsReviewClient({
         setIsSubmitting(false);
       }
     },
-    [currentItem, isSubmitting, recordReview],
+    [clearRefreshError, currentItem, isSubmitting, recordReview],
   );
-
-  async function handleLoadMore() {
-    setIsLoadingMore(true);
-    setNoMoreCards(false);
-    setError(null);
-    try {
-      const result = await forceRefresh();
-      if (!result.ok) {
-        setError(result.error.message);
-        return;
-      }
-      if (result.value.added === 0) {
-        setNoMoreCards(true);
-      }
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }
 
   if (isSessionComplete) {
     return (
       <>
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-            {error}
-          </div>
-        )}
+        <InlineError message={displayError} />
         <SrsReviewComplete
           reviewedCount={reviewedCount}
           ratingCounts={ratingCounts}
@@ -143,11 +129,7 @@ export default function SrsReviewClient({
   if (!currentItem) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-            {error}
-          </div>
-        )}
+        <InlineError message={displayError} />
         <p className="text-muted">Reconnecting...</p>
       </div>
     );
@@ -157,11 +139,7 @@ export default function SrsReviewClient({
 
   return (
     <>
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <InlineError message={displayError} />
       <SrsReviewActive
         currentItem={currentItem}
         reviewedCount={reviewedCount}

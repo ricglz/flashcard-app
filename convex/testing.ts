@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { SRS_DEFAULTS } from "./srs";
+import { insertDefaultSrsCard } from "./srs";
 
 const SEEDED_FIELD_DEFINITIONS = [
   { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
@@ -113,15 +113,10 @@ export const seedFlashcardSet = internalMutation({
     const srsCardIds: Id<"srsCards">[] = [];
     if (args.srsEnabled) {
       for (const cardId of cardIds) {
-        const srsCardId = await ctx.db.insert("srsCards", {
+        const srsCardId = await insertDefaultSrsCard(ctx, {
           userId: args.userId,
           cardId,
           setId,
-          easeFactor: SRS_DEFAULTS.INITIAL_EASE_FACTOR,
-          interval: SRS_DEFAULTS.INITIAL_INTERVAL,
-          repetitions: SRS_DEFAULTS.INITIAL_REPETITIONS,
-          nextReviewAt: 0,
-          status: "new",
         });
         srsCardIds.push(srsCardId);
       }

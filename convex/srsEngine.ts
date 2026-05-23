@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { SRS_DEFAULTS, selectNewCardsRoundRobin } from "./srs";
+import { SRS_DEFAULTS, insertDefaultSrsCard, selectNewCardsRoundRobin } from "./srs";
 import { shuffleArray } from "../src/lib/shuffle";
 
 export async function populateQueue(
@@ -41,15 +41,10 @@ export async function populateQueue(
 
     for (const card of cards) {
       if (!enrolledCardIds.has(card._id)) {
-        await ctx.db.insert("srsCards", {
+        await insertDefaultSrsCard(ctx, {
           userId,
           cardId: card._id,
           setId,
-          easeFactor: SRS_DEFAULTS.INITIAL_EASE_FACTOR,
-          interval: SRS_DEFAULTS.INITIAL_INTERVAL,
-          repetitions: SRS_DEFAULTS.INITIAL_REPETITIONS,
-          nextReviewAt: 0,
-          status: "new",
         });
       }
     }

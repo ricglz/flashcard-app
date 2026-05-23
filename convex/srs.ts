@@ -1,4 +1,6 @@
 import type { CardRating } from "../src/lib/types";
+import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 export const SRS_DEFAULTS = {
   INITIAL_EASE_FACTOR: 2.5,
@@ -10,6 +12,30 @@ export const SRS_DEFAULTS = {
 } as const;
 
 export type SrsCardStatus = "new" | "learning" | "review";
+
+export async function insertDefaultSrsCard(
+  ctx: MutationCtx,
+  {
+    userId,
+    cardId,
+    setId,
+  }: {
+    userId: string;
+    cardId: Id<"flashcards">;
+    setId: Id<"flashcardSets">;
+  },
+): Promise<Id<"srsCards">> {
+  return await ctx.db.insert("srsCards", {
+    userId,
+    cardId,
+    setId,
+    easeFactor: SRS_DEFAULTS.INITIAL_EASE_FACTOR,
+    interval: SRS_DEFAULTS.INITIAL_INTERVAL,
+    repetitions: SRS_DEFAULTS.INITIAL_REPETITIONS,
+    nextReviewAt: 0,
+    status: "new",
+  });
+}
 
 type SM2Input = {
   rating: CardRating;

@@ -5,7 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { UserIdentity } from "convex/server";
 import * as Effect from "effect/Effect";
 import { userSetRoleValidator } from "./schema";
-import { SRS_DEFAULTS } from "./srs";
+import { insertDefaultSrsCard } from "./srs";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict, type CommonFailure } from "./domain/result";
 import {
   fromAsyncDomainResult,
@@ -284,15 +284,10 @@ export async function enrollCardsForSetHelper(
 
   for (const card of cards) {
     if (!existingCardIds.has(card._id)) {
-      await ctx.db.insert("srsCards", {
+      await insertDefaultSrsCard(ctx, {
         userId,
         cardId: card._id,
         setId,
-        easeFactor: SRS_DEFAULTS.INITIAL_EASE_FACTOR,
-        interval: SRS_DEFAULTS.INITIAL_INTERVAL,
-        repetitions: SRS_DEFAULTS.INITIAL_REPETITIONS,
-        nextReviewAt: 0,
-        status: "new",
       });
     }
   }

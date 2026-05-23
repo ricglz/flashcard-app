@@ -10,6 +10,8 @@ import SrsSettingsPanel from "./SrsSettingsPanel";
 import SrsQueueEmpty from "./SrsQueueEmpty";
 import SrsQueueComplete from "./SrsQueueComplete";
 import SrsQueueActive from "./SrsQueueActive";
+import InlineError from "./InlineError";
+import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
 
 type QueueStats = NonNullable<FunctionReturnType<typeof api.srsReviewQueue.getQueueStats>>;
 type Settings = FunctionReturnType<typeof api.userSettings.get>;
@@ -32,13 +34,18 @@ export default function SrsQueueStatusInner({
 }) {
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
   const updateTtsSpeed = useMutation(api.userSettings.updateTtsPlaybackSpeed);
-  const forceRefresh = useMutation(api.srsReviewQueue.forceRefreshQueue);
+  const {
+    handleLoadMore,
+    isLoadingMore,
+    noMoreCards,
+    error: refreshError,
+    clearError: clearRefreshError,
+  } = useForceRefreshQueue();
 
   const [showSettings, setShowSettings] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [noMoreCards, setNoMoreCards] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const displayError = error ?? refreshError;
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
     setIsSaving(true);
@@ -67,28 +74,11 @@ export default function SrsQueueStatusInner({
     }
   }
 
-  async function handleLoadMore() {
-    setIsLoadingMore(true);
-    setNoMoreCards(false);
-    setError(null);
-    try {
-      const result = await forceRefresh();
-      if (!result.ok) {
-        setError(result.error.message);
-        return;
-      }
-      if (result.value.added === 0) {
-        setNoMoreCards(true);
-      }
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }
-
   const resetTimeStr = formatResetTime(stats.dayResetUtcHour);
   const onToggleSettings = () => {
     setShowSettings((v) => !v);
     setError(null);
+    clearRefreshError();
   };
 
   const settingsPanel = showSettings ? (
@@ -107,11 +97,7 @@ export default function SrsQueueStatusInner({
   if (stats.remaining === 0 && stats.reviewedToday === 0) {
     return (
       <>
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-            {error}
-          </div>
-        )}
+        <InlineError message={displayError} />
         <SrsQueueEmpty
           resetTimeStr={resetTimeStr}
           onToggleSettings={onToggleSettings}
@@ -124,11 +110,7 @@ export default function SrsQueueStatusInner({
   if (stats.remaining === 0) {
     return (
       <>
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-            {error}
-          </div>
-        )}
+        <InlineError message={displayError} />
         <SrsQueueComplete
           reviewedToday={stats.reviewedToday}
           resetTimeStr={resetTimeStr}
@@ -144,11 +126,7 @@ export default function SrsQueueStatusInner({
 
   return (
     <>
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <InlineError message={displayError} />
       <SrsQueueActive
         remaining={stats.remaining}
         reviewedToday={stats.reviewedToday}

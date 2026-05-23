@@ -1,11 +1,13 @@
-import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api } from "../../convex/_generated/api";
-import schema from "../../convex/schema";
-import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import {
+  createSetWithCards,
+  createTestDb,
+  insertQueuedSrsCardForTest,
+  insertSrsReviewForTest,
+  TEST_USER,
+} from "./helpers";
 import type { TestDb } from "./testTypes";
-
-const modules = import.meta.glob("../../convex/**/*.ts");
 
 
 async function setupSetWithSrsReviews(
@@ -13,41 +15,24 @@ async function setupSetWithSrsReviews(
   reviewTimestamps: number[]
 ) {
   const as = t.withIdentity(TEST_USER);
-
-  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
-    name: "Test",
-    fieldDefinitions: fieldDefs,
-  }));
-
-  const cards = Array.from({ length: reviewTimestamps.length }, (_, i) => ({
-    fields: { Front: `Q${i}`, Back: `A${i}` },
-    order: i,
-  }));
-  await unwrap(await as.mutation(api.flashcards.batchCreate, { setId, cards }));
-
-  const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
+  const { setId, cards: cardList } = await createSetWithCards(as, {
+    cardCount: reviewTimestamps.length,
+    cards: reviewTimestamps.map((_, index) => ({
+      fields: { Front: `Q${index}`, Back: `A${index}` },
+      order: index,
+    })),
+  });
 
   for (let i = 0; i < reviewTimestamps.length; i++) {
     await t.run(async (ctx) => {
-      const srsCardId = await ctx.db.insert("srsCards", {
-        userId: TEST_USER.tokenIdentifier,
+      const srsCardId = await insertQueuedSrsCardForTest(ctx, {
         cardId: cardList[i]!._id,
         setId,
-        easeFactor: 2.5,
-        interval: 1,
-        repetitions: 1,
-        nextReviewAt: 0,
-        status: "learning",
       });
-
-      await ctx.db.insert("srsReviews", {
-        userId: TEST_USER.tokenIdentifier,
+      await insertSrsReviewForTest(ctx, {
         cardId: cardList[i]!._id,
         srsCardId,
-        rating: "good",
         timestamp: reviewTimestamps[i]!,
-        newInterval: 1,
-        newEaseFactor: 2.5,
       });
     });
   }
@@ -57,41 +42,23 @@ async function setupSetWithSrsReviews(
 
 describe("getHydratedQueue", () => {
   it("returns hydrated items with correct fields", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
 
-    const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
+    const { cards: cardList, setId } = await createSetWithCards(as, {
       name: "Test Set",
-      fieldDefinitions: fieldDefs,
-    }));
-
-    const cards = [
-      { fields: { Front: "Q0", Back: "A0" }, order: 0 },
-      { fields: { Front: "Q1", Back: "A1" }, order: 1 },
-      { fields: { Front: "Q2", Back: "A2" }, order: 2 },
-    ];
-    await as.mutation(api.flashcards.batchCreate, { setId, cards });
-    const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
+      cards: [
+        { fields: { Front: "Q0", Back: "A0" }, order: 0 },
+        { fields: { Front: "Q1", Back: "A1" }, order: 1 },
+        { fields: { Front: "Q2", Back: "A2" }, order: 2 },
+      ],
+    });
 
     await t.run(async (ctx) => {
       for (let i = 0; i < cardList.length; i++) {
-        const srsCardId = await ctx.db.insert("srsCards", {
-          userId: TEST_USER.tokenIdentifier,
+        await insertQueuedSrsCardForTest(ctx, {
           cardId: cardList[i]!._id,
           setId,
-          easeFactor: 2.5,
-          interval: 1,
-          repetitions: 1,
-          nextReviewAt: 0,
-          status: "learning",
-        });
-
-        await ctx.db.insert("reviewQueue", {
-          userId: TEST_USER.tokenIdentifier,
-          cardId: cardList[i]!._id,
-          srsCardId,
-          setId,
-          queuedAt: Date.now(),
           order: i,
         });
       }
@@ -109,7 +76,7 @@ describe("getHydratedQueue", () => {
   });
 
   it("returns empty array when queue is empty", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
 
     const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
@@ -117,42 +84,21 @@ describe("getHydratedQueue", () => {
   });
 
   it("hydrates only queued cards from a larger set", async () => {
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
 
-    const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
+    const { setId, cards: cardList } = await createSetWithCards(as, {
       name: "Large Set",
-      fieldDefinitions: fieldDefs,
-    }));
-
-    await as.mutation(api.flashcards.batchCreate, {
-      setId,
       cards: [
         { fields: { Front: "Queued", Back: "Included" }, order: 0 },
         { fields: { Front: "Unqueued", Back: "Excluded" }, order: 1 },
       ],
     });
-    const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
 
     await t.run(async (ctx) => {
-      const srsCardId = await ctx.db.insert("srsCards", {
-        userId: TEST_USER.tokenIdentifier,
+      await insertQueuedSrsCardForTest(ctx, {
         cardId: cardList[0]!._id,
         setId,
-        easeFactor: 2.5,
-        interval: 1,
-        repetitions: 1,
-        nextReviewAt: 0,
-        status: "learning",
-      });
-
-      await ctx.db.insert("reviewQueue", {
-        userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[0]!._id,
-        srsCardId,
-        setId,
-        queuedAt: Date.now(),
-        order: 0,
       });
     });
 
@@ -172,7 +118,7 @@ describe("getQueueStats", () => {
     // Current time: 2025-06-15 10:00 UTC, default reset hour = 4
     // Day boundary: 2025-06-15 04:00 UTC
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
 
     const beforeBoundary = new Date("2025-06-15T03:00:00Z").getTime();
     const afterBoundary = new Date("2025-06-15T05:00:00Z").getTime();
@@ -194,7 +140,7 @@ describe("getQueueStats", () => {
     // Current time: 2025-06-15 10:00 UTC, default reset hour = 4
     // Day boundary: 2025-06-15 04:00 UTC
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
 
     const beforeBoundary = new Date("2025-06-15T03:00:00Z").getTime();
     const afterBoundary = new Date("2025-06-15T05:00:00Z").getTime();
@@ -216,7 +162,7 @@ describe("getQueueStats", () => {
     // Current time: 2025-06-15 10:00 UTC, custom reset hour = 8
     // Day boundary: 2025-06-15 08:00 UTC
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
 
     const as = t.withIdentity(TEST_USER);
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
@@ -233,7 +179,7 @@ describe("getQueueStats", () => {
 
   it("returns dayResetUtcHour in response", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 12, dailyGoal: 0 });
@@ -250,38 +196,19 @@ const OTHER_USER = {
 
 async function setupQueuedReview(t: TestDb, user = TEST_USER) {
   const as = t.withIdentity(user);
-  const setId = await unwrap(await as.mutation(api.flashcardSets.create, {
+  const { setId, cards: cardList } = await createSetWithCards(as, {
     name: `Review Set ${user.tokenIdentifier}`,
-    fieldDefinitions: fieldDefs,
-  }));
-  await unwrap(await as.mutation(api.flashcards.batchCreate, {
-    setId,
     cards: [
       { fields: { Front: "Q0", Back: "A0" }, order: 0 },
       { fields: { Front: "Q1", Back: "A1" }, order: 1 },
     ],
-  }));
-  const cardList = await unwrap(await as.query(api.flashcards.list, { setId }));
+  });
   const srsCardId = await t.run(async (ctx) => {
-    const id = await ctx.db.insert("srsCards", {
+    return await insertQueuedSrsCardForTest(ctx, {
       userId: user.tokenIdentifier,
       cardId: cardList[0]!._id,
       setId,
-      easeFactor: 2.5,
-      interval: 1,
-      repetitions: 1,
-      nextReviewAt: 0,
-      status: "learning",
     });
-    await ctx.db.insert("reviewQueue", {
-      userId: user.tokenIdentifier,
-      cardId: cardList[0]!._id,
-      srsCardId: id,
-      setId,
-      queuedAt: Date.now(),
-      order: 0,
-    });
-    return id;
   });
 
   return { as, setId, cardList, srsCardId };
@@ -310,7 +237,7 @@ describe("recordReview", () => {
 
   it("records a valid queued review and removes the queue item", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const { as, srsCardId } = await setupQueuedReview(t);
 
     const result = await as.mutation(api.srsReviewQueue.recordReview, {
@@ -336,7 +263,7 @@ describe("recordReview", () => {
 
   it("treats replay after queue deletion as duplicate without another review", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const { as, srsCardId } = await setupQueuedReview(t);
 
     await as.mutation(api.srsReviewQueue.recordReview, {
@@ -358,7 +285,7 @@ describe("recordReview", () => {
 
   it("reports current remaining queue count for duplicate replay", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const { as, setId, cardList, srsCardId } = await setupQueuedReview(t);
 
     await as.mutation(api.srsReviewQueue.recordReview, {
@@ -366,22 +293,9 @@ describe("recordReview", () => {
       rating: "good",
     });
     await t.run(async (ctx) => {
-      const otherSrsCardId = await ctx.db.insert("srsCards", {
-        userId: TEST_USER.tokenIdentifier,
+      await insertQueuedSrsCardForTest(ctx, {
         cardId: cardList[1]!._id,
         setId,
-        easeFactor: 2.5,
-        interval: 1,
-        repetitions: 1,
-        nextReviewAt: 0,
-        status: "learning",
-      });
-      await ctx.db.insert("reviewQueue", {
-        userId: TEST_USER.tokenIdentifier,
-        cardId: cardList[1]!._id,
-        srsCardId: otherSrsCardId,
-        setId,
-        queuedAt: Date.now(),
         order: 1,
       });
     });
@@ -397,7 +311,7 @@ describe("recordReview", () => {
 
   it("rejects another user's SRS card without deleting queue or inserting review", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const { srsCardId } = await setupQueuedReview(t, TEST_USER);
     const other = t.withIdentity(OTHER_USER);
 
@@ -416,7 +330,7 @@ describe("recordReview", () => {
 
   it("rejects a foreign queue row for an owned SRS card", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const { as, setId, cardList } = await setupQueuedReview(t);
     await t.run(async (ctx) => {
       const existing = await ctx.db.query("reviewQueue").withIndex("by_userId_and_order", (q) =>
@@ -425,25 +339,21 @@ describe("recordReview", () => {
       for (const row of existing) await ctx.db.delete(row._id);
     });
     const srsCardId = await t.run(async (ctx) => {
-      const id = await ctx.db.insert("srsCards", {
+      return await insertQueuedSrsCardForTest(ctx, {
         userId: TEST_USER.tokenIdentifier,
         cardId: cardList[1]!._id,
         setId,
-        easeFactor: 2.5,
-        interval: 1,
-        repetitions: 1,
-        nextReviewAt: 0,
-        status: "learning",
-      });
-      await ctx.db.insert("reviewQueue", {
-        userId: OTHER_USER.tokenIdentifier,
-        cardId: cardList[1]!._id,
-        srsCardId: id,
-        setId,
-        queuedAt: Date.now(),
         order: 0,
+        srsOverrides: {},
       });
-      return id;
+    });
+
+    await t.run(async (ctx) => {
+      const queue = await ctx.db.query("reviewQueue").withIndex("by_srsCardId", (q) =>
+        q.eq("srsCardId", srsCardId)
+      ).first();
+      if (!queue) throw new Error("Missing test queue item");
+      await ctx.db.patch(queue._id, { userId: OTHER_USER.tokenIdentifier });
     });
 
     const result = await as.mutation(api.srsReviewQueue.recordReview, {
@@ -461,7 +371,7 @@ describe("recordReview", () => {
 
   it("rejects a stale mismatched queue row without scheduling or inserting review", async () => {
     vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
-    const t = convexTest(schema, modules);
+    const t = createTestDb();
     const { as, setId, cardList, srsCardId } = await setupQueuedReview(t);
     const originalSrsCard = await t.run(async (ctx) => await ctx.db.get(srsCardId));
 
