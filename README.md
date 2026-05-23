@@ -23,6 +23,27 @@ pnpm dev
 
 Open http://localhost:3000.
 
+## Observability
+
+Sentry is optional. Error reporting is disabled unless a DSN is configured.
+
+```bash
+NEXT_PUBLIC_SENTRY_DSN=... # browser errors
+SENTRY_DSN=...             # Next.js server and route-handler errors
+SENTRY_ENVIRONMENT=...     # optional
+SENTRY_RELEASE=...         # optional
+```
+
+Production source map upload runs only when all of these are present:
+
+```bash
+SENTRY_ORG=...
+SENTRY_PROJECT=...
+SENTRY_AUTH_TOKEN=...
+```
+
+Sentry user context is limited to the opaque Clerk user id. Do not add names, emails, avatars, flashcard content, prompts, or request bodies to Sentry events.
+
 ## Scripts
 
 ```bash

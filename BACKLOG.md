@@ -111,7 +111,9 @@
 - [ ] Multi-language UX enhancements (tone color coding, language-specific rendering)
 
 ### Observability
-- [ ] Sentry integration for client + server error tracking (auto-capture unhandled errors, stack traces, user context)
+- [ ] Configure Convex official exception reporting with Sentry via https://docs.convex.dev/production/integrations/exception-reporting
+  - Convex built-in exception reporting is Pro-only.
+  - Convex automatically uses `tokenIdentifier` as the Sentry user id.
 
 ### Platform
 - [ ] Pronunciation validation (speech-to-text comparison against expected pinyin)
