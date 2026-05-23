@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 
 export default function StudyError({
   error,
@@ -14,6 +15,7 @@ export default function StudyError({
   const params = useParams<{ setId: string }>();
 
   useEffect(() => {
+    Sentry.captureException(error);
     console.error("Study session error boundary caught an error", {
       message: error.message,
       stack: error.stack,

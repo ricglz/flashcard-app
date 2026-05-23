@@ -1,4 +1,5 @@
 import { fetchQuery } from "convex/nextjs";
+import * as Sentry from "@sentry/nextjs";
 import { igniteModel, Message } from "multi-llm-ts";
 import { api } from "../../../../convex/_generated/api";
 import { getAuthToken } from "@/lib/server";
@@ -219,6 +220,15 @@ export async function POST(request: Request) {
       if (Either.isRight(result)) {
         controller.enqueue(sseEvent({ type: "done" }));
       } else {
+        Sentry.captureException(result.left, {
+          tags: {
+            route: "api.chat",
+            provider: aiConfig.provider,
+          },
+          extra: {
+            modelName,
+          },
+        });
         console.error(`[chat] Generation failed:`, result.left);
         controller.enqueue(
           sseEvent({

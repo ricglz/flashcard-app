@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { toast } from "sonner";
 
 export default class AssistantErrorBoundary extends Component<
@@ -14,6 +15,13 @@ export default class AssistantErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
+    Sentry.captureException(error, {
+      contexts: {
+        react: {
+          componentStack: info.componentStack,
+        },
+      },
+    });
     console.error("AssistantPanel error:", error, info);
     toast.error("Study assistant crashed - click to retry");
   }
