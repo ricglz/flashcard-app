@@ -1,8 +1,10 @@
-import { redirect } from "next/navigation";
-import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
+import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
-import { getAuthToken } from "@/lib/server";
-import { parseId } from "@/lib/convexHelpers";
+import {
+  requireAuthToken,
+  requirePreloadedDomainResult,
+  requireRouteId,
+} from "@/lib/routePreload";
 import BrowseClient from "./BrowseClient";
 
 export default async function BrowsePage({
@@ -20,10 +22,8 @@ export default async function BrowsePage({
 }) {
   const { setId } = await params;
   const sp = await searchParams;
-  const flashcardSetId = parseId<"flashcardSets">(setId);
-  if (!flashcardSetId) redirect("/");
-  const token = await getAuthToken();
-  if (!token) redirect("/");
+  const flashcardSetId = requireRouteId<"flashcardSets">(setId);
+  const token = await requireAuthToken();
 
   const [preloadedSet, preloadedCards, preloadedTtsConfig, preloadedAnnotations] =
     await Promise.all([
@@ -33,15 +33,8 @@ export default async function BrowsePage({
       preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
     ]);
 
-  const setResult = preloadedQueryResult(preloadedSet);
-  if (!setResult.ok) {
-    redirect("/");
-  }
-  const setData = setResult.value;
-  const cardsResult = preloadedQueryResult(preloadedCards);
-  if (!cardsResult.ok) {
-    redirect("/");
-  }
+  const setData = requirePreloadedDomainResult(preloadedSet);
+  requirePreloadedDomainResult(preloadedCards);
 
   const frontFields = sp.frontFields?.split(",") ?? [];
   const backFields = sp.backFields?.split(",") ?? [];

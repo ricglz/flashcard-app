@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
-import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
+import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import { getAuthToken } from "@/lib/server";
-import { parseId } from "@/lib/convexHelpers";
+import {
+  requireAuthToken,
+  requirePreloadedDomainResult,
+  requireRouteId,
+} from "@/lib/routePreload";
 import StudyConfigClient from "./StudyConfigClient";
 
 export default async function StudyConfigPage({
@@ -14,10 +17,8 @@ export default async function StudyConfigPage({
 }) {
   const { setId } = await params;
   const { mode: modeParam } = await searchParams;
-  const flashcardSetId = parseId<"flashcardSets">(setId);
-  if (!flashcardSetId) redirect("/");
-  const token = await getAuthToken();
-  if (!token) redirect("/");
+  const flashcardSetId = requireRouteId<"flashcardSets">(setId);
+  const token = await requireAuthToken();
 
   const [preloadedSet, preloadedCards, preloadedActiveSession] =
     await Promise.all([
@@ -30,11 +31,8 @@ export default async function StudyConfigPage({
       ),
     ]);
 
-  const result = preloadedQueryResult(preloadedSet);
-  if (!result.ok) redirect("/");
-  const cardsResult = preloadedQueryResult(preloadedCards);
-  if (!cardsResult.ok) redirect("/");
-  const setData = result.value;
+  const setData = requirePreloadedDomainResult(preloadedSet);
+  requirePreloadedDomainResult(preloadedCards);
   if (setData.viewer.role === "visitor") redirect(`/sets/${setId}`);
 
   const initialMode = modeParam === "browse" ? "browse" : "study";

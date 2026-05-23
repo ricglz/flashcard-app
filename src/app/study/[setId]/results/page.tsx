@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
-import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
+import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
-import { getAuthToken } from "@/lib/server";
-import { parseId } from "@/lib/convexHelpers";
+import {
+  requireAuthToken,
+  requirePreloadedDomainResult,
+  requirePreloadedValue,
+  requireRouteId,
+} from "@/lib/routePreload";
 import ResultsClient from "./ResultsClient";
 
 export default async function ResultsPage({
@@ -14,17 +18,14 @@ export default async function ResultsPage({
 }) {
   const { setId } = await params;
   const { sessionId } = await searchParams;
-  const flashcardSetId = parseId<"flashcardSets">(setId);
-  if (!flashcardSetId) redirect("/");
-  const token = await getAuthToken();
-  if (!token) redirect(`/`);
+  const flashcardSetId = requireRouteId<"flashcardSets">(setId);
+  const token = await requireAuthToken("/");
 
   if (!sessionId) {
     redirect(`/study/${setId}`);
   }
 
-  const typedSessionId = parseId<"studySessions">(sessionId);
-  if (!typedSessionId) redirect("/");
+  const typedSessionId = requireRouteId<"studySessions">(sessionId);
 
   const [preloadedResults, preloadedSet] = await Promise.all([
     preloadQuery(
@@ -39,12 +40,8 @@ export default async function ResultsPage({
     ),
   ]);
 
-  const results = preloadedQueryResult(preloadedResults);
-  const setResult = preloadedQueryResult(preloadedSet);
-  if (!results || !setResult.ok) {
-    redirect("/");
-  }
-  const setData = setResult.value;
+  const results = requirePreloadedValue(preloadedResults);
+  const setData = requirePreloadedDomainResult(preloadedSet);
 
   if (results.session.setId !== flashcardSetId) {
     redirect(`/study/${results.session.setId}/results?sessionId=${sessionId}`);
@@ -55,10 +52,7 @@ export default async function ResultsPage({
     { setId: flashcardSetId },
     { token }
   );
-  const cardsResult = preloadedQueryResult(preloadedCards);
-  if (!cardsResult.ok) {
-    redirect("/");
-  }
+  requirePreloadedDomainResult(preloadedCards);
 
   return (
     <ResultsClient
