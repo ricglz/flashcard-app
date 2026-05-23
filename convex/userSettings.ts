@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation, internalQuery } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { SRS_DEFAULTS } from "./srs";
 import { type CommonFailure } from "./domain/result";
@@ -18,15 +20,46 @@ const DEFAULTS = {
   ttsPlaybackSpeed: 0.75,
 };
 
+type UserSettingsPatch = Partial<
+  Omit<Doc<"userSettings">, "_id" | "_creationTime" | "userId">
+>;
+
+async function getSettingsByUserId(
+  ctx: QueryCtx | MutationCtx,
+  userId: string,
+) {
+  return await ctx.db
+    .query("userSettings")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .first();
+}
+
+async function patchOrInsertSettings(
+  ctx: MutationCtx,
+  userId: string,
+  patch: UserSettingsPatch,
+) {
+  const existing = await getSettingsByUserId(ctx, userId);
+  if (existing) {
+    await ctx.db.patch(existing._id, patch);
+    return;
+  }
+
+  await ctx.db.insert("userSettings", {
+    userId,
+    maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
+    dayResetUtcHour: DEFAULTS.dayResetUtcHour,
+    ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
+    ...patch,
+  });
+}
+
 export const get = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const settings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .first();
+    const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
     const { llmApiKey: _stripped, ...safe } = settings ?? {};
     const key = settings?.llmApiKey;
     return {
@@ -43,10 +76,7 @@ export const getTtsConfig = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const settings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .first();
+    const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
     return { ttsPlaybackSpeed: settings?.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed };
   },
 });
@@ -56,10 +86,7 @@ export const hasLlmKey = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const settings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .first();
+    const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
     return { hasLlmKey: !!settings?.llmApiKey };
   },
 });
@@ -78,29 +105,13 @@ export const updateSrsSettings = mutation({
       const hour = yield* validateDayResetUtcHourEffect(args.dayResetUtcHour);
       const goal = yield* validateDailyGoalEffect(args.dailyGoal);
 
-      const existing = yield* Effect.promise(() =>
-        ctx.db.query("userSettings")
-          .withIndex("by_userId", (q) => q.eq("userId", userId))
-          .first(),
-      );
-
       const patch = {
         maxNewCardsPerDay: max,
         dayResetUtcHour: hour,
         dailyGoal: goal,
       };
 
-      if (existing) {
-        yield* Effect.promise(() => ctx.db.patch(existing._id, patch));
-      } else {
-        yield* Effect.promise(() =>
-          ctx.db.insert("userSettings", {
-            userId,
-            ...patch,
-            ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
-          }),
-        );
-      }
+      yield* Effect.promise(() => patchOrInsertSettings(ctx, userId, patch));
       return null;
     }),
   ),
@@ -117,12 +128,7 @@ export const updateAiConfig = mutation({
       const identity = yield* requireAuth(ctx);
       const userId = identity.tokenIdentifier;
 
-      const existing = yield* Effect.promise(() =>
-        ctx.db
-          .query("userSettings")
-          .withIndex("by_userId", (q) => q.eq("userId", userId))
-          .first(),
-      );
+      const existing = yield* Effect.promise(() => getSettingsByUserId(ctx, userId));
 
       const effectiveKey = args.apiKey || existing?.llmApiKey;
 
@@ -132,19 +138,7 @@ export const updateAiConfig = mutation({
         customChatPrompt: args.customChatPrompt,
       };
 
-      if (existing) {
-        yield* Effect.promise(() => ctx.db.patch(existing._id, patch));
-      } else {
-        yield* Effect.promise(() =>
-          ctx.db.insert("userSettings", {
-            userId,
-            maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
-            dayResetUtcHour: DEFAULTS.dayResetUtcHour,
-            ttsPlaybackSpeed: DEFAULTS.ttsPlaybackSpeed,
-            ...patch,
-          }),
-        );
-      }
+      yield* Effect.promise(() => patchOrInsertSettings(ctx, userId, patch));
       return null;
     }),
   ),
@@ -160,25 +154,9 @@ export const updateTtsPlaybackSpeed = mutation({
       const userId = identity.tokenIdentifier;
       const speed = yield* validateTtsPlaybackSpeedEffect(args.ttsPlaybackSpeed);
 
-      const existing = yield* Effect.promise(() =>
-        ctx.db
-          .query("userSettings")
-          .withIndex("by_userId", (q) => q.eq("userId", userId))
-          .first(),
+      yield* Effect.promise(() =>
+        patchOrInsertSettings(ctx, userId, { ttsPlaybackSpeed: speed }),
       );
-
-      if (existing) {
-        yield* Effect.promise(() => ctx.db.patch(existing._id, { ttsPlaybackSpeed: speed }));
-      } else {
-        yield* Effect.promise(() =>
-          ctx.db.insert("userSettings", {
-            userId,
-            maxNewCardsPerDay: DEFAULTS.maxNewCardsPerDay,
-            dayResetUtcHour: DEFAULTS.dayResetUtcHour,
-            ttsPlaybackSpeed: speed,
-          }),
-        );
-      }
       return null;
     }),
   ),
@@ -187,10 +165,7 @@ export const updateTtsPlaybackSpeed = mutation({
 export const getAiConfig = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
-    const settings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
+    const settings = await getSettingsByUserId(ctx, args.userId);
     if (!settings?.llmApiKey || !settings.llmProvider) return null;
     return {
       provider: settings.llmProvider,
@@ -207,10 +182,7 @@ export const getAiConfigForServer = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const settings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .first();
+    const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
     if (!settings?.llmApiKey || !settings.llmProvider) return null;
     return {
       provider: settings.llmProvider,
