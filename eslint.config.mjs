@@ -13,6 +13,22 @@ const typeAwareRulesOff = {
   "@typescript-eslint/prefer-nullish-coalescing": "off",
 };
 
+const restrictedSyntaxRules = [
+  {
+    selector: "TSAsExpression[typeAnnotation.type='TSNeverKeyword']",
+    message: "'as never' is forbidden. This indicates a type system escape hatch. Use proper typing or @ts-expect-error with explanation instead.",
+  },
+  {
+    selector: "TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
+    message: "'as unknown' is forbidden. Use @ts-expect-error with explanation or proper typing instead.",
+  },
+];
+
+const noThrowRule = {
+  selector: "ThrowStatement",
+  message: "Do not throw for expected app/domain failures. Return a typed result or Effect failure; use an explicit override only for defects or framework boundaries.",
+};
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -71,17 +87,22 @@ const eslintConfig = defineConfig([
         skipBlankLines: true,
         skipComments: true,
       }],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "TSAsExpression[typeAnnotation.type='TSNeverKeyword']",
-          message: "'as never' is forbidden. This indicates a type system escape hatch. Use proper typing or @ts-expect-error with explanation instead.",
-        },
-        {
-          selector: "TSAsExpression[typeAnnotation.type='TSUnknownKeyword']",
-          message: "'as unknown' is forbidden. Use @ts-expect-error with explanation or proper typing instead.",
-        },
-      ],
+      "no-restricted-syntax": ["error", ...restrictedSyntaxRules],
+    },
+  },
+  {
+    files: ["convex/**/*.ts", "src/lib/**/*.ts", "src/hooks/**/*.ts"],
+    ignores: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "convex/_generated/**",
+      "convex/testing.ts",
+      "src/lib/aiToolingSchemas.ts",
+      "src/lib/offlineMutationRegistry.ts",
+      "src/lib/routePreload.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": ["error", ...restrictedSyntaxRules, noThrowRule],
     },
   },
   {
