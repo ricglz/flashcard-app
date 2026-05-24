@@ -90,3 +90,7 @@ export const LANGUAGE_PRESETS = {
 
 export type PresetKey = keyof typeof LANGUAGE_PRESETS;
 export const PRESET_KEYS = Object.keys(LANGUAGE_PRESETS) as PresetKey[];
+
+export function isPresetKey(value: unknown): value is PresetKey {
+  return typeof value === "string" && Object.hasOwn(LANGUAGE_PRESETS, value);
+}

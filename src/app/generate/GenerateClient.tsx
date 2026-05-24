@@ -8,7 +8,7 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import { METHODOLOGIES, type Methodology } from "@/lib/types";
+import { isMethodology } from "@/lib/types";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
 
@@ -32,8 +32,9 @@ export default function GenerateClient({
     [userSets],
   );
 
-  const initialMethodology = METHODOLOGIES.includes(searchParams.get("methodology") as Methodology)
-    ? (searchParams.get("methodology") as Methodology)
+  const methodologyParam = searchParams.get("methodology");
+  const initialMethodology = isMethodology(methodologyParam)
+    ? methodologyParam
     : "balanced";
 
   const initialSetId = searchParams.get("setId") ?? "";

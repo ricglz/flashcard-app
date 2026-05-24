@@ -80,6 +80,32 @@ function resetForSourceMethod(state: WizardState, sourceMethod: SourceMethod): W
   };
 }
 
+function nextStep(step: WizardState["step"]): WizardState["step"] {
+  switch (step) {
+    case 1:
+      return 2;
+    case 2:
+      return 3;
+    case 3:
+      return 4;
+    case 4:
+      return 4;
+  }
+}
+
+function previousStep(step: WizardState["step"]): WizardState["step"] {
+  switch (step) {
+    case 1:
+      return 1;
+    case 2:
+      return 1;
+    case 3:
+      return 2;
+    case 4:
+      return 3;
+  }
+}
+
 export function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case "SET_NAME":
@@ -101,10 +127,10 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       });
     case "NEXT_STEP": {
       if (state.step >= 4 || !canProceed(state)) return state;
-      return { ...state, step: (state.step + 1) as WizardState["step"] };
+      return { ...state, step: nextStep(state.step) };
     }
     case "PREV_STEP":
-      if (state.step > 1) return { ...state, step: (state.step - 1) as WizardState["step"] };
+      if (state.step > 1) return { ...state, step: previousStep(state.step) };
       return state;
     case "RESET":
       return initialState;

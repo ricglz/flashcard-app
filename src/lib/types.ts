@@ -1,3 +1,14 @@
+import type { Doc } from "../../convex/_generated/dataModel";
+
+// Convex schema imports the literal arrays from this file. Keep this module free
+// of runtime imports from convex/schema.ts so generated types remain one-way.
+function isOneOf<const Values extends readonly string[]>(
+  values: Values,
+  value: unknown,
+): value is Values[number] {
+  return typeof value === "string" && values.some((item) => item === value);
+}
+
 export const FIELD_ROLES = [
   "primary",
   "pronunciation",
@@ -14,7 +25,7 @@ export const FIELD_ROLE_LABELS: Record<FieldRole, string> = {
 };
 
 export function isFieldRole(value: unknown): value is FieldRole {
-  return typeof value === "string" && FIELD_ROLES.includes(value as FieldRole);
+  return isOneOf(FIELD_ROLES, value);
 }
 
 export type FieldMetadata = {
@@ -92,6 +103,10 @@ export function getDefaultFieldLayout(fieldDefinitions: readonly FieldDefinition
 export const CARD_RATINGS = ["wrong", "hard", "good", "easy"] as const;
 export type CardRating = (typeof CARD_RATINGS)[number];
 
+export function isCardRating(value: unknown): value is CardRating {
+  return isOneOf(CARD_RATINGS, value);
+}
+
 export const CARD_RATING_LABELS: Record<CardRating, string> = {
   wrong: "Wrong",
   hard: "Hard",
@@ -121,6 +136,10 @@ export const METHODOLOGIES = [
 ] as const;
 export type Methodology = (typeof METHODOLOGIES)[number];
 
+export function isMethodology(value: unknown): value is Methodology {
+  return isOneOf(METHODOLOGIES, value);
+}
+
 export const METHODOLOGY_LABELS: Record<Methodology, string> = {
   balanced: "Balanced",
   recent_lapses: "Recent Lapses",
@@ -130,6 +149,10 @@ export const METHODOLOGY_LABELS: Record<Methodology, string> = {
 
 export const VISIBILITIES = ["private", "unlisted", "public"] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
+
+export function isVisibility(value: unknown): value is Visibility {
+  return isOneOf(VISIBILITIES, value);
+}
 
 export const VISIBILITY_LABELS: Record<Visibility, string> = {
   private: "Private",
@@ -143,8 +166,6 @@ export const SESSION_STATUSES = [
   "abandoned",
 ] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
-
-import type { Doc } from "../../convex/_generated/dataModel";
 
 export type Viewer =
   | { role: "owner"; userSet: Doc<"userSets"> }
@@ -166,3 +187,15 @@ export type PublicFlashcardSet = Omit<Doc<"flashcardSets">, "visibility"> & {
 export type ActiveStudySession = Omit<Doc<"studySessions">, "status"> & {
   status: "in_progress";
 };
+
+export function isActiveStudySession(
+  session: Doc<"studySessions">,
+): session is ActiveStudySession {
+  return session.status === "in_progress";
+}
+
+export function isPublicFlashcardSet(
+  set: Doc<"flashcardSets">,
+): set is PublicFlashcardSet {
+  return set.visibility === "public";
+}

@@ -4,10 +4,7 @@ import { useState, useCallback } from "react";
 import { useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import type { FunctionReturnType } from "convex/server";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
-
-type TtsConfig = FunctionReturnType<typeof api.userSettings.getTtsConfig>;
 
 export function useTtsControls(
   preloaded: Preloaded<typeof api.userSettings.getTtsConfig>,
@@ -17,7 +14,7 @@ export function useTtsControls(
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
 
-  const speed = localTtsSpeed ?? (config as TtsConfig)?.ttsPlaybackSpeed ?? 0.75;
+  const speed = localTtsSpeed ?? config?.ttsPlaybackSpeed ?? 0.75;
 
   const onSpeedChange = useCallback(
     (s: number) => {

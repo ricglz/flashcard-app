@@ -1,4 +1,4 @@
-import { LANGUAGE_PRESETS, PRESET_KEYS, type PresetKey } from "@/lib/presets";
+import { isPresetKey, LANGUAGE_PRESETS, PRESET_KEYS } from "@/lib/presets";
 import type { WizardAction, WizardState } from "./wizardState";
 import SourceCard from "./SourceCard";
 
@@ -10,8 +10,8 @@ type Props = {
 
 export default function StepNameAndSource({ state, dispatch, aiAvailable }: Props) {
   const handlePresetSelect = (key: string) => {
-    if (key in LANGUAGE_PRESETS) {
-      const preset = LANGUAGE_PRESETS[key as PresetKey];
+    if (isPresetKey(key)) {
+      const preset = LANGUAGE_PRESETS[key];
       dispatch({ type: "SET_FIELD_DEFINITIONS", payload: preset.fieldDefinitions });
     }
   };

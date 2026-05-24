@@ -4,7 +4,6 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import type { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
-import type { TypedCardResult } from "@/lib/types";
 import { computeScorePercent } from "@/lib/studyResults";
 import {
   type FlashcardSetWithViewer,
@@ -41,7 +40,7 @@ export default function ResultsClient({
 
   const { set } = setResult.value;
   const { session } = data;
-  const results = data.results as TypedCardResult[];
+  const results = data.results;
   const totalCards = session.cardOrder.length;
   const completedCards = results.length;
   const scorePercent = computeScorePercent(results, session.overallScore);

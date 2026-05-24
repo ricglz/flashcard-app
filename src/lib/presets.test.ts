@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { LANGUAGE_PRESETS, PRESET_KEYS, type LanguagePreset } from "./presets";
+import { isPresetKey, LANGUAGE_PRESETS, PRESET_KEYS, type LanguagePreset } from "./presets";
 
 describe("LANGUAGE_PRESETS", () => {
   it("PRESET_KEYS matches Object.keys", () => {
@@ -40,5 +40,10 @@ describe("LANGUAGE_PRESETS", () => {
         `${key} has empty label`
       ).toBeGreaterThan(0);
     }
+  });
+
+  it("recognizes only defined preset keys", () => {
+    expect(isPresetKey("custom")).toBe(true);
+    expect(isPresetKey("unknown")).toBe(false);
   });
 });

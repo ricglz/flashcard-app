@@ -70,7 +70,7 @@ export default function AiPath({
         selected: true,
       }));
       setGeneratedCards(cards);
-      dispatch({ type: "SET_FIELD_DEFINITIONS", payload: payload.fieldDefinitions as FieldDefinition[] });
+      dispatch({ type: "SET_FIELD_DEFINITIONS", payload: [...payload.fieldDefinitions] });
       dispatch({ type: "SET_CARDS", payload: cards.filter((c) => c.selected).map(({ fields }) => fields) });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");

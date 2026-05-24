@@ -15,10 +15,15 @@ export default function TypedSelect<T extends string>({
   React.SelectHTMLAttributes<HTMLSelectElement>,
   "value" | "onChange"
 >) {
+  const handleChange = (rawValue: string) => {
+    const next = options.find((option) => option === rawValue);
+    if (next !== undefined) onChange(next);
+  };
+
   return (
     <select
       value={value}
-      onChange={(e) => onChange(e.target.value as T)}
+      onChange={(e) => handleChange(e.target.value)}
       className={className}
       {...rest}
     >

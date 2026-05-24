@@ -9,7 +9,7 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { VISIBILITIES, VISIBILITY_LABELS, type Visibility } from "@/lib/types";
+import { VISIBILITIES, VISIBILITY_LABELS } from "@/lib/types";
 import TypedSelect from "@/components/TypedSelect";
 import SrsSetConfig from "@/components/SrsSetConfig";
 import {
@@ -119,7 +119,7 @@ export default function SetDetailClient({
           </span>
           {isOwner && (
             <TypedSelect
-              value={set.visibility as Visibility}
+              value={set.visibility}
               options={VISIBILITIES}
               labels={VISIBILITY_LABELS}
               onChange={(visibility) => {
@@ -134,7 +134,7 @@ export default function SetDetailClient({
           <p className="text-sm text-muted mb-4">
             Forked from{" "}
             <Link
-              href={`/sets/${(set.origin as { sourceSetId: string }).sourceSetId}`}
+              href={`/sets/${set.origin.sourceSetId}`}
               className="text-accent hover:underline"
             >
               original set

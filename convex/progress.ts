@@ -410,7 +410,7 @@ export const getPerSetMastery = query({
     const setNameMap = new Map(
       sets.filter((s) => s !== null).map((s) => [s._id, s.name])
     );
-    const perSet = new Map<string, {
+    const perSet = new Map<Id<"flashcardSets">, {
       newCount: number; learningCount: number; reviewCount: number;
       totalEase: number; total: number;
     }>();
@@ -432,10 +432,10 @@ export const getPerSetMastery = query({
 
     const results = [];
     for (const [setId, stats] of perSet) {
-      const setName = setNameMap.get(setId as typeof setIds[0]);
+      const setName = setNameMap.get(setId);
       if (!setName) continue;
       results.push({
-        setId: setId as typeof setIds[0],
+        setId,
         setName,
         total: stats.total,
         new: stats.newCount,

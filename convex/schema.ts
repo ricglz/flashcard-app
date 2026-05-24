@@ -1,18 +1,27 @@
 import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { v, type Validator } from "convex/values";
+import {
+  CARD_RATINGS,
+  FIELD_ROLES,
+  METHODOLOGIES,
+  SESSION_STATUSES,
+  VISIBILITIES,
+} from "../src/lib/types";
 
-// Field roles, card ratings, and methodologies are defined as source-of-truth
-// arrays in src/lib/types.ts (FIELD_ROLES, CARD_RATINGS, METHODOLOGIES).
-// These validators must stay in sync with those arrays.
+// src/lib/types.ts owns the literal arrays. Keep this dependency one-way:
+// app/shared types must not import validators from this schema module.
+function literalUnion<const Values extends readonly [string, ...string[]]>(
+  values: Values,
+) {
+  const validators = values.map((value) => v.literal(value)) as {
+    [Index in keyof Values]: Validator<Values[Index] & string, "required", never>;
+  };
+  return v.union(...validators);
+}
 
 export const fieldDefinitionValidator = v.object({
   name: v.string(),
-  role: v.union(
-    v.literal("primary"),
-    v.literal("pronunciation"),
-    v.literal("definition"),
-    v.literal("note")
-  ),
+  role: literalUnion(FIELD_ROLES),
   metadata: v.union(
     v.object({}),
     v.object({ tts: v.object({ lang: v.string() }) }),
@@ -20,12 +29,7 @@ export const fieldDefinitionValidator = v.object({
   order: v.number(),
 });
 
-export const ratingValidator = v.union(
-  v.literal("wrong"),
-  v.literal("hard"),
-  v.literal("good"),
-  v.literal("easy")
-);
+export const ratingValidator = literalUnion(CARD_RATINGS);
 
 export const srsCardStatusValidator = v.union(
   v.literal("new"),
@@ -38,12 +42,7 @@ export const userSetRoleValidator = v.union(
   v.literal("member")
 );
 
-export const weakContextMethodologyValidator = v.union(
-  v.literal("balanced"),
-  v.literal("recent_lapses"),
-  v.literal("low_ease"),
-  v.literal("learning_stuck")
-);
+export const weakContextMethodologyValidator = literalUnion(METHODOLOGIES);
 
 export const sourceScopeValidator = v.union(
   v.literal("single_set"),
@@ -86,11 +85,7 @@ export default defineSchema({
     cardCount: v.number(),
     updatedAt: v.number(),
     origin: setOriginValidator,
-    visibility: v.union(
-      v.literal("private"),
-      v.literal("unlisted"),
-      v.literal("public")
-    ),
+    visibility: literalUnion(VISIBILITIES),
     createdAt: v.number(),
   })
     .index("by_ownerId", ["ownerId"])
@@ -117,11 +112,7 @@ export default defineSchema({
     ttsOnlyFields: v.array(v.string()),
     cardOrder: v.array(v.id("flashcards")),
     currentIndex: v.number(),
-    status: v.union(
-      v.literal("in_progress"),
-      v.literal("completed"),
-      v.literal("abandoned")
-    ),
+    status: literalUnion(SESSION_STATUSES),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     overallScore: v.optional(v.number()),

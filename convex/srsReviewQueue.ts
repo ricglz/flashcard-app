@@ -10,6 +10,7 @@ import { notFound, conflict } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
+import type { Doc } from "./_generated/dataModel";
 
 export const getQueueStats = query({
   args: {},
@@ -54,11 +55,11 @@ export const getHydratedQueue = query({
 
     const uniqueSetIds = [...new Set(queueItems.map((qi) => qi.setId))];
     const uniqueCardIds = [...new Set(queueItems.map((qi) => qi.cardId))];
-    const cardMap = new Map<string, { _id: string; fields: Record<string, string> }>();
+    const cardMap = new Map<string, Doc<"flashcards">>();
     await Promise.all(
       uniqueCardIds.map(async (cardId) => {
         const card = await ctx.db.get(cardId);
-        if (card) cardMap.set(cardId, { _id: card._id, fields: card.fields });
+        if (card) cardMap.set(cardId, card);
       })
     );
 

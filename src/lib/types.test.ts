@@ -7,8 +7,20 @@ import {
   CARD_RATING_SCORES,
   CARD_RATING_LABELS,
   FIELD_ROLES,
-  FIELD_ROLE_LABELS
+  FIELD_ROLE_LABELS,
+  isCardRating,
+  isActiveStudySession,
+  isFieldRole,
+  isMethodology,
+  isPublicFlashcardSet,
+  isVisibility,
 } from "./types";
+import { parseId } from "./convexHelpers";
+
+const testSetId = parseId<"flashcardSets">("abc123def456ghi7");
+if (testSetId === null) throw new Error("Invalid test set ID.");
+const testSessionId = parseId<"studySessions">("abc123def456ghi8");
+if (testSessionId === null) throw new Error("Invalid test session ID.");
 
 describe("getTtsConfig", () => {
   it("returns TTS config when metadata has tts", () => {
@@ -58,5 +70,71 @@ describe("constants structural invariants", () => {
       expect(FIELD_ROLE_LABELS[role]).toBeDefined();
       expect(typeof FIELD_ROLE_LABELS[role]).toBe("string");
     }
+  });
+});
+
+describe("literal type guards", () => {
+  it("narrows known literal values", () => {
+    expect(isFieldRole("primary")).toBe(true);
+    expect(isCardRating("good")).toBe(true);
+    expect(isMethodology("balanced")).toBe(true);
+    expect(isVisibility("public")).toBe(true);
+  });
+
+  it("rejects unknown literal values", () => {
+    expect(isFieldRole("front")).toBe(false);
+    expect(isCardRating("ok")).toBe(false);
+    expect(isMethodology("fast")).toBe(false);
+    expect(isVisibility("shared")).toBe(false);
+  });
+});
+
+describe("isPublicFlashcardSet", () => {
+  it("narrows sets with public visibility", () => {
+    expect(isPublicFlashcardSet({
+      _id: testSetId,
+      _creationTime: 1,
+      name: "Public",
+      ownerId: "user",
+      fieldDefinitions: [],
+      cardCount: 0,
+      updatedAt: 1,
+      origin: { kind: "manual" },
+      visibility: "public",
+      createdAt: 1,
+    })).toBe(true);
+  });
+
+  it("rejects non-public sets", () => {
+    expect(isPublicFlashcardSet({
+      _id: testSetId,
+      _creationTime: 1,
+      name: "Private",
+      ownerId: "user",
+      fieldDefinitions: [],
+      cardCount: 0,
+      updatedAt: 1,
+      origin: { kind: "manual" },
+      visibility: "private",
+      createdAt: 1,
+    })).toBe(false);
+  });
+});
+
+describe("isActiveStudySession", () => {
+  it("narrows in-progress sessions", () => {
+    expect(isActiveStudySession({
+      _id: testSessionId,
+      _creationTime: 1,
+      setId: testSetId,
+      userId: "user",
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      ttsOnlyFields: [],
+      cardOrder: [],
+      currentIndex: 0,
+      status: "in_progress",
+      startedAt: 1,
+    })).toBe(true);
   });
 });
