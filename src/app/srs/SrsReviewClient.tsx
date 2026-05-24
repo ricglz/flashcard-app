@@ -12,7 +12,6 @@ import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 import AssistantPanel from "@/components/AssistantPanel";
-import { asId } from "@/lib/convexHelpers";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 import InlineError from "@/components/InlineError";
@@ -135,7 +134,7 @@ export default function SrsReviewClient({
     );
   }
 
-  const currentAnnotation = annotationMap.get(asId<"flashcards">(currentItem.card._id));
+  const currentAnnotation = annotationMap.get(currentItem.card._id);
 
   return (
     <>
@@ -151,10 +150,10 @@ export default function SrsReviewClient({
         onRate={handleRate}
         annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
         onToggleFlag={() => {
-          void toggleFlag({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId });
+          void toggleFlag({ cardId: currentItem.card._id, setId: currentItem.setId });
         }}
         onSetNote={(note: string) => {
-          void setNote({ cardId: asId<"flashcards">(currentItem.card._id), setId: currentItem.setId, note });
+          void setNote({ cardId: currentItem.card._id, setId: currentItem.setId, note });
         }}
         onEndSession={() => {
           if (confirm("End review session? Your progress is saved.")) {
@@ -164,7 +163,7 @@ export default function SrsReviewClient({
         assistant={
           <AssistantPanel
             context={{
-              setId: asId<"flashcardSets">(currentItem.setId),
+              setId: currentItem.setId,
               setName: currentItem.setName,
               cardFields: currentItem.card.fields,
             }}

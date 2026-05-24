@@ -7,7 +7,6 @@ import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { Doc, Id } from "../../../../../convex/_generated/dataModel";
-import { asId } from "@/lib/convexHelpers";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
@@ -28,9 +27,9 @@ import StudySessionLocalResults, {
 const EMPTY_CARDS: Doc<"flashcards">[] = [];
 
 type Props = {
-  setId: string;
+  flashcardSetId: Id<"flashcardSets">;
   sessionId: Id<"studySessions">;
-  preloadedSession: Preloaded<typeof api.studySessions.get>;
+  initialSession: ActiveStudySession;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   initialSet: FlashcardSetWithViewer;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
@@ -39,9 +38,9 @@ type Props = {
 };
 
 export default function StudySessionClient({
-  setId,
+  flashcardSetId,
   sessionId,
-  preloadedSession,
+  initialSession,
   preloadedSet,
   initialSet,
   preloadedCards,
@@ -49,8 +48,9 @@ export default function StudySessionClient({
   preloadedAnnotations,
 }: Props) {
   const router = useRouter();
+  const setId = String(flashcardSetId);
 
-  const session = usePreloadedQuery(preloadedSession) as ActiveStudySession;
+  const session = initialSession;
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : EMPTY_CARDS;
@@ -185,10 +185,10 @@ export default function StudySessionClient({
         ttsRate={tts.speed}
         annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
         onToggleFlag={() => {
-          if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
+          if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: flashcardSetId });
         }}
         onSetNote={(note: string) => {
-          if (currentCardId) void setNote({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
+          if (currentCardId) void setNote({ cardId: currentCardId, setId: flashcardSetId, note });
         }}
       />
 

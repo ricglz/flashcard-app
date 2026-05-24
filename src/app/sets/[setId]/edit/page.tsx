@@ -1,8 +1,10 @@
-import { redirect } from "next/navigation";
-import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
-import { getAuthToken } from "@/lib/server";
-import { parseId } from "@/lib/convexHelpers";
+import {
+  preloadRouteQuery,
+  requireAuthToken,
+  requirePreloadedDomainResult,
+  requireRouteId,
+} from "@/lib/routePreload";
 import EditSetClient from "./EditSetClient";
 
 export default async function EditSetPage({
@@ -11,33 +13,24 @@ export default async function EditSetPage({
   params: Promise<{ setId: string }>;
 }) {
   const { setId } = await params;
-  const flashcardSetId = parseId<"flashcardSets">(setId);
-  if (!flashcardSetId) redirect("/");
-  const token = await getAuthToken();
-  if (!token) redirect("/");
+  const flashcardSetId = requireRouteId<"flashcardSets">(setId);
+  const token = await requireAuthToken();
 
-  const preloadedSet = await preloadQuery(
+  const preloadedSet = await preloadRouteQuery(
     api.flashcardSets.get,
     { id: flashcardSetId },
     { token }
   );
 
-  const setResult = preloadedQueryResult(preloadedSet);
-  if (!setResult.ok) {
-    redirect("/");
-  }
-  const setData = setResult.value;
+  const setData = requirePreloadedDomainResult(preloadedSet);
 
-  const preloadedCards = await preloadQuery(
+  const preloadedCards = await preloadRouteQuery(
     api.flashcards.list,
     { setId: flashcardSetId },
     { token }
   );
 
-  const cardsResult = preloadedQueryResult(preloadedCards);
-  if (!cardsResult.ok) {
-    redirect("/");
-  }
+  requirePreloadedDomainResult(preloadedCards);
 
   return (
     <EditSetClient

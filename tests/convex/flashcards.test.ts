@@ -289,17 +289,6 @@ describe("flashcards.list access control", () => {
     expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
   });
 
-  it("returns NotFound for an ID-shaped value that is not a valid Convex ID", async () => {
-    const t = convexTest(schema, modules);
-    const as = t.withIdentity(TEST_USER);
-
-    const result = await as.query(api.flashcards.list, {
-      setId: "j0000000000000000000000000000000",
-    });
-
-    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
-  });
-
   it("returns success with an empty array for an accessible empty set", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);

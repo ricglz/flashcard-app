@@ -1,6 +1,7 @@
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import {
+  preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
   requireRouteId,
@@ -27,10 +28,10 @@ export default async function BrowsePage({
 
   const [preloadedSet, preloadedCards, preloadedTtsConfig, preloadedAnnotations] =
     await Promise.all([
-      preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
-      preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+      preloadRouteQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+      preloadRouteQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
       preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
-      preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
+      preloadRouteQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
     ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
@@ -48,7 +49,7 @@ export default async function BrowsePage({
 
   return (
     <BrowseClient
-      setId={setId}
+      flashcardSetId={flashcardSetId}
       frontFields={frontFields}
       backFields={backFields}
       ttsOnlyFields={ttsOnlyFields}

@@ -12,53 +12,64 @@ import type { ActiveStudySession } from "../src/lib/types";
 import { CARD_RATING_SCORES } from "../src/lib/types";
 import { computeOverallScore } from "../src/lib/studyResults";
 import { getFieldDefinitions } from "./lib/typed";
+import type { Doc } from "./_generated/dataModel";
+
+function isActiveStudySession(
+  session: Doc<"studySessions"> | null,
+  userId?: string,
+): session is ActiveStudySession {
+  return session !== null && session.status === "in_progress" && (userId === undefined || session.userId === userId);
+}
 
 export const getActiveSession = query({
-  args: { setId: v.string() },
+  args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args): Promise<ActiveStudySession | null> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const setId = ctx.db.normalizeId("flashcardSets", args.setId);
-    if (!setId) return null;
     const session = await ctx.db
       .query("studySessions")
       .withIndex("by_setId_and_userId_and_status", (q) =>
         q
-          .eq("setId", setId)
+          .eq("setId", args.setId)
           .eq("userId", identity.tokenIdentifier)
           .eq("status", "in_progress")
       )
       .first();
-    if (!session) return null;
-    return session as ActiveStudySession;
+    return isActiveStudySession(session, identity.tokenIdentifier) ? session : null;
+  },
+});
+
+export const getActiveById = query({
+  args: { id: v.id("studySessions") },
+  handler: async (ctx, args): Promise<ActiveStudySession | null> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const session = await ctx.db.get(args.id);
+    return isActiveStudySession(session, identity.tokenIdentifier) ? session : null;
   },
 });
 
 export const get = query({
-  args: { id: v.string() },
+  args: { id: v.id("studySessions") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const sessionId = ctx.db.normalizeId("studySessions", args.id);
-    if (!sessionId) return null;
-    const session = await ctx.db.get(sessionId);
+    const session = await ctx.db.get(args.id);
     if (!session || session.userId !== identity.tokenIdentifier) return null;
     return session;
   },
 });
 
 export const getResults = query({
-  args: { sessionId: v.string() },
+  args: { sessionId: v.id("studySessions") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const sessionId = ctx.db.normalizeId("studySessions", args.sessionId);
-    if (!sessionId) return null;
-    const session = await ctx.db.get(sessionId);
+    const session = await ctx.db.get(args.sessionId);
     if (!session || session.userId !== identity.tokenIdentifier) return null;
     const results = await ctx.db
       .query("cardResults")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .take(1000);
     return { session, results };
   },

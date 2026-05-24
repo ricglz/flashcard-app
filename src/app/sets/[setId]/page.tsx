@@ -1,6 +1,7 @@
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import {
+  preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
   requireRouteId,
@@ -17,11 +18,11 @@ export default async function SetDetailPage({
   const token = await requireAuthToken();
 
   const [preloadedSet, preloadedCards, preloadedTtsConfig, preloadedHasLlmKey, preloadedForkSyncStatus] = await Promise.all([
-    preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
-    preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+    preloadRouteQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+    preloadRouteQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
     preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
     preloadQuery(api.userSettings.hasLlmKey, {}, { token }),
-    preloadQuery(api.flashcardSets.getForkSyncStatus, { setId: flashcardSetId }, { token }),
+    preloadRouteQuery(api.flashcardSets.getForkSyncStatus, { setId: flashcardSetId }, { token }),
   ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);

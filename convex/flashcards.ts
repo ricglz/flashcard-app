@@ -4,7 +4,7 @@ import * as Effect from "effect/Effect";
 import { assertOwnerEffect, requireSetContentAccessEffect } from "./userSets";
 import { validateCardFieldsEffect, type CardFieldsValidationFailure } from "./domain/cardFields";
 import type { CommonFailure } from "./domain/result";
-import { normalizeIdEffect, requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
+import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 
 function validateAgainstSetEffect(
   set: { fieldDefinitions: Array<{ name: string }> },
@@ -17,20 +17,14 @@ function validateAgainstSetEffect(
 }
 
 export const list = query({
-  args: { setId: v.string() },
+  args: { setId: v.id("flashcardSets") },
   handler: (ctx, args) => toDomainResultAsync(
     Effect.gen(function* () {
-      const setId = yield* normalizeIdEffect<"flashcardSets">(
-        ctx,
-        "flashcardSets",
-        args.setId,
-        "Set not found",
-      );
-      yield* requireSetContentAccessEffect(ctx, setId);
+      yield* requireSetContentAccessEffect(ctx, args.setId);
       return yield* Effect.promise(() =>
         ctx.db
           .query("flashcards")
-          .withIndex("by_setId", (q) => q.eq("setId", setId))
+          .withIndex("by_setId", (q) => q.eq("setId", args.setId))
           .take(1000),
       );
     }),

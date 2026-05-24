@@ -12,16 +12,15 @@ import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
-import { asId } from "@/lib/convexHelpers";
 import SetAccessError from "@/components/SetAccessError";
 import { cycleFieldAssignment } from "@/lib/fieldToggle";
 import ResumeSessionBanner from "./ResumeSessionBanner";
 import FieldSelectionList from "./FieldSelectionList";
 import CardLimitSelector from "./CardLimitSelector";
-import type { Doc } from "../../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 
 type Props = {
-  setId: string;
+  flashcardSetId: Id<"flashcardSets">;
   initialMode: "study" | "browse";
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   preloadedCards: Preloaded<typeof api.flashcards.list>;
@@ -46,7 +45,7 @@ function updateModeInUrl(
 }
 
 export default function StudyConfigClient({
-  setId,
+  flashcardSetId,
   initialMode,
   preloadedSet,
   preloadedCards,
@@ -54,6 +53,7 @@ export default function StudyConfigClient({
   initialSet,
   userSet,
 }: Props) {
+  const setId = String(flashcardSetId);
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
@@ -61,7 +61,6 @@ export default function StudyConfigClient({
   const startSession = useMutation(api.studySessions.start);
   const convexAuth = useConvexAuth();
   const router = useRouter();
-  const flashcardSetId = asId<"flashcardSets">(setId);
 
   const [shuffle, setShuffle] = useState(true);
   const [cardLimit, setCardLimit] = useState<number | null>(null);

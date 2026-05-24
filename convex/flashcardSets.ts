@@ -25,6 +25,7 @@ import {
   type SetFieldsValidationFailure,
 } from "./domain/fieldDefinitions";
 import type { FieldDefinition, PublicFlashcardSet } from "../src/lib/types";
+import { isPublicFlashcardSet } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
@@ -57,18 +58,16 @@ export const list = query({
 });
 
 export const get = query({
-  args: { id: v.string() },
+  args: { id: v.id("flashcardSets") },
   handler: async (ctx, args): Promise<DomainResult<SetWithViewer, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return fail(unauthenticated());
-    const setId = ctx.db.normalizeId("flashcardSets", args.id);
-    if (!setId) return fail(notFound("Set not found"));
-    const set = await ctx.db.get(setId);
+    const set = await ctx.db.get(args.id);
     if (!set) return fail(notFound("Set not found"));
     const link = await ctx.db
       .query("userSets")
       .withIndex("by_userId_and_setId", (q) =>
-        q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
+        q.eq("userId", identity.tokenIdentifier).eq("setId", args.id)
       )
       .first();
     if (link) {
@@ -213,13 +212,11 @@ export const remove = mutation({
 export type FlashcardSetMutationFailure = CommonFailure | SetFieldsValidationFailure;
 
 export const getForkSyncStatus = query({
-  args: { setId: v.string() },
+  args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const setId = ctx.db.normalizeId("flashcardSets", args.setId);
-    if (!setId) return null;
-    const set = await ctx.db.get(setId);
+    const set = await ctx.db.get(args.setId);
     const origin = set?.origin;
     if (!set || origin?.kind !== "forked") return null;
     const { sourceSetId, forkedAt } = origin;
@@ -247,7 +244,7 @@ export const listPublic = query({
       )
       .order("desc")
       .paginate(args.paginationOpts);
-    return { ...result, page: result.page as PublicFlashcardSet[] };
+    return { ...result, page: result.page.filter(isPublicFlashcardSet) };
   },
 });
 
@@ -260,12 +257,13 @@ export const searchPublic = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [] as PublicFlashcardSet[];
     const limit = Math.min(Math.max(args.limit ?? 20, 1), 50);
-    return await ctx.db
+    const results = await ctx.db
       .query("flashcardSets")
       .withSearchIndex("search_name", (q) =>
         q.search("name", args.searchTerm).eq("visibility", "public")
       )
-      .take(limit) as PublicFlashcardSet[];
+      .take(limit);
+    return results.filter(isPublicFlashcardSet);
   },
 });
 
@@ -298,7 +296,7 @@ export const searchPublicCombined = query({
       const id = set._id as string;
       if (!seen.has(id)) {
         seen.add(id);
-        merged.push(set as PublicFlashcardSet);
+        if (isPublicFlashcardSet(set)) merged.push(set);
       }
     }
     return merged.slice(0, limit);

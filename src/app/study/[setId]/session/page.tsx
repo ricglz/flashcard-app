@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import {
+  fetchRouteQuery,
+  preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
-  requirePreloadedValue,
   requireRouteId,
 } from "@/lib/routePreload";
+import { isActiveStudySession } from "@/lib/types";
 import StudySessionClient from "./StudySessionClient";
 
 export default async function StudySessionPage({
@@ -27,36 +29,46 @@ export default async function StudySessionPage({
   const typedSessionId = requireRouteId<"studySessions">(sessionId);
   const token = await requireAuthToken();
 
-  const [preloadedSession, preloadedSet, preloadedCards, preloadedTtsConfig, preloadedAnnotations] = await Promise.all([
-    preloadQuery(api.studySessions.get, { id: typedSessionId }, { token }),
-    preloadQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
-    preloadQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
-    preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
-    preloadQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
-  ]);
-
-  const session = requirePreloadedValue(preloadedSession, `/study/${setId}`);
-
-  if (session.setId !== flashcardSetId) {
-    redirect(`/study/${session.setId}/session?sessionId=${sessionId}`);
+  const sessionForRouting = await fetchRouteQuery(
+    api.studySessions.get,
+    { id: typedSessionId },
+    { token },
+    `/study/${setId}`,
+  );
+  if (!sessionForRouting) {
+    redirect(`/study/${setId}`);
   }
 
-  if (session.status === "completed") {
+  if (sessionForRouting.setId !== flashcardSetId) {
+    redirect(`/study/${sessionForRouting.setId}/session?sessionId=${sessionId}`);
+  }
+
+  if (sessionForRouting.status === "completed") {
     redirect(`/study/${setId}/results?sessionId=${sessionId}`);
   }
 
-  if (session.status === "abandoned") {
+  if (sessionForRouting.status === "abandoned") {
     redirect(`/study/${setId}`);
   }
+  if (!isActiveStudySession(sessionForRouting)) {
+    redirect(`/study/${setId}`);
+  }
+
+  const [preloadedSet, preloadedCards, preloadedTtsConfig, preloadedAnnotations] = await Promise.all([
+    preloadRouteQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
+    preloadRouteQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
+    preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
+    preloadRouteQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
+  ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
   requirePreloadedDomainResult(preloadedCards);
 
   return (
     <StudySessionClient
-      setId={setId}
+      flashcardSetId={flashcardSetId}
       sessionId={typedSessionId}
-      preloadedSession={preloadedSession}
+      initialSession={sessionForRouting}
       preloadedSet={preloadedSet}
       initialSet={setData}
       preloadedCards={preloadedCards}

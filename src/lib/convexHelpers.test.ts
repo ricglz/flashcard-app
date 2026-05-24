@@ -10,5 +10,6 @@ describe("parseId", () => {
     expect(parseId<"flashcardSets">("not a convex id")).toBeNull();
     expect(parseId<"flashcardSets">("../sets")).toBeNull();
     expect(parseId<"flashcardSets">("short")).toBeNull();
+    expect(parseId<"flashcardSets">("ABC123DEF456GHI7")).toBeNull();
   });
 });

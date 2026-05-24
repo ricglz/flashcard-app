@@ -8,10 +8,10 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { asId } from "@/lib/convexHelpers";
 import { METHODOLOGIES, METHODOLOGY_LABELS, type Methodology } from "@/lib/types";
 import type { WeakReason } from "@/lib/aiToolingSchemas";
 import TypedSelect from "@/components/TypedSelect";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 const REASON_LABELS: Record<WeakReason, string> = {
   recent_wrong_rating: "Wrong",
@@ -30,7 +30,7 @@ export default function WeakSpotsClient({
   preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
 }) {
   const [methodology, setMethodology] = useState<Methodology>("balanced");
-  const [selectedSetId, setSelectedSetId] = useState<string | undefined>();
+  const [selectedSetId, setSelectedSetId] = useState<Id<"flashcardSets"> | undefined>();
   const router = useRouter();
 
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
@@ -42,7 +42,7 @@ export default function WeakSpotsClient({
 
   const weakCards = useQuery(
     api.weakAnalysis.getMyWeakCards,
-    { methodology, ...(selectedSetId ? { setId: asId<"flashcardSets">(selectedSetId) } : {}) }
+    { methodology, ...(selectedSetId ? { setId: selectedSetId } : {}) }
   );
 
   const totalWeakCards = useMemo(
@@ -89,7 +89,12 @@ export default function WeakSpotsClient({
           />
           <select
             value={selectedSetId ?? ""}
-            onChange={(e) => setSelectedSetId(e.target.value || undefined)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedSetId(
+                srsEnabledSets.find((set) => set._id === value)?._id,
+              );
+            }}
             className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           >
             <option value="">All SRS-enabled sets</option>

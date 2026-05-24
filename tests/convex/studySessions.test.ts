@@ -13,24 +13,6 @@ import {
 import type { Id } from "../../convex/_generated/dataModel";
 import type { TestDb, TestIdentity } from "./testTypes";
 
-describe("studySessions route-facing queries", () => {
-  it("return null for ID-shaped values that are not valid Convex IDs", async () => {
-    const t = createTestDb();
-    const as = t.withIdentity(TEST_USER);
-    const invalidId = "j0000000000000000000000000000000";
-
-    await expect(
-      as.query(api.studySessions.getActiveSession, { setId: invalidId }),
-    ).resolves.toBeNull();
-    await expect(
-      as.query(api.studySessions.get, { id: invalidId }),
-    ).resolves.toBeNull();
-    await expect(
-      as.query(api.studySessions.getResults, { sessionId: invalidId }),
-    ).resolves.toBeNull();
-  });
-});
-
 async function createSetWithCards(
   as: TestIdentity,
   cardCount: number,
@@ -529,6 +511,30 @@ describe("studySessions.getActiveSession", () => {
     expect(active).not.toBeNull();
     expect(active!._id).toBe(activeId);
     expect(active!.status).toBe("in_progress");
+  });
+});
+
+describe("studySessions.getActiveById", () => {
+  it("returns only an in-progress session by ID", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const active = await as.query(api.studySessions.getActiveById, { id: sessionId });
+    expect(active).not.toBeNull();
+    expect(active!.status).toBe("in_progress");
+
+    await as.mutation(api.studySessions.abandon, { sessionId });
+
+    const abandoned = await as.query(api.studySessions.getActiveById, { id: sessionId });
+    expect(abandoned).toBeNull();
   });
 });
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import {
+  preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
   requirePreloadedValue,
@@ -28,12 +28,13 @@ export default async function ResultsPage({
   const typedSessionId = requireRouteId<"studySessions">(sessionId);
 
   const [preloadedResults, preloadedSet] = await Promise.all([
-    preloadQuery(
+    preloadRouteQuery(
       api.studySessions.getResults,
       { sessionId: typedSessionId },
-      { token }
+      { token },
+      `/study/${setId}`,
     ),
-    preloadQuery(
+    preloadRouteQuery(
       api.flashcardSets.get,
       { id: flashcardSetId },
       { token }
@@ -47,7 +48,7 @@ export default async function ResultsPage({
     redirect(`/study/${results.session.setId}/results?sessionId=${sessionId}`);
   }
 
-  const preloadedCards = await preloadQuery(
+  const preloadedCards = await preloadRouteQuery(
     api.flashcards.list,
     { setId: flashcardSetId },
     { token }

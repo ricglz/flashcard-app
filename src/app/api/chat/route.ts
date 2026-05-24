@@ -1,4 +1,5 @@
 import { fetchQuery } from "convex/nextjs";
+import type { FunctionReturnType } from "convex/server";
 import * as Sentry from "@sentry/nextjs";
 import { igniteModel, Message } from "multi-llm-ts";
 import { api } from "../../../../convex/_generated/api";
@@ -7,6 +8,7 @@ import { ServerStudyAssistantPlugin } from "@/lib/serverStudyAssistantPlugin";
 import { DEFAULT_MODELS } from "@/lib/aiDefaults";
 import { stripHallucinatedFnCalls } from "@/lib/stripHallucinatedFnCalls";
 import { parseId } from "@/lib/convexHelpers";
+import { isConvexArgumentValidationError } from "@/lib/convexErrors";
 import * as Schema from "effect/Schema";
 import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
@@ -147,11 +149,17 @@ export async function POST(request: Request) {
     if (!setId) {
       return Response.json({ error: "Invalid set context." }, { status: 400 });
     }
-    const set = await fetchQuery(
-      api.flashcardSets.get,
-      { id: setId },
-      { token },
-    );
+    let set: FunctionReturnType<typeof api.flashcardSets.get>;
+    try {
+      set = await fetchQuery(
+        api.flashcardSets.get,
+        { id: setId },
+        { token },
+      );
+    } catch (error) {
+      if (!isConvexArgumentValidationError(error)) throw error;
+      return Response.json({ error: "Invalid set context." }, { status: 400 });
+    }
     if (set.ok) {
       const fieldNames = set.value.fieldDefinitions
         .map((f: { name: string }) => f.name)

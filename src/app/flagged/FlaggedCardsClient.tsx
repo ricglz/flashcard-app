@@ -4,7 +4,6 @@ import { useState } from "react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { asId } from "@/lib/convexHelpers";
 import StudyLayout from "@/components/StudyLayout";
 import StudyCard from "@/components/StudyCard";
 import AssistantPanel from "@/components/AssistantPanel";
@@ -126,8 +125,8 @@ export default function FlaggedCardsClient({
   const handleToggleFlag = () => {
     const cardId = currentCard.cardId;
     void toggleFlag({
-      cardId: asId<"flashcards">(cardId),
-      setId: asId<"flashcardSets">(currentCard.setId),
+      cardId,
+      setId: currentCard.setId,
     });
     if (!unflaggedIds.has(cardId)) {
       const newUnflagged = new Set(unflaggedIds);
@@ -147,8 +146,8 @@ export default function FlaggedCardsClient({
 
   const handleSetNote = (note: string) => {
     void setNoteMutation({
-      cardId: asId<"flashcards">(currentCard.cardId),
-      setId: asId<"flashcardSets">(currentCard.setId),
+      cardId: currentCard.cardId,
+      setId: currentCard.setId,
       note,
     });
   };
@@ -160,7 +159,7 @@ export default function FlaggedCardsClient({
       assistant={
         <AssistantPanel
           context={{
-            setId: asId<"flashcardSets">(currentCard.setId),
+            setId: currentCard.setId,
             setName: currentCard.setName,
             cardFields: currentCard.fields,
           }}

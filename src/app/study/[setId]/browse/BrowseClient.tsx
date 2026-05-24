@@ -6,7 +6,6 @@ import { usePreloadedQuery } from "convex/react";
 import type { api } from "../../../../../convex/_generated/api";
 import Link from "next/link";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { asId } from "@/lib/convexHelpers";
 import StudyCard from "@/components/StudyCard";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
@@ -21,7 +20,7 @@ import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { shuffleArray } from "@/lib/shuffle";
 
 type Props = {
-  setId: string;
+  flashcardSetId: Id<"flashcardSets">;
   frontFields: string[];
   backFields: string[];
   ttsOnlyFields: string[];
@@ -35,7 +34,7 @@ type Props = {
 };
 
 export default function BrowseClient({
-  setId,
+  flashcardSetId,
   frontFields,
   backFields,
   ttsOnlyFields,
@@ -47,6 +46,7 @@ export default function BrowseClient({
   preloadedTtsConfig,
   preloadedAnnotations,
 }: Props) {
+  const setId = String(flashcardSetId);
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
@@ -155,7 +155,7 @@ export default function BrowseClient({
       assistant={
         <AssistantPanel
           context={{
-            setId: asId<"flashcardSets">(setId),
+            setId: flashcardSetId,
             setName: set.name,
             cardFields: currentCard.fields,
           }}
@@ -174,10 +174,10 @@ export default function BrowseClient({
         ttsRate={tts.speed}
         annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
         onToggleFlag={() => {
-          if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: asId<"flashcardSets">(setId) });
+          if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: flashcardSetId });
         }}
         onSetNote={(note: string) => {
-          if (currentCardId) void setNote({ cardId: currentCardId, setId: asId<"flashcardSets">(setId), note });
+          if (currentCardId) void setNote({ cardId: currentCardId, setId: flashcardSetId, note });
         }}
       />
 

@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { validateSetFields } from "../../convex/domain/fieldDefinitions";
-import { asId } from "../../src/lib/convexHelpers";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 import type { TestDb } from "./testTypes";
 
@@ -134,17 +133,6 @@ describe("flashcardSets.get visibility gating", () => {
 
     const result = await t.query(api.flashcardSets.get, { id });
     expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
-  });
-
-  it("returns NotFound for an ID-shaped value that is not a valid Convex ID", async () => {
-    const t = convexTest(schema, modules);
-    const as = t.withIdentity(TEST_USER);
-
-    const result = await as.query(api.flashcardSets.get, {
-      id: "j0000000000000000000000000000000",
-    });
-
-    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
   });
 
   it("returns NotFound for a missing set", async () => {
@@ -298,9 +286,9 @@ describe("flashcardSets.fork", () => {
 
     const result = await other.mutation(api.flashcardSets.fork, { sourceSetId });
     expect(result).toMatchObject({ ok: true });
-    const newSetId = (result as { ok: true; value: string }).value;
+    const newSetId = await unwrap(result);
 
-    const forkedSet = await other.query(api.flashcardSets.get, { id: asId<"flashcardSets">(newSetId) });
+    const forkedSet = await other.query(api.flashcardSets.get, { id: newSetId });
     expect(forkedSet.ok).toBe(true);
     const set = await unwrap(forkedSet);
     expect(set.name).toBe("Copy of Original Set");
@@ -308,7 +296,7 @@ describe("flashcardSets.fork", () => {
     expect(set.cardCount).toBe(2);
     expect(set.origin).toMatchObject({ kind: "forked", sourceSetId });
 
-    const cards = await unwrap(await other.query(api.flashcards.list, { setId: asId<"flashcardSets">(newSetId) }));
+    const cards = await unwrap(await other.query(api.flashcards.list, { setId: newSetId }));
     expect(cards).toHaveLength(2);
   });
 
@@ -381,9 +369,9 @@ describe("flashcardSets.fork", () => {
     const other = t.withIdentity(OTHER_USER);
 
     const result = await other.mutation(api.flashcardSets.fork, { sourceSetId });
-    const newSetId = (result as { ok: true; value: string }).value;
+    const newSetId = await unwrap(result);
 
-    const userSet = await other.query(api.userSets.get, { setId: asId<"flashcardSets">(newSetId) });
+    const userSet = await other.query(api.userSets.get, { setId: newSetId });
     expect(userSet).not.toBeNull();
     expect(userSet!.role).toBe("owner");
 
@@ -391,7 +379,7 @@ describe("flashcardSets.fork", () => {
       return await ctx.db
         .query("srsCards")
         .withIndex("by_userId_and_setId", (q) =>
-          q.eq("userId", OTHER_USER.tokenIdentifier).eq("setId", asId<"flashcardSets">(newSetId))
+          q.eq("userId", OTHER_USER.tokenIdentifier).eq("setId", newSetId)
         )
         .take(100);
     });
