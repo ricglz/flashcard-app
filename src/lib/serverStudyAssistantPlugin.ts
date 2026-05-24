@@ -49,6 +49,12 @@ const GetWeakCardsParamsSchema = Schema.Struct({
   ),
 });
 
+function unwrapToolResult<T>(
+  result: { ok: true; value: T } | { ok: false; error: { message: string } }
+): T | { error: string } {
+  return result.ok ? result.value : { error: result.error.message };
+}
+
 export class ServerStudyAssistantPlugin extends MultiToolPlugin {
   private token: string;
   private roundCount = 0;
@@ -92,10 +98,12 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
     try {
       switch (params.tool) {
         case "list_sets":
-          return await fetchQuery(
-            api.tooling.listSetsPublic,
-            { include: { srsSummary: true, fieldDefinitions: true } },
-            { token: this.token },
+          return unwrapToolResult(
+            await fetchQuery(
+              api.tooling.listSetsPublic,
+              { include: { srsSummary: true, fieldDefinitions: true } },
+              { token: this.token },
+            )
           );
 
         case "get_weak_cards": {
@@ -112,14 +120,16 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
             ? paramsResult.right.methodology
             : undefined) ?? "balanced";
           
-          return await fetchQuery(
-            api.tooling.getWeakCardsPublic,
-            {
-              scope: { kind: "srs_enabled_sets" },
-              methodology,
-              include: { recentRatings: true },
-            },
-            { token: this.token },
+          return unwrapToolResult(
+            await fetchQuery(
+              api.tooling.getWeakCardsPublic,
+              {
+                scope: { kind: "srs_enabled_sets" },
+                methodology,
+                include: { recentRatings: true },
+              },
+              { token: this.token },
+            )
           );
         }
 

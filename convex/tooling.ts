@@ -10,7 +10,15 @@ import {
   weakContextMethodologyValidator,
 } from "./schema";
 import { validateCardFields } from "./domain/cardFields";
-import { invalidInput, fail, notFound, ok } from "./domain/result";
+import {
+  invalidInput,
+  fail,
+  notFound,
+  ok,
+  unauthenticated,
+  type CommonFailure,
+  type DomainResult,
+} from "./domain/result";
 import { getFieldDefinitions } from "./lib/typed";
 import { enrollCardsForSetHelper } from "./userSets";
 import { getDefaultFieldLayout } from "../src/lib/types";
@@ -594,9 +602,12 @@ export const listSetsPublic = query({
   args: {
     include: v.optional(setsListIncludeValidator),
   },
-  handler: async (ctx, args): Promise<SetsListResponse> => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<DomainResult<SetsListResponse, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return fail(unauthenticated());
     const userId = identity.tokenIdentifier;
     const links = await getUserSetLinks(ctx, userId);
     const sets = await Promise.all(
@@ -617,7 +628,7 @@ export const listSetsPublic = query({
         };
       }),
     );
-    return { sets: sets.filter((s) => s !== null) };
+    return ok({ sets: sets.filter((s) => s !== null) });
   },
 });
 
@@ -629,14 +640,17 @@ export const getWeakCardsPublic = query({
       recentRatings: v.optional(v.boolean()),
     })),
   },
-  handler: async (ctx, args): Promise<WeakCardsResponse> => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<DomainResult<WeakCardsResponse, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    return getWeakCardsHelper(ctx, {
+    if (!identity) return fail(unauthenticated());
+    return ok(await getWeakCardsHelper(ctx, {
       userId: identity.tokenIdentifier,
       scope: args.scope,
       methodology: args.methodology,
       include: args.include,
-    });
+    }));
   },
 });
