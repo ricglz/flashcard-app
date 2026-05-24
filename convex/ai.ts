@@ -3,7 +3,7 @@
 import { v } from "convex/values";
 import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { weakContextMethodologyValidator } from "./schema";
+import { fieldDefinitionValidator, sourceScopeValidator, weakContextMethodologyValidator } from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message } from "multi-llm-ts";
@@ -173,12 +173,7 @@ export const generateRemedialCards = action({
 export const generateFromPrompt = action({
   args: {
     prompt: v.string(),
-    fieldDefinitions: v.array(v.object({
-      name: v.string(),
-      role: v.union(v.literal("primary"), v.literal("pronunciation"), v.literal("definition"), v.literal("note")),
-      metadata: v.record(v.string(), v.any()),
-      order: v.number(),
-    })),
+    fieldDefinitions: v.array(fieldDefinitionValidator),
     targetCardCount: v.number(),
     name: v.string(),
     model: v.optional(v.string()),
@@ -191,7 +186,7 @@ export const generateFromPrompt = action({
 
       const prompt = renderFreeformPrompt({
         prompt: args.prompt,
-        fieldDefinitions: args.fieldDefinitions as Parameters<typeof renderFreeformPrompt>[0]["fieldDefinitions"],
+        fieldDefinitions: args.fieldDefinitions,
         targetCardCount: args.targetCardCount,
         name: args.name,
         addToSrs: args.addToSrs,
@@ -208,18 +203,9 @@ export const confirmGeneratedSet = action({
     name: v.string(),
     description: v.optional(v.string()),
     sourceSetIds: v.array(v.id("flashcardSets")),
-    sourceScope: v.union(
-      v.literal("single_set"),
-      v.literal("srs_enabled_sets"),
-      v.literal("custom")
-    ),
+    sourceScope: sourceScopeValidator,
     weakContextMethodology: v.optional(weakContextMethodologyValidator),
-    fieldDefinitions: v.array(v.object({
-      name: v.string(),
-      role: v.union(v.literal("primary"), v.literal("pronunciation"), v.literal("definition"), v.literal("note")),
-      metadata: v.record(v.string(), v.any()),
-      order: v.number(),
-    })),
+    fieldDefinitions: v.array(fieldDefinitionValidator),
     cards: v.array(v.object({
       fields: v.record(v.string(), v.string()),
       sourceCardIds: v.optional(v.array(v.id("flashcards"))),
@@ -256,12 +242,7 @@ export const confirmGeneratedSet = action({
 export const confirmAppendCards = action({
   args: {
     targetSetId: v.id("flashcardSets"),
-    fieldDefinitions: v.array(v.object({
-      name: v.string(),
-      role: v.union(v.literal("primary"), v.literal("pronunciation"), v.literal("definition"), v.literal("note")),
-      metadata: v.record(v.string(), v.any()),
-      order: v.number(),
-    })),
+    fieldDefinitions: v.array(fieldDefinitionValidator),
     cards: v.array(v.object({
       fields: v.record(v.string(), v.string()),
       sourceCardIds: v.optional(v.array(v.id("flashcards"))),

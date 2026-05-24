@@ -75,7 +75,7 @@ async function getUserSetLinks(ctx: QueryCtx, userId: string) {
 async function assertAccessibleSets(
   ctx: QueryCtx | MutationCtx,
   userId: string,
-  sourceSetIds: Id<"flashcardSets">[]
+  sourceSetIds: ReadonlyArray<Id<"flashcardSets">>
 ) {
   const unique = [...new Set(sourceSetIds)];
   if (unique.length === 0) return fail(invalidInput("At least one source set is required.", "sourceSetIds"));
@@ -390,11 +390,11 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   if (normalized.cards.length === 0) issues.push("At least one generated card is required.");
   if (normalized.cards.length > 100) issues.push("Generated sets are limited to 100 cards.");
 
-  const accessible = await assertAccessibleSets(ctx, userId, normalized.sourceSetIds as Id<"flashcardSets">[]);
+  const accessible = await assertAccessibleSets(ctx, userId, normalized.sourceSetIds);
   if (!accessible.ok) issues.push(accessible.error.message);
 
   const expectedFingerprint = schemaFingerprint(normalized.fieldDefinitions);
-  const uniqueSourceSetIds = [...new Set(normalized.sourceSetIds as Id<"flashcardSets">[])];
+  const uniqueSourceSetIds = [...new Set(normalized.sourceSetIds)];
   const sourceSets = await Promise.all(uniqueSourceSetIds.map((id) => ctx.db.get(id)));
   for (const source of sourceSets) {
     if (!source) {
@@ -411,7 +411,7 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   const expectedFieldNames = normalized.fieldDefinitions.map((field) => field.name);
   const allSourceCardIds = normalized.cards
     .flatMap((c) => c.sourceCardIds ?? [])
-    .filter((id, idx, arr) => arr.indexOf(id) === idx) as Id<"flashcards">[];
+    .filter((id, idx, arr) => arr.indexOf(id) === idx);
   const sourceCards = await Promise.all(allSourceCardIds.map((id) => ctx.db.get(id)));
   const existingSourceCards = sourceCards.filter((card): card is Doc<"flashcards"> => card !== null);
   const sourceCardMap = new Map(existingSourceCards.map((card) => [card._id, card]));
@@ -420,7 +420,7 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
     const validation = validateCardFields(expectedFieldNames, card.fields);
     if (!validation.ok) issues.push(`Card ${index + 1}: ${validation.error.message}`);
     if (card.sourceCardIds) {
-      for (const cardId of card.sourceCardIds as Id<"flashcards">[]) {
+      for (const cardId of card.sourceCardIds) {
         if (!sourceCardMap.has(cardId)) issues.push(`Card ${index + 1}: source card not found.`);
       }
     }
@@ -442,7 +442,7 @@ export const validateGeneratedSetForTool = internalQuery({
     addToSrs: v.boolean(),
   },
   handler: async (ctx, args) => {
-    return await validateGeneratedPayload(ctx, args.userId, args as GeneratedSetPayload);
+    return await validateGeneratedPayload(ctx, args.userId, args);
   },
 });
 
@@ -459,10 +459,10 @@ export const createGeneratedSetForTool = internalMutation({
     addToSrs: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const validation = await validateGeneratedPayload(ctx, args.userId, args as GeneratedSetPayload);
+    const validation = await validateGeneratedPayload(ctx, args.userId, args);
     if (!validation.ok || !validation.normalized) return fail(invalidInput(validation.issues.join(" ") || "Invalid generated set."));
     const normalized = validation.normalized;
-    const sourceSetIds = normalized.sourceSetIds as Id<"flashcardSets">[];
+    const sourceSetIds = [...normalized.sourceSetIds];
     const fieldDefinitions = [...normalized.fieldDefinitions];
     const now = Date.now();
     const setId = await ctx.db.insert("flashcardSets", {

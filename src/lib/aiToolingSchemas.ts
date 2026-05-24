@@ -2,14 +2,21 @@ import * as Schema from "effect/Schema";
 import type { Id, TableNames } from "../../convex/_generated/dataModel";
 import { FIELD_ROLES, CARD_RATINGS } from "./types";
 import { METHODOLOGIES } from "./types";
+import { parseId } from "./convexHelpers";
+
+const CONVEX_ID_PATTERN = /^[a-z0-9]{16,64}$/;
 
 const ConvexId = <T extends TableNames>(_table: T) => {
   const idSchema = Schema.declare(
-    (input: unknown): input is Id<T> => typeof input === "string",
+    (input: unknown): input is Id<T> => typeof input === "string" && parseId<T>(input) !== null,
   );
-  return Schema.transform(Schema.String, idSchema, {
+  return Schema.transform(Schema.String.pipe(Schema.pattern(CONVEX_ID_PATTERN)), idSchema, {
     strict: true,
-    decode: (s) => s as Id<T>,
+    decode: (s) => {
+      const id = parseId<T>(s);
+      if (id === null) throw new Error(`Invalid Convex ${_table} ID.`);
+      return id;
+    },
     encode: (id) => String(id),
   });
 };

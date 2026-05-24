@@ -16,6 +16,10 @@ const TOOL_RUNNING_DESCRIPTIONS: Record<ToolName, string> = {
   get_weak_cards: "Analyzing your weak cards...",
 };
 
+function isToolName(tool: string): tool is ToolName {
+  return TOOL_NAMES.has(tool);
+}
+
 const TOOL_DEFINITIONS: PluginTool[] = [
   {
     name: "list_sets",
@@ -71,8 +75,8 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
   }
 
   getRunningDescription(tool: string): string {
-    if (tool in TOOL_RUNNING_DESCRIPTIONS) {
-      return TOOL_RUNNING_DESCRIPTIONS[tool as ToolName];
+    if (isToolName(tool)) {
+      return TOOL_RUNNING_DESCRIPTIONS[tool];
     }
     return tool;
   }
