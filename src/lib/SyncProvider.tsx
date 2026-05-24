@@ -10,8 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import { useConvex, type ConvexReactClient } from "convex/react";
-import { makeFunctionReference } from "convex/server";
-import type { FunctionReference } from "convex/server";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { toast } from "sonner";
 import {
@@ -23,6 +21,7 @@ import {
   getPendingCount,
   getVisiblePendingCount,
 } from "./offlineOutbox";
+import { runOfflineMutation } from "./offlineMutationRegistry";
 import { shouldDrainOutbox } from "./syncState";
 
 const MAX_ATTEMPTS = 3;
@@ -50,20 +49,10 @@ async function flushEntries(client: ConvexReactClient): Promise<boolean> {
   for (const entry of entries) {
     try {
       await markSyncing(entry.id);
-      const ref = makeFunctionReference<"mutation">(
-        entry.mutationName,
-      ) as FunctionReference<"mutation">;
-      const result = await client.mutation(ref, entry.args as Record<string, unknown>);
-      if (
-        result &&
-        typeof result === "object" &&
-        "ok" in result &&
-        result.ok === false
-      ) {
-        const message = "error" in result && result.error && typeof result.error === "object" && "message" in result.error
-          ? String(result.error.message)
-          : "Offline action failed";
-        await markFailed(entry.id, (entry.retries || 0) + 1, normalizeSyncFailure(new Error(message)));
+      const result = await runOfflineMutation(client, entry);
+      if (!result.ok) {
+        const message = result.error.message;
+        await markFailed(entry.id, entry.retries + 1, normalizeSyncFailure(new Error(message)));
         allSucceeded = false;
         continue;
       }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeSyncFailure } from "./offlineOutbox";
+import { parseId } from "./convexHelpers";
 
 // The outbox uses idb (IndexedDB) which isn't available in edge-runtime.
 // We mock getDb() to return a simple in-memory store.
@@ -13,6 +14,11 @@ type Entry = {
   retries: number;
   queuedWhileOnline?: boolean;
 };
+
+const srsCardId = parseId<"srsCards">("abc123def456ghi7")!;
+const recordReviewArgs = { srsCardId, rating: "good" as const };
+const hardReviewArgs = { srsCardId, rating: "hard" as const };
+const easyReviewArgs = { srsCardId, rating: "easy" as const };
 
 function createMockDb() {
   let autoId = 0;
@@ -85,21 +91,21 @@ describe("normalizeSyncFailure", () => {
 
 describe("outbox drain ordering", () => {
   it("returns entries in FIFO order by auto-increment id", async () => {
-    await outboxModule.addToOutbox("mutation.a", { n: 1 });
-    await outboxModule.addToOutbox("mutation.b", { n: 2 });
-    await outboxModule.addToOutbox("mutation.c", { n: 3 });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", hardReviewArgs);
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", easyReviewArgs);
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(3);
-    expect(entries[0]!.mutationName).toBe("mutation.a");
-    expect(entries[1]!.mutationName).toBe("mutation.b");
-    expect(entries[2]!.mutationName).toBe("mutation.c");
+    expect(entries[0]!.mutationName).toBe("srsReviewQueue:recordReview");
+    expect(entries[1]!.mutationName).toBe("srsReviewQueue:recordReview");
+    expect(entries[2]!.mutationName).toBe("srsReviewQueue:recordReview");
     expect(entries[0]!.id).toBeLessThan(entries[1]!.id);
     expect(entries[1]!.id).toBeLessThan(entries[2]!.id);
   });
 
   it("excludes failed entries with retries >= 3", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
     await outboxModule.markFailed(result.id, 3, "permanentFailure");
 
@@ -108,7 +114,7 @@ describe("outbox drain ordering", () => {
   });
 
   it("includes entries with retries < 3 as pending", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
     await outboxModule.markFailed(result.id, 2, "permanentFailure");
 
@@ -116,12 +122,40 @@ describe("outbox drain ordering", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]!.status).toBe("pending");
   });
+
+  it("excludes and fails unknown persisted mutation names", async () => {
+    mockDb.add("outbox", {
+      mutationName: "unknown:mutation",
+      args: {},
+      createdAt: Date.now(),
+      status: "pending",
+      retries: 0,
+    });
+
+    const entries = await outboxModule.getPendingEntries();
+    expect(entries).toHaveLength(0);
+    expect(await outboxModule.getPendingCount()).toBe(0);
+  });
+
+  it("excludes and fails persisted entries with invalid args", async () => {
+    mockDb.add("outbox", {
+      mutationName: "srsReviewQueue:recordReview",
+      args: { srsCardId: "not an id", rating: "good" },
+      createdAt: Date.now(),
+      status: "pending",
+      retries: 0,
+    });
+
+    const entries = await outboxModule.getPendingEntries();
+    expect(entries).toHaveLength(0);
+    expect(await outboxModule.getPendingCount()).toBe(0);
+  });
 });
 
 describe("duplicate replay", () => {
   it("stores duplicate mutations separately without dedup", async () => {
-    await outboxModule.addToOutbox("srsReviewQueue.recordReview", { srsCardId: "abc", rating: "good" });
-    await outboxModule.addToOutbox("srsReviewQueue.recordReview", { srsCardId: "abc", rating: "good" });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(2);
@@ -129,21 +163,21 @@ describe("duplicate replay", () => {
   });
 
   it("keeps second entry after first is removed", async () => {
-    const first = await outboxModule.addToOutbox("mutation.a", { n: 1 });
-    await outboxModule.addToOutbox("mutation.a", { n: 2 });
+    const first = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", hardReviewArgs);
     if (!first.ok) throw new Error("addToOutbox failed");
 
     await outboxModule.removeEntry(first.id);
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(1);
-    expect((entries[0]!.args as { n: number }).n).toBe(2);
+    expect(entries[0]!.args.rating).toBe("hard");
   });
 });
 
 describe("failure recovery", () => {
   it("keeps entry fetchable when retries < 3", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
 
     await outboxModule.markFailed(result.id, 1, "permanentFailure");
@@ -154,7 +188,7 @@ describe("failure recovery", () => {
   });
 
   it("excludes entry from pending when retries >= 3", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
 
     await outboxModule.markFailed(result.id, 3, "permanentFailure");
@@ -166,7 +200,7 @@ describe("failure recovery", () => {
   });
 
   it("marks auth failures as auth_required", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
 
     await outboxModule.markFailed(result.id, 1, "authRequiredRetry");
@@ -180,7 +214,7 @@ describe("failure recovery", () => {
   });
 
   it("transitions entry through syncing status", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
 
     await outboxModule.markSyncing(result.id);
@@ -192,9 +226,9 @@ describe("failure recovery", () => {
 
 describe("getPendingCount", () => {
   it("counts only pending and syncing entries", async () => {
-    await outboxModule.addToOutbox("mutation.a", {});
-    await outboxModule.addToOutbox("mutation.b", {});
-    const third = await outboxModule.addToOutbox("mutation.c", {});
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", hardReviewArgs);
+    const third = await outboxModule.addToOutbox("srsReviewQueue:recordReview", easyReviewArgs);
     if (!third.ok) throw new Error("addToOutbox failed");
     await outboxModule.markFailed(third.id, 3, "permanentFailure");
 
@@ -205,23 +239,23 @@ describe("getPendingCount", () => {
 
 describe("getVisiblePendingCount", () => {
   it("excludes entries queued while online", async () => {
-    await outboxModule.addToOutbox("mutation.online", {}, { queuedWhileOnline: true });
-    await outboxModule.addToOutbox("mutation.offline", {}, { queuedWhileOnline: false });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs, { queuedWhileOnline: true });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", hardReviewArgs, { queuedWhileOnline: false });
 
     const count = await outboxModule.getVisiblePendingCount();
     expect(count).toBe(1);
   });
 
   it("counts legacy entries with no origin metadata as visible", async () => {
-    await outboxModule.addToOutbox("mutation.legacy", {});
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
 
     const count = await outboxModule.getVisiblePendingCount();
     expect(count).toBe(1);
   });
 
   it("does not count failed or auth-required entries", async () => {
-    const failed = await outboxModule.addToOutbox("mutation.failed", {}, { queuedWhileOnline: false });
-    const authRequired = await outboxModule.addToOutbox("mutation.auth", {}, { queuedWhileOnline: false });
+    const failed = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs, { queuedWhileOnline: false });
+    const authRequired = await outboxModule.addToOutbox("srsReviewQueue:recordReview", hardReviewArgs, { queuedWhileOnline: false });
     if (!failed.ok || !authRequired.ok) throw new Error("addToOutbox failed");
 
     await outboxModule.markFailed(failed.id, 3, "permanentFailure");
@@ -234,40 +268,40 @@ describe("getVisiblePendingCount", () => {
 
 describe("addToOutbox", () => {
   it("returns queued outcome with a positive id", async () => {
-    const result = await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     expect(result).toMatchObject({ ok: true, status: "queued", id: expect.any(Number) });
     expect(result.id).toBeGreaterThan(0);
   });
 
   it("stores queuedWhileOnline metadata", async () => {
-    await outboxModule.addToOutbox("mutation.x", {}, { queuedWhileOnline: true });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs, { queuedWhileOnline: true });
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries[0]!.queuedWhileOnline).toBe(true);
   });
 
   it("dispatches outbox-changed event on success", async () => {
-    await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "outbox-changed" }));
   });
 
   it("returns permanentFailure when IndexedDB write fails", async () => {
     mockDb.add = () => { throw new Error("QuotaExceededError"); };
-    const result = await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     expect(result).toEqual({ ok: false, status: "permanentFailure", id: -1, message: "QuotaExceededError" });
   });
 
   it("does not dispatch event when IndexedDB write fails", async () => {
     mockDb.add = () => { throw new Error("QuotaExceededError"); };
-    await outboxModule.addToOutbox("mutation.x", { key: "val" });
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     expect(dispatchSpy).not.toHaveBeenCalled();
   });
 });
 
 describe("markSyncing", () => {
   it("does not dispatch outbox-changed event", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
     dispatchSpy.mockClear();
 
@@ -282,13 +316,13 @@ describe("markSyncing", () => {
 
 describe("event dispatch", () => {
   it("addToOutbox dispatches outbox-changed", async () => {
-    await outboxModule.addToOutbox("mutation.a", {});
+    await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "outbox-changed" }));
   });
 
   it("markFailed dispatches outbox-changed", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
     dispatchSpy.mockClear();
 
@@ -298,7 +332,7 @@ describe("event dispatch", () => {
   });
 
   it("removeEntry dispatches outbox-changed", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
     dispatchSpy.mockClear();
 
@@ -308,7 +342,7 @@ describe("event dispatch", () => {
   });
 
   it("markSyncing does NOT dispatch outbox-changed", async () => {
-    const result = await outboxModule.addToOutbox("mutation.a", {});
+    const result = await outboxModule.addToOutbox("srsReviewQueue:recordReview", recordReviewArgs);
     if (!result.ok) throw new Error("addToOutbox failed");
     dispatchSpy.mockClear();
 

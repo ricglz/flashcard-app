@@ -1,4 +1,10 @@
 import { getDb, type OutboxEntry, type OutboxStatus } from "./offlineDb";
+import {
+  decodeOutboxEntry,
+  type OfflineMutationName,
+  type OutboxArgs,
+  type RegisteredOutboxEntry,
+} from "./offlineMutationRegistry";
 
 export type OutboxOutcome =
   | { ok: true; status: "queued"; id: number }
@@ -25,9 +31,9 @@ function isUserVisibleEntry(entry: OutboxEntry): boolean {
   return entry.queuedWhileOnline !== true;
 }
 
-export async function addToOutbox(
-  mutationName: string,
-  args: unknown,
+export async function addToOutbox<Name extends OfflineMutationName>(
+  mutationName: Name,
+  args: OutboxArgs<Name>,
   options: AddToOutboxOptions = {},
 ): Promise<OutboxOutcome> {
   try {
@@ -39,19 +45,33 @@ export async function addToOutbox(
       status: "pending",
       retries: 0,
       queuedWhileOnline: options.queuedWhileOnline,
-    } as OutboxEntry);
+    });
     window.dispatchEvent(new Event("outbox-changed"));
-    return { ok: true, status: "queued", id: id as number };
+    return { ok: true, status: "queued", id };
   } catch (err) {
     return { ok: false, status: "permanentFailure", id: -1, message: err instanceof Error ? err.message : "Failed to queue offline action" };
   }
 }
 
-export async function getPendingEntries(): Promise<OutboxEntry[]> {
+export async function getPendingEntries(): Promise<RegisteredOutboxEntry[]> {
   try {
     const db = await getDb();
     const all = await db.getAll("outbox");
-    return all.filter((e) => e.status !== "failed" || e.retries < 3);
+    const entries: RegisteredOutboxEntry[] = [];
+    for (const entry of all.filter((e) => e.status !== "failed" || e.retries < 3)) {
+      if (typeof entry.id !== "number") continue;
+      const decoded = decodeOutboxEntry({ ...entry, id: entry.id });
+      if (decoded) {
+        entries.push(decoded);
+      } else {
+        console.warn("[offline] Dropping invalid outbox entry", {
+          id: entry.id,
+          mutationName: entry.mutationName,
+        });
+        await markFailed(entry.id, 3, "permanentFailure");
+      }
+    }
+    return entries;
   } catch {
     return [];
   }
