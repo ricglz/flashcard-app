@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import * as Effect from "effect/Effect";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
@@ -7,8 +8,12 @@ import {
   GeneratedSetPayloadSchema,
 } from "../src/lib/aiToolingSchemas";
 import {
+  domainResultToHttpEffect,
+  ForbiddenError,
+  handleToolingEffectRequest,
   handleToolingRequest,
   handleToolingRequestNoBody,
+  ParseError,
 } from "./lib/httpEffect";
 
 const http = httpRouter();
@@ -81,27 +86,33 @@ http.route({
   path: "/tooling/v1/generated-sets/validate",
   method: "POST",
   handler: httpAction((ctx, req) =>
-    handleToolingRequest(
+    handleToolingEffectRequest(
       ctx,
       req,
       GeneratedSetPayloadSchema,
       ["ai_sets:create"],
-      async (auth, body) => {
+      (auth, body) => Effect.gen(function* () {
         if (body.addToSrs && !auth.scopes.includes("srs:enroll")) {
-          throw new Error("CLI token is missing required scope: srs:enroll");
+          return yield* Effect.fail(
+            new ForbiddenError("CLI token is missing required scope: srs:enroll")
+          );
         }
         const { sourceSetIds, fieldDefinitions, cards, ...rest } = body;
-        return ctx.runQuery(internal.tooling.validateGeneratedSetForTool, {
-          ...rest,
-          sourceSetIds: [...sourceSetIds],
-          fieldDefinitions: [...fieldDefinitions],
-          cards: cards.map(({ sourceCardIds, ...c }) => ({
-            ...c,
-            sourceCardIds: sourceCardIds && [...sourceCardIds],
-          })),
-          userId: auth.userId,
+        return yield* Effect.tryPromise({
+          try: () => ctx.runQuery(internal.tooling.validateGeneratedSetForTool, {
+            ...rest,
+            sourceSetIds: [...sourceSetIds],
+            fieldDefinitions: [...fieldDefinitions],
+            cards: cards.map(({ sourceCardIds, ...c }) => ({
+              ...c,
+              sourceCardIds: sourceCardIds && [...sourceCardIds],
+            })),
+            userId: auth.userId,
+          }),
+          catch: (error) =>
+            new ParseError(error instanceof Error ? error.message : "Invalid generated set."),
         });
-      }
+      })
     )
   ),
 });
@@ -110,31 +121,34 @@ http.route({
   path: "/tooling/v1/generated-sets/create",
   method: "POST",
   handler: httpAction((ctx, req) =>
-    handleToolingRequest(
+    handleToolingEffectRequest(
       ctx,
       req,
       GeneratedSetPayloadSchema,
       ["ai_sets:create"],
-      async (auth, body) => {
+      (auth, body) => Effect.gen(function* () {
         if (body.addToSrs && !auth.scopes.includes("srs:enroll")) {
-          throw new Error("CLI token is missing required scope: srs:enroll");
+          return yield* Effect.fail(
+            new ForbiddenError("CLI token is missing required scope: srs:enroll")
+          );
         }
         const { sourceSetIds, fieldDefinitions, cards, ...rest } = body;
-        const result = await ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
-          ...rest,
-          sourceSetIds: [...sourceSetIds],
-          fieldDefinitions: [...fieldDefinitions],
-          cards: cards.map(({ sourceCardIds, ...c }) => ({
-            ...c,
-            sourceCardIds: sourceCardIds && [...sourceCardIds],
-          })),
-          userId: auth.userId,
+        const result = yield* Effect.tryPromise({
+          try: () => ctx.runMutation(internal.tooling.createGeneratedSetForTool, {
+            ...rest,
+            sourceSetIds: [...sourceSetIds],
+            fieldDefinitions: [...fieldDefinitions],
+            cards: cards.map(({ sourceCardIds, ...c }) => ({
+              ...c,
+              sourceCardIds: sourceCardIds && [...sourceCardIds],
+            })),
+            userId: auth.userId,
+          }),
+          catch: (error) =>
+            new ParseError(error instanceof Error ? error.message : "Invalid generated set."),
         });
-        if (!result.ok) {
-          throw new Error(`${result.error._tag}: ${result.error.message}`);
-        }
-        return result.value;
-      }
+        return yield* domainResultToHttpEffect(result);
+      })
     )
   ),
 });

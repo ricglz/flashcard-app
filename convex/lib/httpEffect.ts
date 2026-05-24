@@ -4,6 +4,7 @@ import * as ParseResult from "effect/ParseResult";
 import { internal } from "../_generated/api";
 import type { ActionCtx } from "../_generated/server";
 import type { ApiErrorResponse } from "../../src/lib/aiToolingSchemas";
+import type { AnyDomainFailure, DomainResult } from "../domain/result";
 
 export type Scope = "sets:read" | "weak_context:read" | "ai_sets:create" | "srs:enroll";
 
@@ -42,7 +43,17 @@ export class NotFoundError {
   constructor(readonly message: string) {}
 }
 
-export type HttpError = UnauthenticatedError | ForbiddenError | ParseError | NotFoundError;
+export class ConflictError {
+  readonly _tag = "Conflict";
+  constructor(readonly message: string) {}
+}
+
+export type HttpError =
+  | UnauthenticatedError
+  | ForbiddenError
+  | ParseError
+  | NotFoundError
+  | ConflictError;
 
 function bearerToken(req: Request): string | null {
   const header = req.headers.get("authorization") ?? "";
@@ -128,6 +139,8 @@ export function httpErrorToResponse(error: HttpError): Response {
       return errorResponse("bad_request", error.message, 400);
     case "NotFound":
       return errorResponse("not_found", error.message, 404);
+    case "Conflict":
+      return errorResponse("conflict", error.message, 409);
   }
 }
 
@@ -135,7 +148,33 @@ function isHttpError(error: unknown): error is HttpError {
   return error instanceof UnauthenticatedError ||
     error instanceof ForbiddenError ||
     error instanceof ParseError ||
-    error instanceof NotFoundError;
+    error instanceof NotFoundError ||
+    error instanceof ConflictError;
+}
+
+function domainFailureToHttpError(error: AnyDomainFailure): HttpError {
+  switch (error._tag) {
+    case "Unauthenticated":
+      return new UnauthenticatedError(error.message);
+    case "Forbidden":
+      return new ForbiddenError(error.message);
+    case "NotFound":
+      return new NotFoundError(error.message);
+    case "Conflict":
+      return new ConflictError(error.message);
+    case "InvalidInput":
+      return new ParseError(error.message);
+    default:
+      return new ParseError(error.message);
+  }
+}
+
+export function domainResultToHttpEffect<T, E extends AnyDomainFailure>(
+  result: DomainResult<T, E>
+): Effect.Effect<T, HttpError> {
+  return result.ok
+    ? Effect.succeed(result.value)
+    : Effect.fail(domainFailureToHttpError(result.error));
 }
 
 export function handleToolingRequest<A, I, R>(
@@ -151,9 +190,35 @@ export function handleToolingRequest<A, I, R>(
     const result = yield* Effect.tryPromise({
       try: () => handler(auth, body),
       catch: (err) => {
+        if (isHttpError(err)) return err;
         return new ParseError(err instanceof Error ? err.message : "Invalid request.");
       },
     });
+    return jsonResponse(result);
+  });
+
+  return program.pipe(
+    Effect.catchAll((error: unknown) => {
+      if (isHttpError(error)) {
+        return Effect.succeed(httpErrorToResponse(error));
+      }
+      return Effect.succeed(errorResponse("internal_error", "Unexpected error", 500));
+    }),
+    Effect.runPromise
+  );
+}
+
+export function handleToolingEffectRequest<A, I, R>(
+  ctx: Pick<ActionCtx, "runMutation" | "runQuery">,
+  req: Request,
+  schema: Schema.Schema<A, I, never>,
+  scopes: Scope[],
+  handler: (auth: Auth, body: A) => Effect.Effect<R, HttpError>
+): Promise<Response> {
+  const program = Effect.gen(function* () {
+    const auth = yield* authenticateEffect(ctx, req, scopes);
+    const body = yield* parseBodyEffect(req, schema);
+    const result = yield* handler(auth, body);
     return jsonResponse(result);
   });
 
@@ -179,6 +244,7 @@ export function handleToolingRequestNoBody<R>(
     const result = yield* Effect.tryPromise({
       try: () => handler(auth),
       catch: (err) => {
+        if (isHttpError(err)) return err;
         return new ParseError(err instanceof Error ? err.message : "Invalid request.");
       },
     });
