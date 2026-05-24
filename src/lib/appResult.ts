@@ -53,11 +53,3 @@ export const invalidInput = (message: string, field?: string): CommonFailure => 
 export function getFailureMessage(error: { message: string }): string {
   return error.message;
 }
-
-export async function unwrapAppResult<T>(
-  resultPromise: Promise<AppResult<T, AppFailure<string, object>>>
-): Promise<T> {
-  const result = await resultPromise;
-  if (!result.ok) throw new Error(result.error.message);
-  return result.value;
-}

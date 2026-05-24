@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { validateCardFields } from "../../convex/domain/cardFields";
-import { assertDomainResult } from "../../convex/domain/result";
 
 const validFieldNames = ["Front", "Back"] as const;
 
@@ -58,13 +57,5 @@ describe("validateCardFields", () => {
         message: "At least one field value is required",
       },
     });
-  });
-});
-
-describe("assertDomainResult", () => {
-  it("throws the user-safe domain failure message", () => {
-    expect(() =>
-      assertDomainResult(validateCardFields(validFieldNames, { Extra: "Nope" }))
-    ).toThrow("Unknown field: Extra");
   });
 });

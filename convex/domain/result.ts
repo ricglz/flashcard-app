@@ -58,11 +58,3 @@ export const invalidInput = (message: string, field?: string): CommonFailure => 
   message,
   ...(field !== undefined ? { field } : {}),
 });
-
-export function assertDomainResult<T, Failure extends AnyDomainFailure>(
-  result: DomainResult<T, Failure>
-): asserts result is { readonly ok: true; readonly value: T } {
-  if (!result.ok) {
-    throw new Error(result.error.message);
-  }
-}
