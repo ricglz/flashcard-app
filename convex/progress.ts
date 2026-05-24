@@ -3,6 +3,13 @@ import { query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { computeDayStartMs, computeDayKey, SRS_DEFAULTS } from "./srs";
+import {
+  fail,
+  invalidInput,
+  ok,
+  type CommonFailure,
+  type DomainResult,
+} from "./domain/result";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -20,6 +27,14 @@ type SetMastery = {
   learning: number;
   review: number;
   avgEase: number;
+};
+
+export type DailyHistoryEntry = {
+  dayKey: string;
+  dayStartMs: number;
+  totalCards: number;
+  correctCount: number;
+  accuracy: number;
 };
 
 export async function incrementDailyStats(
@@ -191,11 +206,16 @@ export const getDailyGoalProgress = query({
 
 export const getDailyHistory = query({
   args: { days: v.number() },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<DomainResult<DailyHistoryEntry[], CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return ok([]);
     if (!Number.isInteger(args.days) || args.days < 1 || args.days > 365) {
-      throw new Error("days must be an integer between 1 and 365");
+      return fail(
+        invalidInput("days must be an integer between 1 and 365", "days")
+      );
     }
 
     const settings = await ctx.db
@@ -218,7 +238,7 @@ export const getDailyHistory = query({
       )
       .take(args.days + 1);
 
-    return rows.map((row) => {
+    return ok(rows.map((row) => {
       const totalCards = row.srsReviewCount + row.sessionCardCount;
       return {
         dayKey: row.dayKey,
@@ -227,7 +247,7 @@ export const getDailyHistory = query({
         correctCount: row.correctCount,
         accuracy: totalCards > 0 ? row.correctCount / totalCards : 0,
       };
-    });
+    }));
   },
 });
 

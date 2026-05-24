@@ -24,7 +24,10 @@ export default function ProgressClient({
   preloadedGoal,
 }: Props) {
   const [days, setDays] = useState<7 | 30>(7);
-  const history = useOfflineQuery(api.progress.getDailyHistory, { days });
+  const historyResult = useOfflineQuery(api.progress.getDailyHistory, { days });
+  const history = historyResult?.ok ? historyResult.value : undefined;
+  const historyError =
+    historyResult && !historyResult.ok ? historyResult.error.message : null;
   const srsSummary = useOfflinePreloadedQuery(preloadedSrsSummary);
   const breakdown = srsSummary.breakdown;
   const mastery = srsSummary.mastery;
@@ -43,13 +46,17 @@ export default function ProgressClient({
         <DailyGoalRing preloaded={preloadedGoal} />
       </div>
 
-      {history === undefined ? (
+      {historyResult === undefined ? (
         <div className="h-40 flex items-center justify-center">
           <div className="animate-spin h-6 w-6 border-2 border-accent border-t-transparent rounded-full" />
         </div>
+      ) : historyError ? (
+        <div className="h-40 flex items-center justify-center text-sm text-muted">
+          {historyError}
+        </div>
       ) : (
         <DailyActivityChart
-          history={history}
+          history={history ?? []}
           maxCards={maxCards}
           days={days}
           onDaysChange={setDays}
