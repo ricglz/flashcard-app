@@ -24,17 +24,23 @@
 
 ### Form / Draft State Helpers
 - [ ] Extract reusable local draft helpers for editable settings forms if more settings sections need nullable draft-over-server-state behavior.
-- [ ] Consolidate field definition add/remove/update helpers across manual set creation and field definition editing.
 
 ### Async Action State
 - [ ] Evaluate `@convex-dev/react-query` / TanStack Query for components that still hand-roll `isSaving`/`error`/success state around Convex mutations.
   - Compare against a small local async-action hook before adopting another provider and dependency.
   - Keep standard Convex React hooks where offline/preloaded-query behavior or adapter beta gaps matter.
+- [ ] Stabilize local async-action helpers if `useSaveHandler` keeps spreading.
+  - Keep the local helper for one-shot Convex mutations that only need button loading, inline errors, and success callbacks.
+  - Revisit TanStack Query instead of adding more local abstraction when multiple features need shared mutation/query state, retry/backoff policy, cancellation/deduping, cache invalidation/refetch orchestration, or optimistic updates beyond the offline outbox.
+  - Do not adopt `@convex-dev/react-query` until offline/preloaded-query behavior and adapter maturity are compatible with this app's core study flows.
 
 ## Code Quality — Convex Performance
 
 ### SRS Queue Population
-- [ ] Move toward incremental SRS enrollment so queue population does not need to repeatedly scan full flashcard sets and existing SRS cards.
+- [ ] Centralize Convex card creation paths so manual, AI/tooling, fork, and append flows share one backend helper for flashcard inserts, card counts, origin metadata, and SRS enrollment hooks.
+- [ ] Batch SRS enrollment for large shared sets if public/marketplace sets start accumulating many users.
+  - Current bounded per-card enrollment is acceptable for side-project scale.
+  - Move to scheduled batches if a single card creation needs to enroll more users than fits comfortably in one Convex mutation.
 - [ ] Revisit queue selection indexes if production signals show due/new card selection becoming hot.
 
 ### Large Set Study Paths
@@ -63,8 +69,10 @@
 
 ### Query Result Contracts
 - [ ] Continue replacing ambiguous access-control `null` query returns with domain results where clients need to distinguish unauthenticated, forbidden, not found, and invalid input states.
+- [ ] Create a nullable query contract decision map before the broader migration:
+  - classify each `null` return as valid optional domain state, access-control failure, missing entity, or intentionally hidden signed-out state,
+  - migrate only route/client contracts that are ready to change together.
   - Include a broad Convex nullable-to-domain-result migration once the route/client contracts are ready to change together.
-  - `studySessions.get` and `studySessions.getResults`: split unauthenticated, invalid/missing session, and wrong-user access while preserving current redirects at route boundaries.
   - `userSets.get`: return a typed failure for unauthenticated/missing membership if callers need to show access or library state explicitly.
   - Auth-gated dashboard/query surfaces such as `srsReviewQueue.getQueueStats`, `weakAnalysis.getMyWeakCards`, and progress queries should either return a domain result or be documented as intentionally empty/hidden when signed out.
   - Keep valid optional-state queries nullable where `null` is the useful domain value, such as “no active study session” or “no fork sync status”.
@@ -77,18 +85,14 @@
 ## Code Quality — Card Navigation
 
 ### Shared `useCardNavigation` hook
-- [ ] Unify card position tracking across study session, browse, and SRS review into a shared hook
-  - Study session: `session.currentIndex` + `localIndexOffset` (optimistic) with render-time sync
-  - Browse: `currentIndex` state + `cardOrder` + `dismissed` set
-  - SRS: `reviewedIds` set, filters queue, takes first visible
-  - All three solve "which card am I on" with optimistic local state — divergent patterns
-- [ ] Initialize from server state (e.g. `session.currentIndex` for resumed sessions) via `useState` initializer rather than render-time `setLocalIndexOffset(0)`
-- [ ] Use a ref to track last-seen server index, reconcile only on unexpected jumps (multi-device edge case)
+- [ ] Add hook-level tests for `useCardNavigation` if the project adopts a lightweight React hook test pattern.
+  - Pure navigation helpers already cover index math.
+  - Hook-level coverage should focus on resumed-session server-index reconciliation and hidden-card state across changing input orders.
 
 ## Code Quality — UI Consistency
 
 ### Status Color Guardrails
-- [ ] Add a targeted lint rule or script for raw generic status color classes if they keep regressing after shared UI primitives exist. Keep chart, rating, and CJK colors exempt because those colors encode data.
+- [ ] Expand status color guardrail exemptions or semantic primitives only when new legitimate data-color surfaces appear. Keep chart, rating, and CJK colors exempt because those colors encode data.
 
 ## E2E Testing
 
