@@ -1,9 +1,12 @@
 "use client";
 
 
-import { useState } from "react";
 import { useMutation } from "convex/react";
+import { useState } from "react";
 import { api } from "../../convex/_generated/api";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 import { LANGUAGE_PRESETS, PRESET_KEYS, type PresetKey } from "@/lib/presets";
 
 type Props = {
@@ -16,30 +19,21 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<PresetKey>("custom");
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { execute, isSaving, error } = useSaveHandler<string>({
+    fallbackErrorMessage: "Failed to create set",
+    onSuccess: onCreated,
+  });
 
   const handleCreate = async () => {
-    if (!name.trim() || isCreating) return;
-    setIsCreating(true);
-    setError(null);
-    try {
-      const preset = LANGUAGE_PRESETS[selectedPreset];
-      const result = await createSet({
+    if (!name.trim() || isSaving) return;
+    const preset = LANGUAGE_PRESETS[selectedPreset];
+    await execute(() =>
+      createSet({
         name: name.trim(),
         description: description.trim() || undefined,
         fieldDefinitions: preset.fieldDefinitions,
-      });
-      if (!result.ok) {
-        setError(result.error.message);
-        setIsCreating(false);
-        return;
-      }
-      onCreated(result.value);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create set");
-      setIsCreating(false);
-    }
+      })
+    );
   };
 
   return (
@@ -84,37 +78,36 @@ export default function QuickCreateForm({ onClose, onCreated }: Props) {
           <label className="block text-sm font-medium mb-2">Preset</label>
           <div className="flex flex-wrap gap-2">
             {PRESET_KEYS.map((key) => (
-              <button
+              <Button
                 key={key}
                 onClick={() => setSelectedPreset(key)}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                  selectedPreset === key
-                    ? "bg-accent text-white border-accent"
-                    : "border-edge hover:bg-surface-hover"
-                }`}
+                variant={selectedPreset === key ? "primary" : "secondary"}
+                size="sm"
               >
                 {LANGUAGE_PRESETS[key].label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <Alert variant="danger">{error}</Alert>}
 
         <div className="flex gap-2 pt-2">
-          <button
+          <Button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
+            variant="secondary"
+            fullWidth
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleCreate}
-            disabled={!name.trim() || isCreating}
-            className="flex-1 px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
+            disabled={!name.trim() || isSaving}
+            loading={isSaving}
+            fullWidth
           >
-            {isCreating ? "Creating..." : "Create"}
-          </button>
+            Create
+          </Button>
         </div>
       </div>
     </div>

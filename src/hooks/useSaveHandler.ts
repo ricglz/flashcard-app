@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import type { AppResult, AppFailure } from "@/lib/appResult";
 
 type UseSaveHandlerOptions<T> = {
+  fallbackErrorMessage?: string;
   onSuccess?: (result: T) => void;
   onError?: (error: string) => void;
 };
@@ -26,6 +27,14 @@ export function useSaveHandler<T>(options?: UseSaveHandlerOptions<T>) {
         }
         options?.onSuccess?.(result.value);
         return result.value;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : (options?.fallbackErrorMessage ?? "Failed to save");
+        setError(message);
+        options?.onError?.(message);
+        return null;
       } finally {
         setIsSaving(false);
       }

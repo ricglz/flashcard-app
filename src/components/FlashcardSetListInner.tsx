@@ -4,22 +4,29 @@ import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 type SetList = NonNullable<FunctionReturnType<typeof api.flashcardSets.list>>;
 
 export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
   const removeSet = useMutation(api.flashcardSets.remove);
+  const { execute: executeRemove, error } = useSaveHandler<null>({
+    fallbackErrorMessage: "Failed to delete set",
+  });
 
   if (sets.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-muted mb-4">No flashcard sets yet.</p>
-        <Link
+        <LinkButton
           href="/sets/new"
-          className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
         >
           Create Your First Set
-        </Link>
+        </LinkButton>
       </div>
     );
   }
@@ -27,6 +34,7 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Your Flashcard Sets</h2>
+      {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sets.map((set) => {
           const isOwner = set.userSet.role === "owner";
@@ -39,14 +47,14 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold text-lg">{set.name}</h3>
                   {set.origin.kind === "ai_generated" && (
-                    <span className="px-1.5 py-0.5 bg-info-surface border border-info-edge rounded text-xs text-muted">
+                    <Badge variant="info" size="sm">
                       AI generated
-                    </span>
+                    </Badge>
                   )}
                   {set.origin.kind === "forked" && (
-                    <span className="px-1.5 py-0.5 bg-info-surface border border-info-edge rounded text-xs text-muted">
+                    <Badge variant="info" size="sm">
                       Forked
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 {set.description && (
@@ -60,37 +68,40 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
                     {set.fieldDefinitions.length !== 1 ? "s" : ""}
                   </span>
                   {!isOwner && (
-                    <span className="px-1.5 py-0.5 bg-surface-hover rounded text-xs">
+                    <Badge variant="neutral" size="sm">
                       Shared
-                    </span>
+                    </Badge>
                   )}
                 </div>
               </Link>
               <div className="mt-3 flex gap-2">
-                <Link
+                <LinkButton
                   href={`/study/${set._id}`}
-                  className="text-sm px-3 py-1.5 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
+                  size="sm"
                 >
                   Study
-                </Link>
+                </LinkButton>
                 {isOwner && (
                   <>
-                    <Link
+                    <LinkButton
                       href={`/sets/${set._id}/edit`}
-                      className="text-sm px-3 py-1.5 border border-edge text-foreground rounded-lg hover:bg-surface-hover transition-colors"
+                      variant="secondary"
+                      size="sm"
                     >
                       Edit
-                    </Link>
-                    <button
+                    </LinkButton>
+                    <Button
                       onClick={() => {
                         if (confirm("Delete this set and all its cards?")) {
-                          void removeSet({ id: set._id });
+                          void executeRemove(() => removeSet({ id: set._id }));
                         }
                       }}
-                      className="text-sm px-3 py-1.5 text-muted rounded-lg hover:text-danger hover:bg-danger-surface transition-colors"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted hover:text-danger hover:bg-danger-surface"
                     >
                       Delete
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>

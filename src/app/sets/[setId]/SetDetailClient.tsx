@@ -10,8 +10,12 @@ import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { VISIBILITIES, VISIBILITY_LABELS } from "@/lib/types";
-import TypedSelect from "@/components/TypedSelect";
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import SrsSetConfig from "@/components/SrsSetConfig";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
@@ -50,9 +54,21 @@ export default function SetDetailClient({
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
-  const [isForking, setIsForking] = useState(false);
-  const [forkError, setForkError] = useState<string | null>(null);
   const [showAiAppend, setShowAiAppend] = useState(false);
+  const {
+    execute: executeVisibility,
+    error: visibilityError,
+  } = useSaveHandler<null>({
+    fallbackErrorMessage: "Failed to update visibility",
+  });
+  const {
+    execute: executeFork,
+    isSaving: isForking,
+    error: forkError,
+  } = useSaveHandler<string>({
+    fallbackErrorMessage: "Failed to fork set",
+    onSuccess: (forkedSetId) => router.push(`/sets/${forkedSetId}`),
+  });
 
   if (!setResult.ok) {
     return <SetAccessError message={setResult.error.message} />;
@@ -69,22 +85,7 @@ export default function SetDetailClient({
   if (!cardsResult.ok) return null;
 
   const handleFork = async () => {
-    setIsForking(true);
-    setForkError(null);
-    try {
-      const result = await forkSet({ sourceSetId: set._id });
-      if (!result.ok) {
-        setForkError(result.error.message);
-        return;
-      }
-      router.push(`/sets/${result.value}`);
-    } catch (err) {
-      setForkError(
-        err instanceof Error ? err.message : "Failed to fork set"
-      );
-    } finally {
-      setIsForking(false);
-    }
+    await executeFork(() => forkSet({ sourceSetId: set._id }));
   };
 
   return (
@@ -108,27 +109,36 @@ export default function SetDetailClient({
         </p>
 
         <div className="flex items-center gap-2 mb-6">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            set.visibility === "public"
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-              : set.visibility === "unlisted"
-                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-          }`}>
+          <Badge
+            variant={
+              set.visibility === "public"
+                ? "success"
+                : set.visibility === "unlisted"
+                  ? "warning"
+                  : "neutral"
+            }
+          >
             {set.visibility.charAt(0).toUpperCase() + set.visibility.slice(1)}
-          </span>
+          </Badge>
           {isOwner && (
-            <TypedSelect
+            <Select
               value={set.visibility}
               options={VISIBILITIES}
               labels={VISIBILITY_LABELS}
               onChange={(visibility) => {
-                void updateVisibility({ id: set._id, visibility });
+                void executeVisibility(() =>
+                  updateVisibility({ id: set._id, visibility })
+                );
               }}
-              className="text-xs border border-edge rounded px-2 py-0.5 bg-transparent"
+              className="px-2 py-0.5 text-xs"
             />
           )}
         </div>
+        {visibilityError && (
+          <Alert variant="danger" className="mb-4">
+            {visibilityError}
+          </Alert>
+        )}
 
         {set.origin.kind === "forked" && (
           <p className="text-sm text-muted mb-4">
@@ -168,15 +178,18 @@ export default function SetDetailClient({
 
         {viewer.role === "member" && (
           <div className="mb-6">
-            <button
+            <Button
               onClick={handleFork}
               disabled={isForking}
-              className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors disabled:opacity-50"
+              loading={isForking}
+              variant="secondary"
             >
-              {isForking ? "Forking..." : "Fork (Copy to My Sets)"}
-            </button>
+              Fork (Copy to My Sets)
+            </Button>
             {forkError && (
-              <p className="text-sm text-danger mt-2">{forkError}</p>
+              <Alert variant="danger" className="mt-2">
+                {forkError}
+              </Alert>
             )}
           </div>
         )}
