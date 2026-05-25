@@ -1,24 +1,22 @@
 # AI CLI Remedial Sets
 
 > Status: Current
-> Last reviewed: 2026-05-12
-> Source of truth: Yes, for the current AI-assisted remedial set workflow.
+> Last reviewed: 2026-05-24
+> Source of truth: Yes, for the CLI/tooling workflow.
 
 ## Purpose
 
-Let a user generate remedial flashcard sets with an external assistant without the app calling an LLM API or storing LLM provider keys. The app exposes a narrow token-protected tooling API; the local CLI exports weak SRS context and imports reviewed generated JSON.
+Let a user generate remedial flashcard sets with an external assistant and local review loop. The app exposes a narrow token-protected tooling API; the local CLI exports weak SRS context and imports reviewed generated JSON.
 
 ## Why This Exists
 
-This provides AI-assisted value while keeping the app backend simple:
+This workflow is still useful even though the app also supports in-app BYOK LLM features:
 
-- No OpenAI/Anthropic/etc. keys are stored by the app.
-- No platform LLM costs.
 - User can use any assistant.
+- Generated JSON can be inspected locally before import.
+- Tooling tokens are scoped and revocable.
 - Generated cards are validated before import.
 - Remedial sets remain normal flashcard sets and can be enrolled in SRS.
-
-See `docs/decisions/005-ai-cli-remedial-sets.md`.
 
 ## Workflow
 
@@ -128,14 +126,3 @@ Generated payloads should:
 - include relevant `sourceCardIds` where possible;
 - create cards targeting weak SRS signals;
 - set `addToSrs` according to user intent.
-
-Payload schemas live in `src/lib/aiToolingSchemas.ts`.
-
-## Related Files
-
-- `scripts/flashcard-ai.ts`
-- `convex/http.ts`
-- `convex/tooling.ts`
-- `convex/cliTokens.ts`
-- `src/lib/aiToolingSchemas.ts`
-- `src/app/settings/page.tsx`
