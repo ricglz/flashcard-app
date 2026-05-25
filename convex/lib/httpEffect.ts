@@ -103,7 +103,11 @@ export function parseBodyEffect<A, I>(
   schema: Schema.Schema<A, I, never>
 ): Effect.Effect<A, ParseError> {
   return Effect.gen(function* () {
-    const text = yield* Effect.promise(() => req.text());
+    const text = yield* Effect.tryPromise({
+      try: () => req.text(),
+      catch: (error) =>
+        new ParseError(error instanceof Error ? error.message : "Invalid request body."),
+    });
     const json = text.trim().length === 0 ? "{}" : text;
 
     const result = yield* Effect.try({
