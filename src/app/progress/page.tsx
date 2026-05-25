@@ -1,13 +1,11 @@
-import { redirect } from "next/navigation";
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../convex/_generated/api";
-import { getAuthToken } from "@/lib/server";
+import { requireAuthToken } from "@/lib/routePreload";
 import ProgressClient from "./ProgressClient";
 import Link from "next/link";
 
 export default async function ProgressPage() {
-  const token = await getAuthToken();
-  if (!token) redirect("/");
+  const token = await requireAuthToken();
 
   const [preloadedSrsSummary, preloadedStreak, preloadedGoal] =
     await Promise.all([

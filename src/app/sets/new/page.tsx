@@ -1,13 +1,11 @@
-import { redirect } from "next/navigation";
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import Link from "next/link";
 import WizardShell from "@/components/wizard/WizardShell";
-import { getAuthToken } from "@/lib/server";
+import { requireAuthToken } from "@/lib/routePreload";
 
 export default async function NewSetPage() {
-  const token = await getAuthToken();
-  if (!token) redirect("/");
+  const token = await requireAuthToken();
 
   const preloadedHasLlmKey = await preloadQuery(
     api.userSettings.hasLlmKey,

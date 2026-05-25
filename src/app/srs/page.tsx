@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { preloadQuery, preloadedQueryResult } from "convex/nextjs";
 import { api } from "../../../convex/_generated/api";
-import { getAuthToken } from "@/lib/server";
+import { requireAuthToken } from "@/lib/routePreload";
 import SrsReviewClient from "./SrsReviewClient";
 
 export default async function SrsReviewPage() {
-  const token = await getAuthToken();
+  const token = await requireAuthToken();
   const [preloadedQueue, preloadedStats, preloadedTtsConfig, preloadedAnnotations] =
     await Promise.all([
       preloadQuery(api.srsReviewQueue.getHydratedQueue, {}, { token }),
