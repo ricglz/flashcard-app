@@ -31,6 +31,7 @@ import type {
 import type { CardRating, FieldDefinition } from "../src/lib/types";
 
 type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
+type SourceScope = GeneratedSetPayload["sourceScope"];
 type WeakSchemaGroup = WeakCardsResponse["schemaGroups"][number];
 type WeakSet = WeakSchemaGroup["sets"][number];
 type WeakCard = WeakSet["weakCards"][number];
@@ -83,10 +84,15 @@ async function getUserSetLinks(ctx: QueryCtx, userId: string) {
 async function assertAccessibleSets(
   ctx: QueryCtx | MutationCtx,
   userId: string,
-  sourceSetIds: ReadonlyArray<Id<"flashcardSets">>
+  sourceSetIds: ReadonlyArray<Id<"flashcardSets">>,
+  sourceScope: SourceScope,
 ) {
   const unique = [...new Set(sourceSetIds)];
-  if (unique.length === 0) return fail(invalidInput("At least one source set is required.", "sourceSetIds"));
+  if (unique.length === 0) {
+    return sourceScope === "custom"
+      ? ok(unique)
+      : fail(invalidInput("At least one source set is required.", "sourceSetIds"));
+  }
   for (const setId of unique) {
     const link = await ctx.db
       .query("userSets")
@@ -398,7 +404,7 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   if (normalized.cards.length === 0) issues.push("At least one generated card is required.");
   if (normalized.cards.length > 100) issues.push("Generated sets are limited to 100 cards.");
 
-  const accessible = await assertAccessibleSets(ctx, userId, normalized.sourceSetIds);
+  const accessible = await assertAccessibleSets(ctx, userId, normalized.sourceSetIds, normalized.sourceScope);
   if (!accessible.ok) issues.push(accessible.error.message);
 
   const expectedFingerprint = schemaFingerprint(normalized.fieldDefinitions);
