@@ -240,7 +240,7 @@ describe("AI Effect error handling", () => {
       expect(result.value.payload.cards[0]?.fields.Front).toBe("早上好");
     }
     const thread = llm.complete.mock.calls[0]?.[0];
-    expect(thread?.[1]?.content).toContain("Refine Generated Flashcards");
+    expect(thread?.[1]?.content).toMatch(/Refine Generated Flashcards[\s\S]*Keep the same number of cards/);
   });
 
   it("returns LlmError when model loading rejects", async () => {

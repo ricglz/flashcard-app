@@ -397,6 +397,7 @@ ${opts.instructions}
 ## Requirements
 
 - Preserve \`fieldDefinitions\`, \`sourceSetIds\`, \`sourceScope\`, \`weakContextMethodology\`, and \`addToSrs\`.
+- Keep the same number of cards unless the user explicitly asks for a different count.
 - Keep cards realistic, cohesive, and human-studyable.
 - Prefer natural examples over arbitrary combinations of terms.
 - Do not create text that only exists to satisfy a schema requirement.
