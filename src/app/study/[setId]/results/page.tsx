@@ -4,7 +4,6 @@ import {
   preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
-  requirePreloadedValue,
   requireRouteId,
 } from "@/lib/routePreload";
 import ResultsClient from "./ResultsClient";
@@ -41,11 +40,11 @@ export default async function ResultsPage({
     ),
   ]);
 
-  const results = requirePreloadedValue(preloadedResults);
+  const resultsValue = requirePreloadedDomainResult(preloadedResults, `/study/${setId}`);
   const setData = requirePreloadedDomainResult(preloadedSet);
 
-  if (results.session.setId !== flashcardSetId) {
-    redirect(`/study/${results.session.setId}/results?sessionId=${sessionId}`);
+  if (resultsValue.session.setId !== flashcardSetId) {
+    redirect(`/study/${resultsValue.session.setId}/results?sessionId=${sessionId}`);
   }
 
   const preloadedCards = await preloadRouteQuery(

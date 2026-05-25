@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
-import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import { getStudySession, unwrap, TEST_USER, fieldDefs } from "./helpers";
 import type { TestIdentity } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
@@ -39,7 +39,7 @@ describe("incrementDailyStats via recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -63,7 +63,7 @@ describe("incrementDailyStats via recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -108,7 +108,7 @@ describe("getDailyGoalProgress", () => {
       backFields: ["Back"],
       shuffle: false,
     }));
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -144,7 +144,7 @@ describe("getStreakStats", () => {
       backFields: ["Back"],
       shuffle: false,
     }));
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -179,7 +179,7 @@ describe("getDailyHistory", () => {
       backFields: ["Back"],
       shuffle: false,
     }));
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,

@@ -6,7 +6,7 @@ import { assertMemberEffect } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
-import { type CommonFailure } from "./domain/result";
+import { fail, notFound, ok, unauthenticated, type CommonFailure } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import type { ActiveStudySession } from "../src/lib/types";
 import { CARD_RATING_SCORES } from "../src/lib/types";
@@ -53,10 +53,12 @@ export const get = query({
   args: { id: v.id("studySessions") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const session = await ctx.db.get(args.id);
-    if (!session || session.userId !== identity.tokenIdentifier) return null;
-    return session;
+    if (!session || session.userId !== identity.tokenIdentifier) {
+      return fail(notFound("Session not found"));
+    }
+    return ok(session);
   },
 });
 
@@ -64,14 +66,16 @@ export const getResults = query({
   args: { sessionId: v.id("studySessions") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const session = await ctx.db.get(args.sessionId);
-    if (!session || session.userId !== identity.tokenIdentifier) return null;
+    if (!session || session.userId !== identity.tokenIdentifier) {
+      return fail(notFound("Session not found"));
+    }
     const results = await ctx.db
       .query("cardResults")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .take(1000);
-    return { session, results };
+    return ok({ session, results });
   },
 });
 

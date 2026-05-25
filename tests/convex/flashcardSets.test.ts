@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { validateSetFields } from "../../convex/domain/fieldDefinitions";
-import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import { getStudySession, unwrap, TEST_USER, fieldDefs } from "./helpers";
 import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
@@ -237,9 +237,7 @@ describe("flashcardSets.remove", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,

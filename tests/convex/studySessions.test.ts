@@ -5,6 +5,7 @@ import { CARD_RATING_SCORES } from "../../src/lib/types";
 import {
   createSetWithCards as createSharedSetWithCards,
   createTestDb,
+  getStudySession,
   unwrap,
   TEST_USER,
   fieldDefs,
@@ -12,6 +13,11 @@ import {
 } from "./helpers";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { TestDb, TestIdentity } from "./testTypes";
+
+const OTHER_USER = {
+  tokenIdentifier: "test-user-2",
+  subject: "user2",
+};
 
 async function createSetWithCards(
   as: TestIdentity,
@@ -33,6 +39,158 @@ async function getCardResults(t: TestDb, sessionId: Id<"studySessions">) {
       .take(1000);
   });
 }
+
+describe("studySessions.get", () => {
+  it("returns Unauthenticated without identity", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const result = await t.query(api.studySessions.get, { id: sessionId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
+  });
+
+  it("returns NotFound for missing sessions", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    await t.run(async (ctx) => {
+      await ctx.db.delete(sessionId);
+    });
+
+    const result = await as.query(api.studySessions.get, { id: sessionId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns NotFound for another user's session", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const other = t.withIdentity(OTHER_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const result = await other.query(api.studySessions.get, { id: sessionId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns the session for the owner", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const result = await as.query(api.studySessions.get, { id: sessionId });
+
+    expect(result).toMatchObject({ ok: true, value: { _id: sessionId } });
+  });
+});
+
+describe("studySessions.getResults", () => {
+  it("returns Unauthenticated without identity", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const result = await t.query(api.studySessions.getResults, { sessionId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
+  });
+
+  it("returns NotFound for missing sessions", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    await t.run(async (ctx) => {
+      await ctx.db.delete(sessionId);
+    });
+
+    const result = await as.query(api.studySessions.getResults, { sessionId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns NotFound for another user's session", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const other = t.withIdentity(OTHER_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+
+    const result = await other.query(api.studySessions.getResults, { sessionId });
+
+    expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
+  });
+
+  it("returns session and results for the owner", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    const session = await getStudySession(as, sessionId);
+    await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session.cardOrder[0]!,
+      rating: "good",
+    });
+
+    const result = await as.query(api.studySessions.getResults, { sessionId });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        session: { _id: sessionId },
+        results: [{ rating: "good" }],
+      },
+    });
+  });
+});
 
 describe("computeOverallScore", () => {
   it("returns 0 for empty results", () => {
@@ -82,9 +240,7 @@ describe("studySessions.start", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     expect(session).not.toBeNull();
     expect(session!.cardOrder).toHaveLength(3);
     expect(session!.currentIndex).toBe(0);
@@ -104,9 +260,7 @@ describe("studySessions.start", () => {
       cardLimit: 2,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     expect(session!.cardOrder).toHaveLength(2);
   });
 
@@ -226,9 +380,7 @@ describe("studySessions.recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     const { isComplete } = await unwrap(await as.mutation(
       api.studySessions.recordResult,
       {
@@ -239,9 +391,7 @@ describe("studySessions.recordResult", () => {
     ));
     expect(isComplete).toBe(false);
 
-    const updated = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const updated = await getStudySession(as, sessionId);
     expect(updated!.currentIndex).toBe(1);
   });
 
@@ -257,9 +407,7 @@ describe("studySessions.recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     const { isComplete } = await unwrap(await as.mutation(
       api.studySessions.recordResult,
       {
@@ -270,9 +418,7 @@ describe("studySessions.recordResult", () => {
     ));
     expect(isComplete).toBe(true);
 
-    const completed = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const completed = await getStudySession(as, sessionId);
     expect(completed!.status).toBe("completed");
     expect(completed!.overallScore).toBe(1); // easy = 3/3
   });
@@ -289,9 +435,7 @@ describe("studySessions.recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     expect(await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[1]!,
@@ -311,7 +455,7 @@ describe("studySessions.recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -331,7 +475,7 @@ describe("studySessions.recordResult", () => {
     const results = await getCardResults(t, sessionId);
     expect(results).toHaveLength(1);
     expect(results[0]!.rating).toBe("good");
-    const updated = await as.query(api.studySessions.get, { id: sessionId });
+    const updated = await getStudySession(as, sessionId);
     expect(updated!.currentIndex).toBe(1);
   });
 
@@ -347,7 +491,7 @@ describe("studySessions.recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -365,7 +509,7 @@ describe("studySessions.recordResult", () => {
     });
     const results = await getCardResults(t, sessionId);
     expect(results).toHaveLength(2);
-    const completed = await as.query(api.studySessions.get, { id: sessionId });
+    const completed = await getStudySession(as, sessionId);
     expect(completed!.status).toBe("completed");
     expect(completed!.currentIndex).toBe(2);
     expect(completed!.overallScore).toBe(0.5);
@@ -383,9 +527,7 @@ describe("studySessions.recordResult", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.abandon, { sessionId });
 
     expect(await as.mutation(api.studySessions.recordResult, {
@@ -411,9 +553,7 @@ describe("studySessions.abandon", () => {
 
     await as.mutation(api.studySessions.abandon, { sessionId });
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     expect(session!.status).toBe("abandoned");
   });
 
@@ -429,9 +569,7 @@ describe("studySessions.abandon", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, {
-      id: sessionId,
-    });
+    const session = await getStudySession(as, sessionId);
     await as.mutation(api.studySessions.recordResult, {
       sessionId,
       cardId: session!.cardOrder[0]!,
@@ -552,7 +690,7 @@ describe("studySessions.start — ttsOnlyFields", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     expect(session!.ttsOnlyFields).toEqual(["Character"]);
   });
 
@@ -568,7 +706,7 @@ describe("studySessions.start — ttsOnlyFields", () => {
       shuffle: false,
     }));
 
-    const session = await as.query(api.studySessions.get, { id: sessionId });
+    const session = await getStudySession(as, sessionId);
     expect(session!.ttsOnlyFields).toEqual([]);
   });
 

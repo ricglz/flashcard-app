@@ -35,22 +35,23 @@ export default async function StudySessionPage({
     { token },
     `/study/${setId}`,
   );
-  if (!sessionForRouting) {
+  if (!sessionForRouting.ok) {
     redirect(`/study/${setId}`);
   }
+  const session = sessionForRouting.value;
 
-  if (sessionForRouting.setId !== flashcardSetId) {
-    redirect(`/study/${sessionForRouting.setId}/session?sessionId=${sessionId}`);
+  if (session.setId !== flashcardSetId) {
+    redirect(`/study/${session.setId}/session?sessionId=${sessionId}`);
   }
 
-  if (sessionForRouting.status === "completed") {
+  if (session.status === "completed") {
     redirect(`/study/${setId}/results?sessionId=${sessionId}`);
   }
 
-  if (sessionForRouting.status === "abandoned") {
+  if (session.status === "abandoned") {
     redirect(`/study/${setId}`);
   }
-  if (!isActiveStudySession(sessionForRouting)) {
+  if (!isActiveStudySession(session)) {
     redirect(`/study/${setId}`);
   }
 
@@ -68,7 +69,7 @@ export default async function StudySessionPage({
     <StudySessionClient
       flashcardSetId={flashcardSetId}
       sessionId={typedSessionId}
-      initialSession={sessionForRouting}
+      initialSession={session}
       preloadedSet={preloadedSet}
       initialSet={setData}
       preloadedCards={preloadedCards}

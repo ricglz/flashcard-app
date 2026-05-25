@@ -119,6 +119,13 @@ export async function startStudySession(
   );
 }
 
+export async function getStudySession(
+  as: TestIdentity,
+  sessionId: Id<"studySessions">,
+): Promise<Doc<"studySessions">> {
+  return await unwrap(await as.query(api.studySessions.get, { id: sessionId }));
+}
+
 export async function recordStudyResult(
   as: TestIdentity,
   {

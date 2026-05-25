@@ -35,12 +35,11 @@ export default function ResultsClient({
   if (!setResult.ok) {
     return <SetAccessError message={setResult.error.message} href={`/study/${setId}`} label="Back to study" />;
   }
-  if (!cardsResult.ok) return null;
-  if (!data) return null;
+  if (!cardsResult.ok || !data.ok) return null;
 
   const { set } = setResult.value;
-  const { session } = data;
-  const results = data.results;
+  const { session } = data.value;
+  const results = data.value.results;
   const totalCards = session.cardOrder.length;
   const completedCards = results.length;
   const scorePercent = computeScorePercent(results, session.overallScore);
