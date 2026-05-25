@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
 import type { TtsEvent, TtsStatus } from "@/lib/tts";
 import { speak } from "@/lib/tts";
+import { useTtsInteraction } from "@/hooks/useTtsInteraction";
 
 function statusClasses(status: TtsStatus): string {
   switch (status) {
@@ -14,7 +14,7 @@ function statusClasses(status: TtsStatus): string {
     case "error":
     case "timeout":
     case "unsupported":
-      return "rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400";
+      return "rounded bg-danger-surface text-danger";
     case "idle":
     case "ended":
     case "cancelled":
@@ -33,22 +33,16 @@ export default function TappableCjkChar({
   rate?: number;
   onTtsEvent?: (event: TtsEvent) => void;
 }) {
-  const [status, setStatus] = useState<TtsStatus>("idle");
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const { status, handleTtsEvent } = useTtsInteraction({
+    onTtsEvent,
+    terminalResetMs: 300,
+    problemResetMs: 1000,
+  });
 
   const handleClick = () => {
-    clearTimeout(resetTimeoutRef.current);
     void speak(char, lang, {
       rate,
-      onEvent: (event) => {
-        setStatus(event.status);
-        onTtsEvent?.(event);
-        const isTerminal = event.status === "ended" || event.status === "cancelled";
-        const isError = event.status === "error" || event.status === "timeout" || event.status === "unsupported";
-        if (isTerminal || isError) {
-          resetTimeoutRef.current = setTimeout(() => setStatus("idle"), isError ? 1000 : 300);
-        }
-      },
+      onEvent: handleTtsEvent,
     });
   };
 

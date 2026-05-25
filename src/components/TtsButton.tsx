@@ -1,13 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type {
-  TtsEvent,
-  TtsStatus} from "@/lib/tts";
+import type { TtsEvent, TtsStatus } from "@/lib/tts";
+import { isTtsSupported, speak } from "@/lib/tts";
 import {
-  isTtsSupported,
-  speak
-} from "@/lib/tts";
+  isTtsBusy,
+  isTtsProblem,
+  useTtsInteraction,
+} from "@/hooks/useTtsInteraction";
 import TtsButtonIcon from "./TtsButtonIcon";
 
 type Props = {
@@ -19,18 +18,12 @@ type Props = {
   onTtsEvent?: (event: TtsEvent) => void;
 };
 
-function isBusy(status: TtsStatus): boolean {
-  return status === "preparing" || status === "queued" || status === "speaking";
-}
-
-function isProblem(status: TtsStatus): boolean {
-  return status === "unsupported" || status === "timeout" || status === "error";
-}
-
 function ariaLabel(status: TtsStatus): string {
   if (status === "speaking") return "Playing pronunciation";
-  if (status === "preparing" || status === "queued") return "Preparing pronunciation";
-  if (isProblem(status)) return "Could not play pronunciation";
+  if (status === "preparing" || status === "queued") {
+    return "Preparing pronunciation";
+  }
+  if (isTtsProblem(status)) return "Could not play pronunciation";
   return "Listen to pronunciation";
 }
 
@@ -39,7 +32,7 @@ function buttonClasses(status: TtsStatus, className: string): string {
     ? "bg-accent text-white shadow-sm"
     : status === "preparing" || status === "queued"
       ? "bg-accent-surface text-accent-surface-text"
-      : isProblem(status)
+      : isTtsProblem(status)
         ? "bg-danger-surface text-danger border border-danger/40"
         : "hover:bg-surface-hover";
 
@@ -54,9 +47,14 @@ export default function TtsButton({
   showMessage = false,
   onTtsEvent,
 }: Props) {
-  const [status, setStatus] = useState<TtsStatus>("idle");
-  const [message, setMessage] = useState<string | null>(null);
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const {
+    status,
+    message,
+    setStatus,
+    setMessage,
+    clearMessage,
+    handleTtsEvent,
+  } = useTtsInteraction({ onTtsEvent });
 
   const handleClick = async () => {
     if (!isTtsSupported()) {
@@ -66,25 +64,15 @@ export default function TtsButton({
         lang,
         message: "Text-to-speech is not supported in this browser.",
       };
-      setStatus(event.status);
-      setMessage(event.message ?? null);
-      onTtsEvent?.(event);
+      handleTtsEvent(event);
       return;
     }
 
-    setMessage(null);
+    clearMessage();
 
     const result = await speak(text, lang, {
       rate,
-      onEvent: (event) => {
-        setStatus(event.status);
-        if (event.message) setMessage(event.message);
-        onTtsEvent?.(event);
-        if (event.status === "ended" || event.status === "cancelled") {
-          clearTimeout(resetTimeoutRef.current);
-          resetTimeoutRef.current = setTimeout(() => setStatus("idle"), 700);
-        }
-      },
+      onEvent: handleTtsEvent,
     });
 
     if (!result.ok) {
@@ -101,7 +89,7 @@ export default function TtsButton({
         className={buttonClasses(status, className)}
         title={message ?? `Listen (${lang})`}
         aria-label={ariaLabel(status)}
-        aria-busy={isBusy(status)}
+        aria-busy={isTtsBusy(status)}
       >
         <TtsButtonIcon status={status} />
       </button>

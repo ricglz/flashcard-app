@@ -5,6 +5,7 @@ import type { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
 import type { TtsEvent } from "@/lib/tts";
 import { speakSequence } from "@/lib/tts";
+import { isTtsProblem, useTtsInteraction } from "@/hooks/useTtsInteraction";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
 
@@ -36,16 +37,12 @@ export default function StudyCard({
   onSetNote,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
-  const [ttsMessage, setTtsMessage] = useState<string | null>(null);
+  const { message: ttsMessage, setMessage: setTtsMessage } = useTtsInteraction();
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
   const updateTtsStatus = (event: TtsEvent) => {
-    if (
-      event.status === "error" ||
-      event.status === "timeout" ||
-      event.status === "unsupported"
-    ) {
+    if (isTtsProblem(event.status)) {
       setTtsMessage(
         event.message ?? "Couldn't play audio. Check volume or tap again.",
       );
