@@ -91,6 +91,44 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/TypedSelect.tsx"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [
+          {
+            name: "@/components/TypedSelect",
+            message: "Use `@/components/ui/Select`.",
+          },
+        ],
+        patterns: [
+          {
+            group: [
+              "**/TypedSelect",
+              "**/TypedSelect.tsx",
+            ],
+            message: "Use `@/components/ui/Select`.",
+          },
+        ],
+      }],
+    },
+  },
+  {
+    files: ["src/app/**/page.tsx"],
+    ignores: ["src/app/page.tsx"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        paths: [
+          {
+            name: "@/lib/server",
+            importNames: ["getAuthToken"],
+            message: "Use `requireAuthToken` from `@/lib/routePreload` for auth-required pages.",
+          },
+        ],
+      }],
+    },
+  },
+  {
     files: ["convex/**/*.ts", "src/lib/**/*.ts", "src/hooks/**/*.ts"],
     ignores: [
       "**/*.test.ts",
