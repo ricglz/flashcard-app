@@ -29,6 +29,7 @@ import { isPublicFlashcardSet } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
+import { insertCards } from "./lib/cardCreation";
 
 export type SetWithViewer = Doc<"flashcardSets"> & {
   viewer:
@@ -378,15 +379,19 @@ export const fork = mutation({
         }),
       );
 
-      for (const card of sourceCards) {
+      yield* fromDomainResult(
         yield* Effect.promise(() =>
-          ctx.db.insert("flashcards", {
+          insertCards(ctx, {
             setId: newSetId,
-            fields: card.fields,
-            order: card.order,
+            fieldNames: sourceSet.fieldDefinitions.map((field) => field.name),
+            cards: sourceCards.map((card) => ({
+              fields: card.fields,
+              order: card.order,
+            })),
+            origin: "forked",
           }),
-        );
-      }
+        ),
+      );
 
       const fieldDefs = getFieldDefinitions(sourceSet);
       const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);

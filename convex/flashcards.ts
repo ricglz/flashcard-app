@@ -3,8 +3,9 @@ import { mutation, query } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { assertOwnerEffect, enrollNewCardForSrsUsers, requireSetContentAccessEffect } from "./userSets";
 import { validateCardFieldsEffect, type CardFieldsValidationFailure } from "./domain/cardFields";
-import type { CommonFailure } from "./domain/result";
-import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
+import { invalidInput, type CommonFailure } from "./domain/result";
+import { fromDomainResult, requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
+import { insertCards } from "./lib/cardCreation";
 
 function validateAgainstSetEffect(
   set: { fieldDefinitions: Array<{ name: string }> },
@@ -42,10 +43,18 @@ export const create = mutation({
       const identity = yield* requireAuth(ctx);
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.setId);
       const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
-      const fields = yield* validateAgainstSetEffect(set, args.fields);
-      const id = yield* Effect.promise(() =>
-        ctx.db.insert("flashcards", { setId: args.setId, fields, order: args.order }),
+      const ids = yield* fromDomainResult(
+        yield* Effect.promise(() =>
+          insertCards(ctx, {
+            setId: args.setId,
+            fieldNames: set.fieldDefinitions.map((field) => field.name),
+            cards: [{ fields: args.fields, order: args.order }],
+            origin: "manual",
+          }),
+        ),
       );
+      const id = ids[0];
+      if (id === undefined) return yield* Effect.fail(invalidInput("No card was created."));
       yield* Effect.promise(() => enrollNewCardForSrsUsers(ctx, args.setId, id));
       yield* Effect.promise(() =>
         ctx.db.patch(args.setId, { cardCount: set.cardCount + 1, updatedAt: Date.now() }),
@@ -70,22 +79,22 @@ export const batchCreate = mutation({
       const identity = yield* requireAuth(ctx);
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.setId);
       const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
-      const normalizedCards: Array<{ fields: Record<string, string>; order: number }> = [];
-      for (const card of args.cards) {
-        const fields = yield* validateAgainstSetEffect(set, card.fields);
-        normalizedCards.push({ fields, order: card.order });
-      }
-      const ids = [];
-      for (const card of normalizedCards) {
-        const id = yield* Effect.promise(() =>
-          ctx.db.insert("flashcards", { setId: args.setId, ...card }),
-        );
+      const ids = yield* fromDomainResult(
+        yield* Effect.promise(() =>
+          insertCards(ctx, {
+            setId: args.setId,
+            fieldNames: set.fieldDefinitions.map((field) => field.name),
+            cards: args.cards,
+            origin: "manual",
+          }),
+        ),
+      );
+      for (const id of ids) {
         yield* Effect.promise(() => enrollNewCardForSrsUsers(ctx, args.setId, id));
-        ids.push(id);
       }
       yield* Effect.promise(() =>
         ctx.db.patch(args.setId, {
-          cardCount: set.cardCount + normalizedCards.length,
+          cardCount: set.cardCount + ids.length,
           updatedAt: Date.now(),
         }),
       );

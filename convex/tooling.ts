@@ -22,6 +22,7 @@ import {
 import { getFieldDefinitions } from "./lib/typed";
 import { enrollCardsForSetHelper } from "./userSets";
 import { getDefaultFieldLayout } from "../src/lib/types";
+import { insertCards } from "./lib/cardCreation";
 import { schemaFingerprint } from "../src/lib/aiToolingSchemas";
 import type {
   GeneratedSetPayload,
@@ -497,11 +498,16 @@ export const createGeneratedSetForTool = internalMutation({
       createdAt: now,
     });
 
-    for (const [i, card] of normalized.cards.entries()) {
-      const validated = validateCardFields(fieldDefinitions.map((field) => field.name), card.fields);
-      if (!validated.ok) return fail(invalidInput(validated.error.message));
-      await ctx.db.insert("flashcards", { setId, fields: validated.value, order: i });
-    }
+    const inserted = await insertCards(ctx, {
+      setId,
+      fieldNames: fieldDefinitions.map((field) => field.name),
+      cards: normalized.cards.map((card, index) => ({
+        fields: card.fields,
+        order: index,
+      })),
+      origin: "ai_generated",
+    });
+    if (!inserted.ok) return inserted;
 
     const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefinitions);
     await ctx.db.insert("userSets", {
@@ -565,26 +571,19 @@ export const appendGeneratedCardsForTool = internalMutation({
       .take(10000);
     const maxOrder = existingCards.reduce((max, c) => Math.max(max, c.order), -1);
 
-    const fieldNames = args.fieldDefinitions.map(
-      (f) => f.name,
-    );
-    const validatedCards = [];
-    for (const card of args.cards) {
-      const validated = validateCardFields(fieldNames, card.fields);
-      if (!validated.ok) return fail(invalidInput(validated.error.message));
-      validatedCards.push(validated.value);
-    }
-    for (const [i, fields] of validatedCards.entries()) {
-      await ctx.db.insert("flashcards", {
-        setId: args.targetSetId,
-        fields,
-        order: maxOrder + 1 + i,
-        origin: "ai_generated",
-      });
-    }
+    const inserted = await insertCards(ctx, {
+      setId: args.targetSetId,
+      fieldNames: args.fieldDefinitions.map((field) => field.name),
+      cards: args.cards.map((card, index) => ({
+        fields: card.fields,
+        order: maxOrder + 1 + index,
+      })),
+      origin: "ai_generated",
+    });
+    if (!inserted.ok) return inserted;
 
     const patchData: Record<string, unknown> = {
-      cardCount: targetSet.cardCount + args.cards.length,
+      cardCount: targetSet.cardCount + inserted.value.length,
       updatedAt: Date.now(),
     };
     if (targetSet.origin.kind !== "ai_generated") {

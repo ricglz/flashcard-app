@@ -43,6 +43,31 @@ function makeCards(count: number) {
 }
 
 describe("appendGeneratedCardsForTool", () => {
+  it("creates generated-set cards with origin ai_generated", async () => {
+    const t = convexTest(schema, modules);
+
+    const result = await t.mutation(internal.tooling.createGeneratedSetForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      name: "Generated",
+      sourceSetIds: [],
+      sourceScope: "custom",
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(2),
+      addToSrs: false,
+    });
+    const created = await unwrap(result);
+
+    const cards = await unwrap(
+      await t.withIdentity(TEST_USER).query(api.flashcards.list, {
+        setId: created.setId,
+      }),
+    );
+    expect(cards.map((card) => card.origin)).toEqual([
+      "ai_generated",
+      "ai_generated",
+    ]);
+  });
+
   it("appends cards with correct order starting after existing max", async () => {
     const t = convexTest(schema, modules);
     const { setId } = await createSetWithCards(t, { cardCount: 3 });

@@ -128,6 +128,14 @@ export const CARD_RATING_SCORES = {
   easy: 3,
 } as const satisfies Record<CardRating, number>;
 
+export const FLASHCARD_ORIGINS = [
+  "manual",
+  "csv_import",
+  "ai_generated",
+  "forked",
+] as const;
+export type FlashcardOrigin = (typeof FLASHCARD_ORIGINS)[number];
+
 export const METHODOLOGIES = [
   "balanced",
   "recent_lapses",

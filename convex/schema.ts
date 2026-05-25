@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v, type Validator } from "convex/values";
 import {
   CARD_RATINGS,
+  FLASHCARD_ORIGINS,
   FIELD_ROLES,
   METHODOLOGIES,
   SESSION_STATUSES,
@@ -97,11 +98,7 @@ export default defineSchema({
     setId: v.id("flashcardSets"),
     fields: v.record(v.string(), v.string()),
     order: v.number(),
-    origin: v.optional(v.union(
-      v.literal("manual"),
-      v.literal("csv_import"),
-      v.literal("ai_generated"),
-    )),
+    origin: v.optional(literalUnion(FLASHCARD_ORIGINS)),
   }).index("by_setId", ["setId"]),
 
   studySessions: defineTable({
