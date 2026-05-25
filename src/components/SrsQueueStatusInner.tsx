@@ -12,6 +12,7 @@ import SrsQueueComplete from "./SrsQueueComplete";
 import SrsQueueActive from "./SrsQueueActive";
 import InlineError from "./InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 type QueueStats = NonNullable<FunctionReturnType<typeof api.srsReviewQueue.getQueueStats>>;
 type Settings = FunctionReturnType<typeof api.userSettings.get>;
@@ -43,14 +44,13 @@ export default function SrsQueueStatusInner({
   } = useForceRefreshQueue();
 
   const [showSettings, setShowSettings] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { execute, isSaving, error, setError } = useSaveHandler<boolean>({
+    onSuccess: () => setShowSettings(false),
+  });
   const displayError = error ?? refreshError;
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
-    setIsSaving(true);
-    setError(null);
-    try {
+    const result = await execute(async () => {
       const [srsResult, ttsResult] = await Promise.all([
         updateSrsSettings({
           maxNewCardsPerDay: config.maxNewCardsPerDay,
@@ -59,19 +59,11 @@ export default function SrsQueueStatusInner({
         }),
         updateTtsSpeed({ ttsPlaybackSpeed: config.ttsPlaybackSpeed }),
       ]);
-      if (!srsResult.ok) {
-        setError(srsResult.error.message);
-        return false;
-      }
-      if (!ttsResult.ok) {
-        setError(ttsResult.error.message);
-        return false;
-      }
-      setShowSettings(false);
-      return true;
-    } finally {
-      setIsSaving(false);
-    }
+      if (!srsResult.ok) return srsResult;
+      if (!ttsResult.ok) return ttsResult;
+      return { ok: true, value: true } as const;
+    });
+    return result !== null;
   }
 
   const resetTimeStr = formatResetTime(stats.dayResetUtcHour);

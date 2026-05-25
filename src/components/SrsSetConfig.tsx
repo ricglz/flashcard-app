@@ -8,6 +8,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
 import { getDisplayableFields } from "@/lib/types";
 import { useFieldAssignment } from "@/hooks/useFieldAssignment";
+import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 type Props = {
   setId: Id<"flashcardSets">;
@@ -27,9 +28,8 @@ export default function SrsSetConfig({
   fieldDefinitions,
 }: Props) {
   const updateUserSet = useMutation(api.userSets.update);
-  const [isSaving, setIsSaving] = useState(false);
   const [localSrsEnabled, setLocalSrsEnabled] = useState(srsEnabled);
-  const [error, setError] = useState<string | null>(null);
+  const { execute, isSaving, error } = useSaveHandler<null>();
   const { assignment, toggleField } = useFieldAssignment({
     initial: {
       frontFields: defaultFrontFields,
@@ -54,20 +54,15 @@ export default function SrsSetConfig({
     JSON.stringify(localTtsOnly) !== JSON.stringify(defaultTtsOnlyFields);
 
   async function handleSave() {
-    setIsSaving(true);
-    try {
-      setError(null);
-      const result = await updateUserSet({
+    await execute(() =>
+      updateUserSet({
         setId,
         srsEnabled: localSrsEnabled,
         defaultFrontFields: localFront,
         defaultBackFields: localBack,
         defaultTtsOnlyFields: localTtsOnly,
-      });
-      if (!result.ok) setError(result.error.message);
-    } finally {
-      setIsSaving(false);
-    }
+      }),
+    );
   }
 
   return (
