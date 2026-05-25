@@ -8,7 +8,15 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import { cloneFieldDefinitionsForAction, cloneGeneratedSetForAction } from "@/lib/generatedSetDraft";
+import {
+  cloneFieldDefinitionsForAction,
+  cloneGeneratedSetForAction,
+  mergeRefinedPayloadCards,
+} from "@/lib/generatedSetDraft";
+import {
+  getCardsForRefinement,
+  type RefinementRequest,
+} from "@/lib/refinementScope";
 import { isMethodology } from "@/lib/types";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
@@ -28,6 +36,23 @@ function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
   }));
 }
 
+function cardsForConfirm(cards: readonly GeneratedCard[]) {
+  return cards
+    .filter((c) => c.selected)
+    .map((card) => ({
+      fields: { ...card.fields },
+      sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
+      rationale: card.rationale,
+    }));
+}
+
+const LOADING_STATE = (
+  <div className="flex flex-col items-center py-12 gap-4">
+    <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+    <p className="text-muted text-sm">Generating cards... this may take 10-30 seconds.</p>
+  </div>
+);
+
 export default function GenerateClient({
   preloadedSets,
 }: {
@@ -40,15 +65,10 @@ export default function GenerateClient({
   const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
 
-  const srsEnabledSets = useMemo(
-    () => userSets.filter((s) => s.userSet.srsEnabled),
-    [userSets],
-  );
+  const srsEnabledSets = useMemo(() => userSets.filter((s) => s.userSet.srsEnabled), [userSets]);
 
   const methodologyParam = searchParams.get("methodology");
-  const initialMethodology = isMethodology(methodologyParam)
-    ? methodologyParam
-    : "balanced";
+  const initialMethodology = isMethodology(methodologyParam) ? methodologyParam : "balanced";
 
   const initialSetId = searchParams.get("setId") ?? "";
 
@@ -66,6 +86,7 @@ export default function GenerateClient({
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
   const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
+  const [refinementModel, setRefinementModel] = useState("");
 
   const handleGenerate = async (config: GenerateConfig) => {
     setStep("loading");
@@ -100,35 +121,49 @@ export default function GenerateClient({
       }
       setPayload(result.value.payload);
       setCards(cardsFromPayload(result.value.payload));
+      setRefinementModel(config.model);
       setStep("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setStep("config");
     }
   };
-  const handleRefine = async (instructions: string) => {
-    if (!payload) return;
-    const draft = cloneGeneratedSetForAction(payload, cards);
+  const handleRefine = async ({ instructions, model, scope }: RefinementRequest) => {
+    if (!payload) return false;
+    const cardsToRefine = getCardsForRefinement(cards, scope);
+    const draft = cloneGeneratedSetForAction(payload, cardsToRefine);
     setIsRefining(true);
     setError(null);
     try {
       const result = await refineGeneratedSet({
         draft,
         instructions,
-        ...(config.model ? { model: config.model } : {}),
+        ...(model ? { model } : {}),
       });
       if (!result.ok) {
         setError(result.error.message);
-        return;
+        return false;
       }
       if (!result.value.validation.ok) {
         setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
-        return;
+        return false;
       }
-      setPayload(result.value.payload);
-      setCards(cardsFromPayload(result.value.payload));
+      const mergeResult = mergeRefinedPayloadCards(
+        cards,
+        result.value.payload,
+        scope,
+        cardsFromPayload,
+      );
+      if (!mergeResult.ok) {
+        setError(mergeResult.message);
+        return false;
+      }
+      setPayload(mergeResult.payload);
+      setCards(mergeResult.cards);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Refinement failed");
+      return false;
     } finally {
       setIsRefining(false);
     }
@@ -138,12 +173,6 @@ export default function GenerateClient({
     setStep("loading");
     setError(null);
     try {
-      const selectedCards = cards
-        .filter((c) => c.selected)
-        .map(({ selected: _, ...c }) => ({
-          ...c,
-          sourceCardIds: c.sourceCardIds && [...c.sourceCardIds],
-        }));
       const result = await confirmSet({
         name: payload.name,
         description: payload.description,
@@ -152,7 +181,7 @@ export default function GenerateClient({
         weakContextMethodology: payload.weakContextMethodology,
         fieldDefinitions: cloneFieldDefinitionsForAction(payload.fieldDefinitions),
         addToSrs: payload.addToSrs,
-        cards: selectedCards,
+        cards: cardsForConfirm(cards),
       });
       if (!result.ok) {
         setError(result.error.message);
@@ -171,7 +200,7 @@ export default function GenerateClient({
 
   return (
     <div className="min-h-screen">
-      <PageHeader title="AI Card Generation" onBack={() => router.back()} />
+      <PageHeader title="AI Card Generation" onBack={() => router.back()} backDisabled={isRefining} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <div className="mb-4">
@@ -188,10 +217,7 @@ export default function GenerateClient({
         )}
 
         {step === "loading" && (
-          <div className="flex flex-col items-center py-12 gap-4">
-            <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-            <p className="text-muted text-sm">Generating cards... this may take 10-30 seconds.</p>
-          </div>
+          LOADING_STATE
         )}
 
         {step === "preview" && (
@@ -202,6 +228,8 @@ export default function GenerateClient({
             onBack={() => setStep("config")}
             onConfirm={handleConfirm}
             onRefine={handleRefine}
+            refinementModel={refinementModel}
+            onRefinementModelChange={setRefinementModel}
             isRefining={isRefining}
           />
         )}

@@ -6,7 +6,11 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import { cloneGeneratedSetForAction } from "@/lib/generatedSetDraft";
+import { cloneGeneratedSetForAction, mergeRefinedPayloadCards } from "@/lib/generatedSetDraft";
+import {
+  getCardsForRefinement,
+  type RefinementRequest,
+} from "@/lib/refinementScope";
 import GeneratePreview from "@/app/generate/GeneratePreview";
 import AiAppendConfig, { type AiAppendConfigValue } from "./AiAppendConfig";
 import AiErrorMessage from "@/components/AiErrorMessage";
@@ -19,6 +23,24 @@ type Props = {
   fieldDefinitions: FieldDefinition[];
   onClose: () => void;
 };
+
+function fieldDefinitionsForAction(fieldDefinitions: readonly FieldDefinition[]) {
+  return fieldDefinitions.map((fd) => ({
+    name: fd.name,
+    role: fd.role,
+    metadata: { ...fd.metadata },
+    order: fd.order,
+  }));
+}
+
+function cardsForAppend(cards: readonly GeneratedCard[]) {
+  return cards
+    .filter((c) => c.selected)
+    .map((card) => ({
+      fields: { ...card.fields },
+      rationale: card.rationale,
+    }));
+}
 
 export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
@@ -36,6 +58,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
   const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
+  const [refinementModel, setRefinementModel] = useState("");
 
   function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
     return nextPayload.cards.map((c) => ({
@@ -53,12 +76,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
     try {
       const result = await generateFromPrompt({
         prompt: config.prompt,
-        fieldDefinitions: fieldDefinitions.map((fd) => ({
-          name: fd.name,
-          role: fd.role,
-          metadata: { ...fd.metadata },
-          order: fd.order,
-        })),
+        fieldDefinitions: fieldDefinitionsForAction(fieldDefinitions),
         targetCardCount: config.targetCount,
         name: "append",
         ...(config.model ? { model: config.model } : {}),
@@ -77,6 +95,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
       }
       setPayload(result.value.payload);
       setCards(cardsFromPayload(result.value.payload));
+      setRefinementModel(config.model);
       setPhase("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -84,29 +103,42 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
     }
   };
 
-  const handleRefine = async (instructions: string) => {
-    if (!payload) return;
-    const draft = cloneGeneratedSetForAction(payload, cards);
+  const handleRefine = async ({ instructions, model, scope }: RefinementRequest) => {
+    if (!payload) return false;
+    const cardsToRefine = getCardsForRefinement(cards, scope);
+    const draft = cloneGeneratedSetForAction(payload, cardsToRefine);
     setIsRefining(true);
     setError(null);
     try {
       const result = await refineGeneratedSet({
         draft,
         instructions,
-        ...(config.model ? { model: config.model } : {}),
+        ...(model ? { model } : {}),
       });
       if (!result.ok) {
         setError(result.error.message);
-        return;
+        return false;
       }
       if (!result.value.validation.ok) {
         setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
-        return;
+        return false;
       }
-      setPayload(result.value.payload);
-      setCards(cardsFromPayload(result.value.payload));
+      const mergeResult = mergeRefinedPayloadCards(
+        cards,
+        result.value.payload,
+        scope,
+        cardsFromPayload,
+      );
+      if (!mergeResult.ok) {
+        setError(mergeResult.message);
+        return false;
+      }
+      setPayload(mergeResult.payload);
+      setCards(mergeResult.cards);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Refinement failed");
+      return false;
     } finally {
       setIsRefining(false);
     }
@@ -116,18 +148,10 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
     setPhase("confirming");
     setError(null);
     try {
-      const selectedCards = cards
-        .filter((c) => c.selected)
-        .map(({ selected: _, sourceCardIds: _s, ...c }) => c);
       const result = await confirmAppend({
         targetSetId: setId,
-        fieldDefinitions: fieldDefinitions.map((fd) => ({
-          name: fd.name,
-          role: fd.role,
-          metadata: { ...fd.metadata },
-          order: fd.order,
-        })),
-        cards: selectedCards,
+        fieldDefinitions: fieldDefinitionsForAction(fieldDefinitions),
+        cards: cardsForAppend(cards),
       });
       if (!result.ok) {
         setError(result.error.message);
@@ -149,7 +173,8 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         <h3 className="text-lg font-semibold">AI Generate Cards</h3>
         <button
           onClick={onClose}
-          className="text-sm text-muted hover:text-foreground"
+          disabled={isRefining}
+          className="text-sm text-muted hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Cancel
         </button>
@@ -184,6 +209,8 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
           onBack={() => setPhase("config")}
           onConfirm={handleConfirm}
           onRefine={handleRefine}
+          refinementModel={refinementModel}
+          onRefinementModelChange={setRefinementModel}
           isRefining={isRefining}
           confirmLabel={`Add to Set (${selectedCount} cards)`}
         />
