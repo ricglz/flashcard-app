@@ -171,7 +171,8 @@ export default defineSchema({
     order: v.number(),
   })
     .index("by_userId_and_order", ["userId", "order"])
-    .index("by_srsCardId", ["srsCardId"]),
+    .index("by_srsCardId", ["srsCardId"])
+    .index("by_srsCardId_and_userId", ["srsCardId", "userId"]),
 
   srsReviews: defineTable({
     userId: v.string(),

@@ -6,8 +6,9 @@ import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from
 import { populateQueue } from "./srsEngine";
 import { CARD_RATING_SCORES } from "../src/lib/types";
 import { incrementDailyStats } from "./progress";
-import { notFound, conflict } from "./domain/result";
+import { conflict } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
+import { validateSrsReviewAction } from "./domain/srsReviewAction";
 import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import type { Doc } from "./_generated/dataModel";
@@ -121,43 +122,17 @@ export const recordReview = mutation({
   handler: (ctx, args) => toDomainResultAsync(
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
+      const userId = identity.tokenIdentifier;
+      const validation = yield* validateSrsReviewAction(ctx, {
+        userId,
+        srsCardId: args.srsCardId,
+      });
 
-      const srsCard = yield* Effect.promise(() => ctx.db.get(args.srsCardId));
-      if (!srsCard || srsCard.userId !== identity.tokenIdentifier) {
-        return yield* Effect.fail(notFound("SRS card not found"));
+      if (validation.kind === "duplicate") {
+        return { remaining: validation.remaining, outcome: "duplicate" as const };
       }
 
-      const queueItems = yield* Effect.promise(() =>
-        ctx.db.query("reviewQueue")
-          .withIndex("by_srsCardId", (q) => q.eq("srsCardId", args.srsCardId))
-          .take(10),
-      );
-      const queueItem = queueItems.find(
-        (item) => item.userId === identity.tokenIdentifier,
-      );
-
-      if (!queueItem) {
-        if (queueItems.length > 0) {
-          return yield* Effect.fail(notFound("Review queue item not found"));
-        }
-        const remaining = yield* Effect.promise(() =>
-          ctx.db.query("reviewQueue")
-            .withIndex("by_userId_and_order", (q) =>
-              q.eq("userId", identity.tokenIdentifier),
-            )
-            .take(500),
-        );
-        return { remaining: remaining.length, outcome: "duplicate" as const };
-      }
-
-      if (
-        queueItem.cardId !== srsCard.cardId ||
-        queueItem.setId !== srsCard.setId ||
-        queueItem.srsCardId !== srsCard._id
-      ) {
-        return yield* Effect.fail(notFound("Review queue item not found"));
-      }
-
+      const { srsCard, queueItem } = validation;
       const now = Date.now();
       const result = computeSM2({
         rating: args.rating,
@@ -191,7 +166,7 @@ export const recordReview = mutation({
 
       yield* Effect.promise(() => ctx.db.delete(queueItem._id));
       yield* Effect.promise(() =>
-        incrementDailyStats(ctx, identity.tokenIdentifier, "srs", CARD_RATING_SCORES[args.rating]),
+        incrementDailyStats(ctx, userId, "srs", CARD_RATING_SCORES[args.rating]),
       );
 
       return { outcome: "recorded" as const };
