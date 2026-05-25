@@ -283,12 +283,43 @@ export async function enrollCardsForSetHelper(
   const existingCardIds = new Set(existingSrsCards.map((sc) => sc.cardId));
 
   for (const card of cards) {
-    if (!existingCardIds.has(card._id)) {
-      await insertDefaultSrsCard(ctx, {
-        userId,
-        cardId: card._id,
-        setId,
-      });
+    if (!existingCardIds.has(card._id)) await ensureSrsCardForCard(ctx, { userId, cardId: card._id, setId });
+  }
+}
+
+export async function ensureSrsCardForCard(
+  ctx: MutationCtx,
+  {
+    userId,
+    cardId,
+    setId,
+  }: {
+    userId: string;
+    cardId: Id<"flashcards">;
+    setId: Id<"flashcardSets">;
+  },
+) {
+  const existing = await ctx.db
+    .query("srsCards")
+    .withIndex("by_cardId_and_userId", (q) => q.eq("cardId", cardId).eq("userId", userId))
+    .first();
+  if (existing) return existing._id;
+  return await insertDefaultSrsCard(ctx, { userId, cardId, setId });
+}
+
+export async function enrollNewCardForSrsUsers(
+  ctx: MutationCtx,
+  setId: Id<"flashcardSets">,
+  cardId: Id<"flashcards">,
+) {
+  const links = await ctx.db
+    .query("userSets")
+    .withIndex("by_setId", (q) => q.eq("setId", setId))
+    .take(500);
+
+  for (const link of links) {
+    if (link.srsEnabled) {
+      await ensureSrsCardForCard(ctx, { userId: link.userId, cardId, setId });
     }
   }
 }

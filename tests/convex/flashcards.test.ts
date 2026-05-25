@@ -35,6 +35,28 @@ describe("flashcards.create", () => {
     expect(cards[0]!.fields).toEqual({ Front: "Question", Back: "Answer" });
   });
 
+  it("enrolls created cards for SRS-enabled users of the set", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    const cardId = await unwrap(await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "Question", Back: "Answer" },
+      order: 0,
+    }));
+
+    const srsCards = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("srsCards")
+        .withIndex("by_cardId_and_userId", (q) =>
+          q.eq("cardId", cardId).eq("userId", TEST_USER.tokenIdentifier),
+        )
+        .take(10);
+    });
+    expect(srsCards).toHaveLength(1);
+  });
+
   it("allows missing defined fields", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
@@ -85,6 +107,35 @@ describe("flashcards.create", () => {
 });
 
 describe("flashcards.batchCreate", () => {
+  it("enrolls batch-created cards for SRS-enabled users of the set", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    const cardIds = await unwrap(await as.mutation(api.flashcards.batchCreate, {
+      setId,
+      cards: [
+        { fields: { Front: "Q1", Back: "A1" }, order: 0 },
+        { fields: { Front: "Q2", Back: "A2" }, order: 1 },
+      ],
+    }));
+
+    const srsCards = await t.run(async (ctx) => {
+      const rows = [];
+      for (const cardId of cardIds) {
+        const row = await ctx.db
+          .query("srsCards")
+          .withIndex("by_cardId_and_userId", (q) =>
+            q.eq("cardId", cardId).eq("userId", TEST_USER.tokenIdentifier),
+          )
+          .first();
+        rows.push(row);
+      }
+      return rows;
+    });
+    expect(srsCards).toEqual([expect.objectContaining({ cardId: cardIds[0] }), expect.objectContaining({ cardId: cardIds[1] })]);
+  });
+
   it("rejects a batch containing an unknown field", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as Effect from "effect/Effect";
-import { assertOwnerEffect, requireSetContentAccessEffect } from "./userSets";
+import { assertOwnerEffect, enrollNewCardForSrsUsers, requireSetContentAccessEffect } from "./userSets";
 import { validateCardFieldsEffect, type CardFieldsValidationFailure } from "./domain/cardFields";
 import type { CommonFailure } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
@@ -46,6 +46,7 @@ export const create = mutation({
       const id = yield* Effect.promise(() =>
         ctx.db.insert("flashcards", { setId: args.setId, fields, order: args.order }),
       );
+      yield* Effect.promise(() => enrollNewCardForSrsUsers(ctx, args.setId, id));
       yield* Effect.promise(() =>
         ctx.db.patch(args.setId, { cardCount: set.cardCount + 1, updatedAt: Date.now() }),
       );
@@ -79,6 +80,7 @@ export const batchCreate = mutation({
         const id = yield* Effect.promise(() =>
           ctx.db.insert("flashcards", { setId: args.setId, ...card }),
         );
+        yield* Effect.promise(() => enrollNewCardForSrsUsers(ctx, args.setId, id));
         ids.push(id);
       }
       yield* Effect.promise(() =>
