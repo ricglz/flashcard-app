@@ -9,6 +9,11 @@ import { DEFAULT_MODELS } from "@/lib/aiDefaults";
 import { stripHallucinatedFnCalls } from "@/lib/stripHallucinatedFnCalls";
 import { parseId } from "@/lib/convexHelpers";
 import { isConvexArgumentValidationError } from "@/lib/convexErrors";
+import {
+  isRetryableToolCallValidationError,
+  isToolUnsupportedError,
+  sanitizeChatGenerationError,
+} from "@/lib/chatGenerationErrors";
 import * as Schema from "effect/Schema";
 import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
@@ -45,11 +50,6 @@ const noToolsCache = new Map<string, boolean>();
 
 function getCacheKey(provider: string, modelName: string): string {
   return `${provider}:${modelName}`;
-}
-
-function isToolUnsupportedError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
-  return msg.includes("tool calling") && msg.includes("not supported");
 }
 
 function normalizeGenerationError(error: unknown): Error {
@@ -231,6 +231,34 @@ export async function POST(request: Request) {
                 ),
                 catch: normalizeGenerationError,
               });
+            }),
+            Effect.catchIf(isRetryableToolCallValidationError, (error) => {
+              console.warn(`[chat] Tool-call validation failed for ${modelName}, retrying without plugins`, error);
+              Sentry.captureException(error, {
+                tags: {
+                  route: "api.chat",
+                  provider: aiConfig.provider,
+                  retry: "without_tools",
+                  reason: "tool_call_validation",
+                },
+                extra: {
+                  modelName,
+                },
+              });
+
+              const noToolsPrompt = `${systemPrompt}\n\n${NO_TOOLS_RETRY_PROMPT_NOTE}`;
+              const newThread = [
+                new Message("system", noToolsPrompt),
+                ...body.history.map((m) => new Message(m.role, m.content)),
+                new Message("user", body.message),
+              ];
+
+              return Effect.tryPromise({
+                try: () => generateWithoutPlugins(
+                  aiConfig.provider, modelName, aiConfig.apiKey, newThread, request, controller
+                ),
+                catch: normalizeGenerationError,
+              });
             })
           );
 
@@ -252,7 +280,7 @@ export async function POST(request: Request) {
         controller.enqueue(
           sseEvent({
             type: "error",
-            message: result.left.message,
+            message: sanitizeChatGenerationError(result.left),
           }),
         );
       }
