@@ -28,11 +28,12 @@
 ### Async Action State
 - [ ] Evaluate `@convex-dev/react-query` / TanStack Query for components that still hand-roll `isSaving`/`error`/success state around Convex mutations.
   - Compare against a small local async-action hook before adopting another provider and dependency.
-  - Keep standard Convex React hooks where offline/preloaded-query behavior or adapter beta gaps matter.
+  - Treat offline support as a prototype target, not a blocker: TanStack Query has persisted cache and paused-mutation examples, but this app still needs validation against Convex live queries, Next route preloading, Clerk auth, and the existing IndexedDB outbox.
+  - Keep standard Convex React hooks where live subscription or preloaded-query behavior is materially simpler.
 - [ ] Stabilize local async-action helpers if `useSaveHandler` keeps spreading.
   - Keep the local helper for one-shot Convex mutations that only need button loading, inline errors, and success callbacks.
   - Revisit TanStack Query instead of adding more local abstraction when multiple features need shared mutation/query state, retry/backoff policy, cancellation/deduping, cache invalidation/refetch orchestration, or optimistic updates beyond the offline outbox.
-  - Do not adopt `@convex-dev/react-query` until offline/preloaded-query behavior and adapter maturity are compatible with this app's core study flows.
+  - Adopt `@convex-dev/react-query` only if a prototype proves it can coexist with or simplify the current offline cache/outbox without weakening core study-flow reliability.
 
 ## Code Quality — Convex Performance
 
