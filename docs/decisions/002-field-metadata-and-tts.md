@@ -19,11 +19,3 @@ TTS behavior belongs to fields. A Chinese set may speak the Character field but 
 ```ts
 metadata: { tts: { lang: "zh-CN" } }
 ```
-
-## Related Files
-
-- `src/lib/types.ts`
-- `src/lib/tts.ts`
-- `convex/schema.ts`
-- `convex/domain/fieldDefinitions.ts`
-- `convex/lib/typed.ts`
