@@ -99,7 +99,7 @@ export default function EditSetClient({
             Cards ({cards.length})
           </h2>
 
-          {cards
+          {[...cards]
             .sort((a, b) => a.order - b.order)
             .map((card, idx) => (
               <div

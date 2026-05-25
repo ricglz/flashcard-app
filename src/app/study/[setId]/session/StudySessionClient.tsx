@@ -20,6 +20,7 @@ import {
 import SetAccessError from "@/components/SetAccessError";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
+import { useReviewCardState } from "@/hooks/useReviewCardState";
 import StudySessionLocalResults, {
   type LocalStudyResult,
 } from "./StudySessionLocalResults";
@@ -60,8 +61,8 @@ export default function StudySessionClient({
   const abandonSession = useMutation(api.studySessions.abandon);
   const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
+  const { revealed, reveal, resetReveal } = useReviewCardState();
 
-  const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localIndex, setLocalIndex] = useState(() => session.currentIndex);
   const [localResults, setLocalResults] = useState<LocalStudyResult[]>([]);
@@ -87,7 +88,7 @@ export default function StudySessionClient({
           setError(result.error.message);
           return;
         }
-        setRevealed(false);
+        resetReveal();
         setLocalResults((previous) => [...previous, { cardId: currentCardId, rating }]);
         setLocalIndex((index) => Math.max(index, localIndex + 1));
       } finally {
@@ -100,6 +101,7 @@ export default function StudySessionClient({
       localIndex,
       isSubmitting,
       recordResult,
+      resetReveal,
     ],
   );
 
@@ -184,7 +186,7 @@ export default function StudySessionClient({
         frontFields={session.frontFields}
         backFields={session.backFields}
         ttsOnlyFields={session.ttsOnlyFields}
-        onRevealed={() => setRevealed(true)}
+        onRevealed={reveal}
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}
         annotation={currentAnnotation}

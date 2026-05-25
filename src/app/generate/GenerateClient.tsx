@@ -7,9 +7,9 @@ import { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseId } from "@/lib/convexHelpers";
-import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 import { cloneFieldDefinitionsForAction } from "@/lib/generatedSetDraft";
-import { useGeneratedSetRefinement } from "@/hooks/useGeneratedSetRefinement";
+import { selectedCardsForConfirm } from "@/lib/generatedDraftCards";
+import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import { isMethodology } from "@/lib/types";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
@@ -17,27 +17,6 @@ import AiErrorMessage from "@/components/AiErrorMessage";
 import PageHeader from "@/components/PageHeader";
 
 type Step = "config" | "loading" | "preview" | "done";
-
-type GeneratedCard = GeneratedSetPayload["cards"][number] & { selected: boolean };
-
-function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
-  return nextPayload.cards.map((c) => ({
-    fields: { ...c.fields },
-    sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
-    rationale: c.rationale,
-    selected: true,
-  }));
-}
-
-function cardsForConfirm(cards: readonly GeneratedCard[]) {
-  return cards
-    .filter((c) => c.selected)
-    .map((card) => ({
-      fields: { ...card.fields },
-      sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
-      rationale: card.rationale,
-    }));
-}
 
 export default function GenerateClient({
   preloadedSets,
@@ -71,17 +50,17 @@ export default function GenerateClient({
     addToSrs: true,
   });
   const [error, setError] = useState<string | null>(null);
-  const [cards, setCards] = useState<GeneratedCard[]>([]);
-  const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
-  const [refinementModel, setRefinementModel] = useState("");
-  const { isRefining, refineDraft } = useGeneratedSetRefinement({
+  const {
     payload,
     cards,
-    cardsFromPayload,
-    onApply: (refinement) => {
-      setPayload(refinement.payload);
-      setCards(refinement.cards);
-    },
+    selectedCount,
+    setCards,
+    refinementModel,
+    setRefinementModel,
+    applyPayload,
+    isRefining,
+    refineDraft,
+  } = useGeneratedDraftCards({
     onError: setError,
   });
 
@@ -116,9 +95,7 @@ export default function GenerateClient({
         setStep("config");
         return;
       }
-      setPayload(result.value.payload);
-      setCards(cardsFromPayload(result.value.payload));
-      setRefinementModel(config.model);
+      applyPayload(result.value.payload, config.model);
       setStep("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -138,7 +115,7 @@ export default function GenerateClient({
         weakContextMethodology: payload.weakContextMethodology,
         fieldDefinitions: cloneFieldDefinitionsForAction(payload.fieldDefinitions),
         addToSrs: payload.addToSrs,
-        cards: cardsForConfirm(cards),
+        cards: selectedCardsForConfirm(cards),
       });
       if (!result.ok) {
         setError(result.error.message);
@@ -152,8 +129,6 @@ export default function GenerateClient({
       setStep("preview");
     }
   };
-
-  const selectedCount = cards.filter((c) => c.selected).length;
 
   return (
     <div className="min-h-screen">

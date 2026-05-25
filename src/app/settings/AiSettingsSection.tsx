@@ -55,8 +55,7 @@ export default function AiSettingsSection({
 
   const [llmProvider, setLlmProvider] = useState<LlmProvider | null>(null);
   const [llmApiKey, setLlmApiKey] = useState("");
-  const [chatPrompt, setChatPrompt] = useState("");
-  const [chatPromptInitialized, setChatPromptInitialized] = useState(false);
+  const [chatPromptDraft, setChatPromptDraft] = useState<string | null>(null);
   const [llmSaved, setLlmSaved] = useState(false);
   const { execute: saveConfig, isSaving: llmSaving, error: llmError } = useSaveHandler({
     onSuccess: () => {
@@ -65,15 +64,12 @@ export default function AiSettingsSection({
     },
   });
 
-  if (settings && !chatPromptInitialized) {
-    setChatPrompt(settings.customChatPrompt ?? "");
-    setChatPromptInitialized(true);
-  }
-
   const savedProvider = isLlmProvider(settings?.llmProvider)
     ? settings.llmProvider
     : "";
   const effectiveProvider = llmProvider ?? savedProvider;
+  const savedChatPrompt = settings?.customChatPrompt ?? "";
+  const chatPrompt = chatPromptDraft ?? savedChatPrompt;
 
   return (
     <section className="border border-edge rounded-xl p-5 space-y-4 mt-6">
@@ -121,7 +117,7 @@ export default function AiSettingsSection({
           <Textarea
             id="chat-prompt"
             value={chatPrompt}
-            onChange={(e) => { setChatPrompt(e.target.value); setLlmSaved(false); }}
+            onChange={(e) => { setChatPromptDraft(e.target.value); setLlmSaved(false); }}
             rows={3}
             placeholder="You are a study assistant for a flashcard app. Help the user understand their study material. Be concise and helpful."
           />
@@ -145,7 +141,7 @@ export default function AiSettingsSection({
                 })
               );
             }}
-            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === (settings?.customChatPrompt ?? "")) || !((llmProvider ?? settings?.llmProvider) && (llmApiKey || settings?.hasLlmKey))}
+            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === savedChatPrompt) || !((llmProvider ?? settings?.llmProvider) && (llmApiKey || settings?.hasLlmKey))}
             loading={llmSaving}
           >
             Save

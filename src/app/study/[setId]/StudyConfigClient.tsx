@@ -7,13 +7,12 @@ import { useConvexAuth, usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getTtsConfig } from "@/lib/types";
 import {
   type FlashcardSetWithViewer,
   useTypedFlashcardSet,
 } from "@/hooks/convex/useTypedFlashcardSet";
 import SetAccessError from "@/components/SetAccessError";
-import { cycleFieldAssignment } from "@/lib/fieldToggle";
+import { useFieldAssignment } from "@/hooks/useFieldAssignment";
 import ResumeSessionBanner from "./ResumeSessionBanner";
 import FieldSelectionList from "./FieldSelectionList";
 import CardLimitSelector from "./CardLimitSelector";
@@ -65,12 +64,17 @@ export default function StudyConfigClient({
   const [shuffle, setShuffle] = useState(true);
   const [cardLimit, setCardLimit] = useState<number | null>(null);
   const [mode, setMode] = useState<"study" | "browse">(initialMode);
-  const [frontFields, setFrontFields] = useState<string[]>([]);
-  const [backFields, setBackFields] = useState<string[]>([]);
-  const [ttsOnlyFields, setTtsOnlyFields] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const { assignment, toggleField } = useFieldAssignment({
+    initial: {
+      frontFields: userSet.defaultFrontFields,
+      backFields: userSet.defaultBackFields,
+      ttsOnlyFields: userSet.defaultTtsOnlyFields,
+    },
+    fieldDefinitions: setResult.ok ? setResult.value.set.fieldDefinitions : [],
+  });
+  const { frontFields, backFields, ttsOnlyFields } = assignment;
 
   if (!setResult.ok) {
     return <SetAccessError message={setResult.error.message} href={`/sets/${setId}`} label="Back to set" />;
@@ -78,24 +82,8 @@ export default function StudyConfigClient({
   const { set } = setResult.value;
   const fieldDefs = set.fieldDefinitions;
 
-  if (!initialized && fieldDefs.length > 0) {
-    setFrontFields(userSet.defaultFrontFields);
-    setBackFields(userSet.defaultBackFields);
-    setTtsOnlyFields(userSet.defaultTtsOnlyFields);
-    setInitialized(true);
-  }
-
   const handleToggle = (fieldName: string) => {
-    const fd = fieldDefs.find((d) => d.name === fieldName);
-    const hasTts = fd ? getTtsConfig(fd) !== null : false;
-    const result = cycleFieldAssignment(
-      fieldName,
-      { frontFields, backFields, ttsOnlyFields },
-      hasTts
-    );
-    setFrontFields(result.frontFields);
-    setBackFields(result.backFields);
-    setTtsOnlyFields(result.ttsOnlyFields);
+    toggleField(fieldName);
   };
 
   const handleStart = async () => {

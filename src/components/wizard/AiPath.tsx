@@ -9,26 +9,10 @@ import AiGenerationConfig, {
 } from "@/components/AiGenerationConfig";
 import AiCardPreview from "./AiCardPreview";
 import AiErrorMessage from "@/components/AiErrorMessage";
-import { useGeneratedSetRefinement } from "@/hooks/useGeneratedSetRefinement";
-import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
+import { includedCardFields } from "@/lib/generatedDraftCards";
+import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
-
-type GeneratedCard = Pick<GeneratedSetPayload["cards"][number], "fields" | "rationale"> & {
-  selected: boolean;
-};
-
-function wizardCardsFromPayload(payload: GeneratedSetPayload): GeneratedCard[] {
-  return payload.cards.map((c) => ({
-    fields: { ...c.fields },
-    rationale: c.rationale,
-    selected: true,
-  }));
-}
-
-function includedCardFields(cards: readonly GeneratedCard[]) {
-  return cards.filter((c) => c.selected).map(({ fields }) => fields);
-}
 
 export default function AiPath({
   state,
@@ -48,23 +32,28 @@ export default function AiPath({
   const [localFieldDefs, setLocalFieldDefs] = useState<FieldDefinition[]>(state.fieldDefinitions);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedCards, setGeneratedCards] = useState<GeneratedCard[]>([]);
-  const [generatedPayload, setGeneratedPayload] = useState<GeneratedSetPayload | null>(null);
-  const [refinementModel, setRefinementModel] = useState("");
-  const { isRefining, refineDraft } = useGeneratedSetRefinement({
-    payload: generatedPayload,
+  const {
     cards: generatedCards,
-    cardsFromPayload: wizardCardsFromPayload,
-    onApply: (refinement) => {
-      setGeneratedPayload(refinement.payload);
-      setGeneratedCards(refinement.cards);
+    selectedCount,
+    refinementModel,
+    setRefinementModel,
+    applyPayload,
+    toggleCard,
+    editCardField,
+    resetDraft,
+    isRefining,
+    refineDraft,
+  } = useGeneratedDraftCards({
+    onError: setError,
+    onCardsChange: (cards) => {
+      dispatch({ type: "SET_CARDS", payload: includedCardFields(cards) });
+    },
+    onPayloadApply: (draft) => {
       dispatch({
         type: "SET_FIELD_DEFINITIONS",
-        payload: [...refinement.payload.fieldDefinitions],
+        payload: [...draft.payload.fieldDefinitions],
       });
-      dispatch({ type: "SET_CARDS", payload: includedCardFields(refinement.cards) });
     },
-    onError: setError,
   });
 
   const hasGenerated = generatedCards.length > 0;
@@ -93,13 +82,7 @@ export default function AiPath({
         setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
         return;
       }
-      const payload = result.value.payload;
-      const cards = wizardCardsFromPayload(payload);
-      setGeneratedPayload(payload);
-      setGeneratedCards(cards);
-      setRefinementModel(aiConfig.model);
-      dispatch({ type: "SET_FIELD_DEFINITIONS", payload: [...payload.fieldDefinitions] });
-      dispatch({ type: "SET_CARDS", payload: includedCardFields(cards) });
+      applyPayload(result.value.payload, aiConfig.model);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
@@ -107,35 +90,21 @@ export default function AiPath({
     }
   };
 
-  const toggleCard = (idx: number) => {
+  const handleToggleCard = (idx: number) => {
     if (isRefining) return;
-    const updated = [...generatedCards];
-    const card = updated[idx];
-    if (!card) return;
-    updated[idx] = { ...card, selected: !card.selected };
-    setGeneratedCards(updated);
-    dispatch({ type: "SET_CARDS", payload: includedCardFields(updated) });
+    toggleCard(idx);
   };
 
   const updateCardField = (idx: number, key: string, value: string) => {
     if (isRefining) return;
-    const updated = [...generatedCards];
-    const card = updated[idx];
-    if (!card) return;
-    updated[idx] = { ...card, fields: { ...card.fields, [key]: value } };
-    setGeneratedCards(updated);
-    dispatch({ type: "SET_CARDS", payload: includedCardFields(updated) });
+    editCardField(idx, key, value);
   };
 
   const resetGeneratedCards = () => {
     if (isRefining) return;
-    setGeneratedCards([]);
-    setGeneratedPayload(null);
+    resetDraft();
     setError(null);
-    dispatch({ type: "SET_CARDS", payload: [] });
   };
-
-  const selectedCount = generatedCards.filter((c) => c.selected).length;
 
   return (
     <div className="space-y-4">
@@ -185,7 +154,7 @@ export default function AiPath({
         <AiCardPreview
           cards={generatedCards}
           selectedCount={selectedCount}
-          onToggle={toggleCard}
+          onToggle={handleToggleCard}
           onEdit={updateCardField}
           onRegenerate={resetGeneratedCards}
           onRefine={refineDraft}

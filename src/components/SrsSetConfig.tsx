@@ -6,8 +6,8 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
-import { getTtsConfig } from "@/lib/types";
-import { cycleFieldAssignment } from "@/lib/fieldToggle";
+import { getDisplayableFields } from "@/lib/types";
+import { useFieldAssignment } from "@/hooks/useFieldAssignment";
 
 type Props = {
   setId: Id<"flashcardSets">;
@@ -29,14 +29,22 @@ export default function SrsSetConfig({
   const updateUserSet = useMutation(api.userSets.update);
   const [isSaving, setIsSaving] = useState(false);
   const [localSrsEnabled, setLocalSrsEnabled] = useState(srsEnabled);
-  const [localFront, setLocalFront] = useState<string[]>(defaultFrontFields);
-  const [localBack, setLocalBack] = useState<string[]>(defaultBackFields);
-  const [localTtsOnly, setLocalTtsOnly] = useState<string[]>(defaultTtsOnlyFields);
   const [error, setError] = useState<string | null>(null);
+  const { assignment, toggleField } = useFieldAssignment({
+    initial: {
+      frontFields: defaultFrontFields,
+      backFields: defaultBackFields,
+      ttsOnlyFields: defaultTtsOnlyFields,
+    },
+    fieldDefinitions,
+  });
+  const {
+    frontFields: localFront,
+    backFields: localBack,
+    ttsOnlyFields: localTtsOnly,
+  } = assignment;
 
-  const sortedFields = [...fieldDefinitions].sort(
-    (a, b) => a.order - b.order
-  );
+  const sortedFields = getDisplayableFields(fieldDefinitions);
   const allFieldNames = sortedFields.map((fd) => fd.name);
 
   const hasChanges =
@@ -44,19 +52,6 @@ export default function SrsSetConfig({
     JSON.stringify(localFront) !== JSON.stringify(defaultFrontFields) ||
     JSON.stringify(localBack) !== JSON.stringify(defaultBackFields) ||
     JSON.stringify(localTtsOnly) !== JSON.stringify(defaultTtsOnlyFields);
-
-  function toggleField(fieldName: string) {
-    const fd = fieldDefinitions.find((d) => d.name === fieldName);
-    const hasTts = fd ? getTtsConfig(fd) !== null : false;
-    const result = cycleFieldAssignment(
-      fieldName,
-      { frontFields: localFront, backFields: localBack, ttsOnlyFields: localTtsOnly },
-      hasTts
-    );
-    setLocalFront(result.frontFields);
-    setLocalBack(result.backFields);
-    setLocalTtsOnly(result.ttsOnlyFields);
-  }
 
   async function handleSave() {
     setIsSaving(true);

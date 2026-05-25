@@ -18,6 +18,18 @@
 
 ### TTS / External Integration Boundary
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
+- [ ] Extract shared TTS interaction state if TTS button/status behavior keeps expanding across `TtsButton`, `TappableCjkChar`, and `StudyCard`.
+
+## Code Quality — React Component Structure
+
+### Form / Draft State Helpers
+- [ ] Extract reusable local draft helpers for editable settings forms if more settings sections need nullable draft-over-server-state behavior.
+- [ ] Consolidate field definition add/remove/update helpers across manual set creation and field definition editing.
+
+### Async Action State
+- [ ] Evaluate `@convex-dev/react-query` / TanStack Query for components that still hand-roll `isSaving`/`error`/success state around Convex mutations.
+  - Compare against a small local async-action hook before adopting another provider and dependency.
+  - Keep standard Convex React hooks where offline/preloaded-query behavior or adapter beta gaps matter.
 
 ## Code Quality — Convex Performance
 

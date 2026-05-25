@@ -16,6 +16,7 @@ import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 import InlineError from "@/components/InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
+import { useReviewCardState } from "@/hooks/useReviewCardState";
 
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
@@ -45,12 +46,12 @@ export default function SrsReviewClient({
   const stats = useOfflinePreloadedQuery(preloadedStats);
   const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsAllPreloaded(preloadedAnnotations);
+  const { revealed, reveal, resetReveal } = useReviewCardState();
 
   const stableQueue = useRef(queue);
   if (queue.length > 0) stableQueue.current = queue;
   const effectiveQueue = queue.length > 0 ? queue : stableQueue.current;
 
-  const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
   const [ratingCounts, setRatingCounts] = useState<Record<CardRating, number>>({
@@ -95,7 +96,7 @@ export default function SrsReviewClient({
           setError(result.error.message);
           return;
         }
-        setRevealed(false);
+        resetReveal();
         setReviewedCount((c) => c + 1);
         setRatingCounts((prev) => ({
           ...prev,
@@ -106,7 +107,7 @@ export default function SrsReviewClient({
         setIsSubmitting(false);
       }
     },
-    [clearRefreshError, currentItem, isSubmitting, recordReview],
+    [clearRefreshError, currentItem, isSubmitting, recordReview, resetReveal],
   );
 
   if (isSessionComplete) {
@@ -146,7 +147,7 @@ export default function SrsReviewClient({
         revealed={revealed}
         isSubmitting={isSubmitting}
         tts={tts}
-        onReveal={() => setRevealed(true)}
+        onReveal={reveal}
         onRate={handleRate}
         annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
         onToggleFlag={() => {

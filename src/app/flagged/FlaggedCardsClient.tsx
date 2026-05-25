@@ -8,6 +8,7 @@ import StudyLayout from "@/components/StudyLayout";
 import StudyCard from "@/components/StudyCard";
 import AssistantPanel from "@/components/AssistantPanel";
 import { useTtsControls } from "@/hooks/useTtsControls";
+import { useReviewCardState } from "@/hooks/useReviewCardState";
 import Link from "next/link";
 
 type Props = {
@@ -31,10 +32,10 @@ export default function FlaggedCardsClient({
   const tts = useTtsControls(preloadedTtsConfig);
   const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useMutation(api.cardAnnotations.setNote);
+  const { revealed, reveal, resetReveal } = useReviewCardState();
 
   const [unflaggedIds, setUnflaggedIds] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
 
   const activeCards = liveQuery
     .filter(isFlaggedCard)
@@ -111,14 +112,14 @@ export default function FlaggedCardsClient({
   const handlePrev = () => {
     if (safeIndex > 0) {
       setCurrentIndex(safeIndex - 1);
-      setRevealed(false);
+      resetReveal();
     }
   };
 
   const handleNext = () => {
     if (safeIndex < activeCards.length - 1) {
       setCurrentIndex(safeIndex + 1);
-      setRevealed(false);
+      resetReveal();
     }
   };
 
@@ -132,7 +133,7 @@ export default function FlaggedCardsClient({
       const newUnflagged = new Set(unflaggedIds);
       newUnflagged.add(cardId);
       setUnflaggedIds(newUnflagged);
-      setRevealed(false);
+      resetReveal();
       const newActiveLength = activeCards.length - 1;
       if (safeIndex >= newActiveLength) {
         setCurrentIndex(Math.max(0, newActiveLength - 1));
@@ -175,7 +176,7 @@ export default function FlaggedCardsClient({
         frontFields={currentCard.frontFields}
         backFields={currentCard.backFields}
         ttsOnlyFields={currentCard.ttsOnlyFields}
-        onRevealed={() => setRevealed(true)}
+        onRevealed={reveal}
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}
         annotation={{

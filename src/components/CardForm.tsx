@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FieldDefinition } from "@/lib/types";
+import { getDisplayableFields } from "@/lib/types";
 
 type Props = {
   fieldDefinitions: FieldDefinition[];
@@ -35,8 +36,7 @@ export default function CardForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {fieldDefinitions
-        .sort((a, b) => a.order - b.order)
+      {getDisplayableFields(fieldDefinitions)
         .map((fd) => (
           <div key={fd.name}>
             <label className="block text-sm font-medium mb-1">

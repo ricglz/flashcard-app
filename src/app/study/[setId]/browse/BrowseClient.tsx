@@ -17,6 +17,7 @@ import {
 import SetAccessError from "@/components/SetAccessError";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
+import { useReviewCardState } from "@/hooks/useReviewCardState";
 import { shuffleArray } from "@/lib/shuffle";
 
 type Props = {
@@ -52,10 +53,10 @@ export default function BrowseClient({
   const cards = cardsResult.ok ? cardsResult.value : [];
   const tts = useTtsControls(preloadedTtsConfig);
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
+  const { revealed, reveal, resetReveal } = useReviewCardState();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
-  const [revealed, setRevealed] = useState(false);
 
   const [cardOrder] = useState<Id<"flashcards">[]>(() => {
     const sorted = [...cards]
@@ -128,21 +129,21 @@ export default function BrowseClient({
   const handlePrev = () => {
     if (safeIndex > 0) {
       setCurrentIndex(safeIndex - 1);
-      setRevealed(false);
+      resetReveal();
     }
   };
 
   const handleNext = () => {
     if (safeIndex < activeCardIds.length - 1) {
       setCurrentIndex(safeIndex + 1);
-      setRevealed(false);
+      resetReveal();
     }
   };
 
   const handleDismiss = () => {
     if (!currentCardId) return;
     setDismissed(new Set([...dismissed, currentCardId]));
-    setRevealed(false);
+    resetReveal();
     if (safeIndex >= activeCardIds.length - 2) {
       setCurrentIndex(Math.max(0, safeIndex - 1));
     }
@@ -173,7 +174,7 @@ export default function BrowseClient({
         frontFields={validFrontFields}
         backFields={validBackFields}
         ttsOnlyFields={validTtsOnlyFields}
-        onRevealed={() => setRevealed(true)}
+        onRevealed={reveal}
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}
         annotation={currentAnnotation}

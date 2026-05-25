@@ -5,14 +5,13 @@ import { useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
-import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import { useGeneratedSetRefinement } from "@/hooks/useGeneratedSetRefinement";
+import { selectedCardsForAppend } from "@/lib/generatedDraftCards";
+import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import GeneratePreview from "@/app/generate/GeneratePreview";
 import AiAppendConfig, { type AiAppendConfigValue } from "./AiAppendConfig";
 import AiErrorMessage from "@/components/AiErrorMessage";
 
 type Phase = "config" | "generating" | "preview" | "confirming";
-type GeneratedCard = GeneratedSetPayload["cards"][number] & { selected: boolean };
 
 type Props = {
   setId: Id<"flashcardSets">;
@@ -29,24 +28,6 @@ function fieldDefinitionsForAction(fieldDefinitions: readonly FieldDefinition[])
   }));
 }
 
-function cardsForAppend(cards: readonly GeneratedCard[]) {
-  return cards
-    .filter((c) => c.selected)
-    .map((card) => ({
-      fields: { ...card.fields },
-      rationale: card.rationale,
-    }));
-}
-
-function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
-  return nextPayload.cards.map((c) => ({
-    fields: { ...c.fields },
-    sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
-    rationale: c.rationale,
-    selected: true,
-  }));
-}
-
 export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
   const confirmAppend = useAction(api.ai.confirmAppendCards);
@@ -59,17 +40,16 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
     model: "",
   });
   const [error, setError] = useState<string | null>(null);
-  const [cards, setCards] = useState<GeneratedCard[]>([]);
-  const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
-  const [refinementModel, setRefinementModel] = useState("");
-  const { isRefining, refineDraft } = useGeneratedSetRefinement({
-    payload,
+  const {
     cards,
-    cardsFromPayload,
-    onApply: (refinement) => {
-      setPayload(refinement.payload);
-      setCards(refinement.cards);
-    },
+    selectedCount,
+    setCards,
+    refinementModel,
+    setRefinementModel,
+    applyPayload,
+    isRefining,
+    refineDraft,
+  } = useGeneratedDraftCards({
     onError: setError,
   });
 
@@ -97,9 +77,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         setPhase("config");
         return;
       }
-      setPayload(result.value.payload);
-      setCards(cardsFromPayload(result.value.payload));
-      setRefinementModel(config.model);
+      applyPayload(result.value.payload, config.model);
       setPhase("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -114,7 +92,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
       const result = await confirmAppend({
         targetSetId: setId,
         fieldDefinitions: fieldDefinitionsForAction(fieldDefinitions),
-        cards: cardsForAppend(cards),
+        cards: selectedCardsForAppend(cards),
       });
       if (!result.ok) {
         setError(result.error.message);
@@ -127,8 +105,6 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
       setPhase("preview");
     }
   };
-
-  const selectedCount = cards.filter((c) => c.selected).length;
 
   return (
     <div className="border border-edge rounded-xl p-5 space-y-4">

@@ -1,5 +1,5 @@
 import type { FieldDefinition } from "@/lib/types";
-import { getTtsConfig } from "@/lib/types";
+import { getDisplayableFields, getTtsConfig } from "@/lib/types";
 
 type Props = {
   fieldDefs: FieldDefinition[];
@@ -26,8 +26,7 @@ export default function FieldSelectionList({
       </p>
 
       <div className="space-y-2">
-        {fieldDefs
-          .sort((a, b) => a.order - b.order)
+        {getDisplayableFields(fieldDefs)
           .map((fd) => {
             const name = fd.name;
             const isFront = frontFields.includes(name);
