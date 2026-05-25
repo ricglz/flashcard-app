@@ -12,6 +12,7 @@ type UseSaveHandlerOptions<T> = {
 export function useSaveHandler<T>(options?: UseSaveHandlerOptions<T>) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const resetError = useCallback(() => setError(null), []);
 
   const execute = useCallback(
     async (operation: () => Promise<AppResult<T, AppFailure<string, object>>>): Promise<T | null> => {
@@ -42,5 +43,5 @@ export function useSaveHandler<T>(options?: UseSaveHandlerOptions<T>) {
     [options]
   );
 
-  return { execute, isSaving, error, setError };
+  return { execute, isSaving, error, setError, resetError };
 }

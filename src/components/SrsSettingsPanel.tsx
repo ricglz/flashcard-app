@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { utcHourToLocal, localHourToUtc } from "@/lib/time";
 import { Button } from "@/components/ui/Button";
+import { useDraftValue } from "@/hooks/useDraftValue";
 
 export type SrsConfig = {
   maxNewCardsPerDay: number;
@@ -25,16 +25,15 @@ export default function SrsSettingsPanel({
   isSaving: boolean;
   onSave: (config: SrsConfig) => Promise<boolean>;
 }) {
-  const [localMaxNew, setLocalMaxNew] = useState<string | null>(null);
-  const [localResetHour, setLocalResetHour] = useState<string | null>(null);
-  const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
-  const [localDailyGoal, setLocalDailyGoal] = useState<string | null>(null);
+  const maxNewDraft = useDraftValue(String(settings.maxNewCardsPerDay));
+  const resetHourDraft = useDraftValue(String(utcHourToLocal(settings.dayResetUtcHour)));
+  const ttsSpeedDraft = useDraftValue(settings.ttsPlaybackSpeed);
+  const dailyGoalDraft = useDraftValue(String(settings.dailyGoal));
 
-  const editMaxValue = localMaxNew ?? String(settings.maxNewCardsPerDay);
-  const editResetHour =
-    localResetHour ?? String(utcHourToLocal(settings.dayResetUtcHour));
-  const editTtsSpeed = localTtsSpeed ?? settings.ttsPlaybackSpeed;
-  const editDailyGoal = localDailyGoal ?? String(settings.dailyGoal);
+  const editMaxValue = maxNewDraft.value;
+  const editResetHour = resetHourDraft.value;
+  const editTtsSpeed = ttsSpeedDraft.value;
+  const editDailyGoal = dailyGoalDraft.value;
 
   async function handleSave() {
     const parsedMax = Math.max(1, Math.min(100, Number(editMaxValue) || 1));
@@ -53,10 +52,10 @@ export default function SrsSettingsPanel({
       dailyGoal: parsedGoal,
     });
     if (success) {
-      setLocalMaxNew(null);
-      setLocalResetHour(null);
-      setLocalTtsSpeed(null);
-      setLocalDailyGoal(null);
+      maxNewDraft.resetDraft();
+      resetHourDraft.resetDraft();
+      ttsSpeedDraft.resetDraft();
+      dailyGoalDraft.resetDraft();
     }
   }
 
@@ -71,13 +70,13 @@ export default function SrsSettingsPanel({
           min={1}
           max={100}
           value={editMaxValue}
-          onChange={(e) => setLocalMaxNew(e.target.value)}
+          onChange={(e) => maxNewDraft.setDraftValue(e.target.value)}
           onBlur={(e) => {
             const clamped = Math.max(
               1,
               Math.min(100, Number(e.target.value) || 1)
             );
-            setLocalMaxNew(String(clamped));
+            maxNewDraft.setDraftValue(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
@@ -91,13 +90,13 @@ export default function SrsSettingsPanel({
           min={0}
           max={23}
           value={editResetHour}
-          onChange={(e) => setLocalResetHour(e.target.value)}
+          onChange={(e) => resetHourDraft.setDraftValue(e.target.value)}
           onBlur={(e) => {
             const clamped = Math.max(
               0,
               Math.min(23, Math.round(Number(e.target.value) || 0))
             );
-            setLocalResetHour(String(clamped));
+            resetHourDraft.setDraftValue(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
@@ -112,7 +111,7 @@ export default function SrsSettingsPanel({
           max={2}
           step={0.25}
           value={editTtsSpeed}
-          onChange={(e) => setLocalTtsSpeed(Number(e.target.value))}
+          onChange={(e) => ttsSpeedDraft.setDraftValue(Number(e.target.value))}
           className="w-full accent-accent"
         />
         <div className="flex justify-between text-xs text-muted mt-0.5">
@@ -130,13 +129,13 @@ export default function SrsSettingsPanel({
           min={0}
           max={500}
           value={editDailyGoal}
-          onChange={(e) => setLocalDailyGoal(e.target.value)}
+          onChange={(e) => dailyGoalDraft.setDraftValue(e.target.value)}
           onBlur={(e) => {
             const clamped = Math.max(
               0,
               Math.min(500, Number(e.target.value) || 0)
             );
-            setLocalDailyGoal(String(clamped));
+            dailyGoalDraft.setDraftValue(String(clamped));
           }}
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
