@@ -1,6 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAvailableModels } from "@/hooks/useAvailableModels";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 
 export type AiGenerationConfigValue = {
   prompt: string;
@@ -39,6 +42,19 @@ export default function AiGenerationConfig({
   disabled?: boolean;
 }) {
   const { models: availableModels } = useAvailableModels();
+  const modelOptions = useMemo(
+    () => ["", ...availableModels.map((model) => model.id)],
+    [availableModels],
+  );
+  const modelLabels = useMemo<Record<string, string>>(
+    () => ({
+      "": modelDefaultLabel,
+      ...Object.fromEntries(
+        availableModels.map((model) => [model.id, model.name]),
+      ),
+    }),
+    [availableModels, modelDefaultLabel],
+  );
 
   function update(patch: Partial<AiGenerationConfigValue>) {
     onChange({ ...value, ...patch });
@@ -51,14 +67,13 @@ export default function AiGenerationConfig({
           <label htmlFor="ai-generation-prompt" className="block text-sm font-medium mb-1">
             {promptLabel}
           </label>
-          <textarea
+          <Textarea
             id="ai-generation-prompt"
             value={value.prompt}
             onChange={(event) => update({ prompt: event.target.value })}
             rows={3}
             placeholder={promptPlaceholder}
             disabled={disabled}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm disabled:opacity-50"
           />
         </div>
       )}
@@ -67,14 +82,13 @@ export default function AiGenerationConfig({
         <label htmlFor="ai-generation-instructions" className="block text-sm font-medium mb-1">
           {instructionsLabel}
         </label>
-        <textarea
+        <Textarea
           id="ai-generation-instructions"
           value={value.instructions}
           onChange={(event) => update({ instructions: event.target.value })}
           rows={2}
           placeholder={instructionsPlaceholder}
           disabled={disabled}
-          className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm disabled:opacity-50"
         />
       </div>
 
@@ -100,20 +114,15 @@ export default function AiGenerationConfig({
           <label htmlFor="ai-generation-model" className="block text-sm font-medium mb-1">
             {modelLabel}
           </label>
-          <select
+          <Select
             id="ai-generation-model"
             value={value.model}
-            onChange={(event) => update({ model: event.target.value })}
+            options={modelOptions}
+            labels={modelLabels}
+            onChange={(model) => update({ model })}
             disabled={disabled}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm disabled:opacity-50"
-          >
-            <option value="">{modelDefaultLabel}</option>
-            {availableModels.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
-          </select>
+            className="w-full"
+          />
         </div>
       </div>
     </div>

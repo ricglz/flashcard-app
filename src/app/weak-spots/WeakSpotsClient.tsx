@@ -10,7 +10,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { METHODOLOGIES, METHODOLOGY_LABELS, type Methodology } from "@/lib/types";
 import type { WeakReason } from "@/lib/aiToolingSchemas";
-import TypedSelect from "@/components/TypedSelect";
+import { Badge } from "@/components/ui/Badge";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { Select } from "@/components/ui/Select";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 const REASON_LABELS: Record<WeakReason, string> = {
@@ -38,6 +40,17 @@ export default function WeakSpotsClient({
   const srsEnabledSets = useMemo(
     () => userSets.filter((s) => s.userSet.srsEnabled),
     [userSets]
+  );
+  const setFilterOptions = useMemo(
+    () => ["", ...srsEnabledSets.map((set) => set._id)],
+    [srsEnabledSets],
+  );
+  const setFilterLabels = useMemo<Record<string, string>>(
+    () => ({
+      "": "All SRS-enabled sets",
+      ...Object.fromEntries(srsEnabledSets.map((set) => [set._id, set.name])),
+    }),
+    [srsEnabledSets],
   );
 
   const weakCards = useQuery(
@@ -80,35 +93,31 @@ export default function WeakSpotsClient({
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <div className="flex gap-3 mb-6">
-          <TypedSelect
+          <Select
             value={methodology}
             options={METHODOLOGIES}
             labels={METHODOLOGY_LABELS}
             onChange={setMethodology}
-            className="px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
           />
-          <select
+          <Select
             value={selectedSetId ?? ""}
-            onChange={(e) => {
-              const value = e.target.value;
+            options={setFilterOptions}
+            labels={setFilterLabels}
+            onChange={(value) => {
               setSelectedSetId(
                 srsEnabledSets.find((set) => set._id === value)?._id,
               );
             }}
-            className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          >
-            <option value="">All SRS-enabled sets</option>
-            {srsEnabledSets.map((s) => (
-              <option key={s._id} value={s._id}>{s.name}</option>
-            ))}
-          </select>
+            className="flex-1"
+          />
           {ai.available && totalWeakCards > 0 && (
-            <Link
+            <LinkButton
               href={`/generate?methodology=${methodology}${selectedSetId ? `&setId=${selectedSetId}` : ""}`}
-              className="px-3 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors whitespace-nowrap"
+              size="sm"
+              className="whitespace-nowrap"
             >
               Generate Remedial Cards
-            </Link>
+            </LinkButton>
           )}
         </div>
 
@@ -165,24 +174,23 @@ export default function WeakSpotsClient({
                               </span>
                             ))}
                           </div>
-                          <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
-                            card.weakScore >= 10
-                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                              : card.weakScore >= 5
-                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                          }`}>
+                          <Badge
+                            variant={
+                              card.weakScore >= 10
+                                ? "danger"
+                                : card.weakScore >= 5
+                                  ? "warning"
+                                  : "neutral"
+                            }
+                          >
                             {Math.round(card.weakScore * 10) / 10}
-                          </span>
+                          </Badge>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {card.weakReasons.map((reason) => (
-                            <span
-                              key={reason}
-                              className="px-1.5 py-0.5 bg-surface-hover rounded text-xs text-muted"
-                            >
+                            <Badge key={reason} variant="neutral" size="sm">
                               {REASON_LABELS[reason]}
-                            </span>
+                            </Badge>
                           ))}
                           <span className="px-1.5 py-0.5 text-xs text-muted">
                             ease: {card.metrics.easeFactor.toFixed(1)} | reviews: {card.metrics.reviewCount}

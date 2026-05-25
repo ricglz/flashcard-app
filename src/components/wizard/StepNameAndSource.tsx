@@ -1,6 +1,15 @@
 import { isPresetKey, LANGUAGE_PRESETS, PRESET_KEYS } from "@/lib/presets";
+import { Select } from "@/components/ui/Select";
 import type { WizardAction, WizardState } from "./wizardState";
 import SourceCard from "./SourceCard";
+
+const PRESET_SELECT_OPTIONS = ["", ...PRESET_KEYS];
+const PRESET_SELECT_LABELS: Record<string, string> = {
+  "": "No preset - define fields in next step",
+  ...Object.fromEntries(
+    PRESET_KEYS.map((key) => [key, LANGUAGE_PRESETS[key].label]),
+  ),
+};
 
 type Props = {
   state: WizardState;
@@ -75,20 +84,15 @@ export default function StepNameAndSource({ state, dispatch, aiAvailable }: Prop
           <label className="block text-sm font-medium mb-1">
             Start from a preset (optional)
           </label>
-          <select
-            onChange={(e) => {
-              if (e.target.value) handlePresetSelect(e.target.value);
+          <Select
+            value=""
+            options={PRESET_SELECT_OPTIONS}
+            labels={PRESET_SELECT_LABELS}
+            onChange={(value) => {
+              if (value) handlePresetSelect(value);
             }}
-            className="w-full px-3 py-2 border rounded"
-            defaultValue=""
-          >
-            <option value="">No preset — define fields in next step</option>
-            {PRESET_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {LANGUAGE_PRESETS[key].label}
-              </option>
-            ))}
-          </select>
+            className="w-full"
+          />
         </div>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { utcHourToLocal, localHourToUtc } from "@/lib/time";
+import { Button } from "@/components/ui/Button";
 
 export type SrsConfig = {
   maxNewCardsPerDay: number;
@@ -140,13 +141,14 @@ export default function SrsSettingsPanel({
           className="w-20 px-2 py-1 text-sm border rounded-lg bg-transparent border-edge"
         />
       </div>
-      <button
+      <Button
         onClick={handleSave}
         disabled={isSaving}
-        className="px-3 py-1 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
+        size="sm"
+        loading={isSaving}
       >
-        {isSaving ? "..." : "Save"}
-      </button>
+        Save
+      </Button>
     </div>
   );
 }

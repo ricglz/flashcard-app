@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Methodology } from "@/lib/types";
 import { METHODOLOGIES, METHODOLOGY_LABELS } from "@/lib/types";
-import TypedSelect from "@/components/TypedSelect";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import AiGenerationConfig, {
   type AiGenerationConfigValue,
 } from "@/components/AiGenerationConfig";
@@ -44,6 +45,17 @@ export default function GenerateConfigForm({
     model: "",
   });
   const [addToSrs, setAddToSrs] = useState(true);
+  const sourceSetOptions = useMemo(
+    () => ["", ...srsEnabledSets.map((set) => set._id)],
+    [srsEnabledSets],
+  );
+  const sourceSetLabels = useMemo<Record<string, string>>(
+    () => ({
+      "": "All SRS-enabled sets",
+      ...Object.fromEntries(srsEnabledSets.map((set) => [set._id, set.name])),
+    }),
+    [srsEnabledSets],
+  );
 
   return (
     <div className="space-y-4">
@@ -59,26 +71,23 @@ export default function GenerateConfigForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Methodology</label>
-          <TypedSelect
+          <Select
             value={methodology}
             options={METHODOLOGIES}
             labels={METHODOLOGY_LABELS}
             onChange={setMethodology}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
+            className="w-full"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Source Set</label>
-          <select
+          <Select
             value={selectedSetId}
-            onChange={(e) => setSelectedSetId(e.target.value)}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
-          >
-            <option value="">All SRS-enabled sets</option>
-            {srsEnabledSets.map((s) => (
-              <option key={s._id} value={s._id}>{s.name}</option>
-            ))}
-          </select>
+            options={sourceSetOptions}
+            labels={sourceSetLabels}
+            onChange={setSelectedSetId}
+            className="w-full"
+          />
         </div>
       </div>
       <AiGenerationConfig
@@ -96,7 +105,7 @@ export default function GenerateConfigForm({
         />
         Enable SRS for generated set
       </label>
-      <button
+      <Button
         onClick={() =>
           onGenerate({
             setName,
@@ -108,10 +117,11 @@ export default function GenerateConfigForm({
             addToSrs,
           })
         }
-        className="w-full px-4 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
+        fullWidth
+        size="lg"
       >
         Generate Cards
-      </button>
+      </Button>
     </div>
   );
 }

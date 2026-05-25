@@ -9,6 +9,7 @@ import {
   type ChatStreamState,
 } from "@/lib/chatStream";
 import type { StudyContext } from "./AssistantPanel";
+import { Select } from "@/components/ui/Select";
 import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
 
@@ -18,6 +19,18 @@ function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   });
+}
+
+function getModelSelectData(availableModels: { id: string; name: string }[]) {
+  return {
+    modelOptions: ["", ...availableModels.map((model) => model.id)],
+    modelLabels: {
+      "": "Default model",
+      ...Object.fromEntries(
+        availableModels.map((model) => [model.id, model.name]),
+      ),
+    },
+  };
 }
 
 export default function AssistantPanelInner({ context }: { context: StudyContext }) {
@@ -31,6 +44,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
   const abortRef = useRef<AbortController | null>(null);
 
   const { models: availableModels } = useAvailableModels(open);
+  const { modelOptions, modelLabels } = getModelSelectData(availableModels);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
@@ -118,16 +132,13 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
         <span className="text-xs text-muted truncate flex-1">
           {context.setName}
         </span>
-        <select
+        <Select
           value={model}
-          onChange={(e) => setModel(e.target.value)}
-          className="w-36 px-2 py-1 border border-edge rounded bg-transparent text-xs"
-        >
-          <option value="">Default model</option>
-          {availableModels.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
+          options={modelOptions}
+          labels={modelLabels}
+          onChange={setModel}
+          className="w-36 px-2 py-1 text-xs"
+        />
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">

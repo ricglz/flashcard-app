@@ -3,9 +3,11 @@
 import { useState, useMemo } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/useDebounce";
+import { Button } from "@/components/ui/Button";
+import { LinkButton } from "@/components/ui/LinkButton";
+import { Select } from "@/components/ui/Select";
 import { SetCard } from "./SetCard";
 import FilterBar, {
   collectLanguages,
@@ -13,8 +15,6 @@ import FilterBar, {
   matchesCardCountRange,
   type CardCountRange,
 } from "./FilterBar";
-
-import TypedSelect from "@/components/TypedSelect";
 
 const SORT_OPTIONS = ["newest", "name", "cards"] as const;
 type SortOption = (typeof SORT_OPTIONS)[number];
@@ -104,12 +104,11 @@ export default function ExploreClient() {
             className="flex-1 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
           />
           {!isSearching && (
-            <TypedSelect
+            <Select
               value={sortBy}
               options={SORT_OPTIONS}
               labels={SORT_LABELS}
               onChange={setSortBy}
-              className="px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
             />
           )}
         </div>
@@ -136,12 +135,11 @@ export default function ExploreClient() {
                 : "No public sets available yet. Be the first to share one!"}
             </p>
             {!isSearching && (
-              <Link
+              <LinkButton
                 href="/sets"
-                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Go to My Sets
-              </Link>
+              </LinkButton>
             )}
           </div>
         )}
@@ -156,12 +154,12 @@ export default function ExploreClient() {
 
         {!isSearching && status === "CanLoadMore" && (
           <div className="flex justify-center mt-6">
-            <button
+            <Button
               onClick={() => loadMore(12)}
-              className="px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
+              variant="secondary"
             >
               Load More
-            </button>
+            </Button>
           </div>
         )}
 

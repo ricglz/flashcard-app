@@ -7,9 +7,43 @@ import { api } from "../../../convex/_generated/api";
 
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
+
+const LLM_PROVIDER_OPTIONS = [
+  "",
+  "openai",
+  "anthropic",
+  "google",
+  "mistral",
+  "ollama",
+  "groq",
+  "xai",
+  "deepseek",
+] as const;
+
+type LlmProviderOption = (typeof LLM_PROVIDER_OPTIONS)[number];
+type LlmProvider = Exclude<LlmProviderOption, "">;
+
+const LLM_PROVIDER_LABELS: Record<LlmProviderOption, string> = {
+  "": "Select a provider...",
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  google: "Google",
+  mistral: "Mistral AI",
+  ollama: "Ollama (local)",
+  groq: "Groq",
+  xai: "xAI",
+  deepseek: "DeepSeek",
+};
+
+const LLM_PROVIDER_VALUES = new Set<string>(LLM_PROVIDER_OPTIONS);
+
+function isLlmProvider(value: string | null | undefined): value is LlmProvider {
+  return typeof value === "string" && value !== "" && LLM_PROVIDER_VALUES.has(value);
+}
 
 export default function AiSettingsSection({
   preloaded,
@@ -19,7 +53,7 @@ export default function AiSettingsSection({
   const settings = useOfflinePreloadedQuery(preloaded);
   const updateAiConfig = useMutation(api.userSettings.updateAiConfig);
 
-  const [llmProvider, setLlmProvider] = useState<string | null>(null);
+  const [llmProvider, setLlmProvider] = useState<LlmProvider | null>(null);
   const [llmApiKey, setLlmApiKey] = useState("");
   const [chatPrompt, setChatPrompt] = useState("");
   const [chatPromptInitialized, setChatPromptInitialized] = useState(false);
@@ -36,7 +70,10 @@ export default function AiSettingsSection({
     setChatPromptInitialized(true);
   }
 
-  const effectiveProvider = llmProvider ?? settings?.llmProvider ?? "";
+  const savedProvider = isLlmProvider(settings?.llmProvider)
+    ? settings.llmProvider
+    : "";
+  const effectiveProvider = llmProvider ?? savedProvider;
 
   return (
     <section className="border border-edge rounded-xl p-5 space-y-4 mt-6">
@@ -51,26 +88,18 @@ export default function AiSettingsSection({
       <div className="space-y-3">
         <div>
           <label htmlFor="llm-provider" className="block text-sm font-medium mb-1">Provider</label>
-          <select
+          <Select
             id="llm-provider"
             value={effectiveProvider}
-            onChange={(e) => {
-              setLlmProvider(e.target.value || null);
-              if (!e.target.value) setLlmApiKey("");
+            options={LLM_PROVIDER_OPTIONS}
+            labels={LLM_PROVIDER_LABELS}
+            onChange={(provider) => {
+              setLlmProvider(provider || null);
+              if (!provider) setLlmApiKey("");
               setLlmSaved(false);
             }}
-            className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-          >
-            <option value="">Select a provider...</option>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="google">Google</option>
-            <option value="mistral">Mistral AI</option>
-            <option value="ollama">Ollama (local)</option>
-            <option value="groq">Groq</option>
-            <option value="xai">xAI</option>
-            <option value="deepseek">DeepSeek</option>
-          </select>
+            className="w-full"
+          />
         </div>
         {effectiveProvider && (
           <div>
@@ -100,8 +129,8 @@ export default function AiSettingsSection({
         </div>
         <div className="flex items-center gap-3">
           <Button
-            onClick={() => {
-              const provider = llmProvider ?? settings?.llmProvider;
+              onClick={() => {
+              const provider = llmProvider ?? savedProvider;
               if (!provider) {
                 return;
               }
