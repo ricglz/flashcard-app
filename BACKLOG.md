@@ -51,6 +51,7 @@
 
 ### Query Result Contracts
 - [ ] Continue replacing ambiguous access-control `null` query returns with domain results where clients need to distinguish unauthenticated, forbidden, not found, and invalid input states.
+  - Include a broad Convex nullable-to-domain-result migration once the route/client contracts are ready to change together.
   - `studySessions.get` and `studySessions.getResults`: split unauthenticated, invalid/missing session, and wrong-user access while preserving current redirects at route boundaries.
   - `userSets.get`: return a typed failure for unauthenticated/missing membership if callers need to show access or library state explicitly.
   - Auth-gated dashboard/query surfaces such as `srsReviewQueue.getQueueStats`, `weakAnalysis.getMyWeakCards`, and progress queries should either return a domain result or be documented as intentionally empty/hidden when signed out.
@@ -71,6 +72,11 @@
   - All three solve "which card am I on" with optimistic local state — divergent patterns
 - [ ] Initialize from server state (e.g. `session.currentIndex` for resumed sessions) via `useState` initializer rather than render-time `setLocalIndexOffset(0)`
 - [ ] Use a ref to track last-seen server index, reconcile only on unexpected jumps (multi-device edge case)
+
+## Code Quality — UI Consistency
+
+### Status Color Guardrails
+- [ ] Add a targeted lint rule or script for raw generic status color classes if they keep regressing after shared UI primitives exist. Keep chart, rating, and CJK colors exempt because those colors encode data.
 
 ## E2E Testing
 

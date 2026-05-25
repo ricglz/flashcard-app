@@ -1,7 +1,7 @@
 # Offline Strategy
 
 > Status: Current, partially implemented
-> Last reviewed: 2026-05-12
+> Last reviewed: 2026-05-24
 > Source of truth: Yes, for offline architecture and known limitations.
 
 ## Purpose
@@ -36,6 +36,22 @@ The app uses a cloud-first cache/outbox model. Convex remains the source of trut
   - live Convex data wins when available;
   - successful live data is cached;
   - cached data is returned when live data is unavailable.
+
+### Hook Selection Policy
+
+Use offline hooks for user-owned state that should keep rendering during study or review when the network drops:
+
+- study cards and sessions;
+- SRS queues, progress, annotations, and settings;
+- set membership data needed by offline-capable screens.
+
+Use live Convex hooks for data that is intentionally online-dependent:
+
+- AI/LLM key checks and provider/model gates;
+- real-time search and public browse queries;
+- transient assistant or generation state that should disappear when offline.
+
+Server preloads are still useful for auth-required route setup and first render, but offline-capable clients should switch to `useOfflinePreloadedQuery` or `useOfflineQuery` once hydrated.
 
 ### IndexedDB Mutation Outbox
 

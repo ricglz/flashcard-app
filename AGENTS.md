@@ -30,6 +30,13 @@ Observability is still important because the app is mainly tested in production.
 - Use `useOfflineQuery` for offline-capable features (study, SRS, settings, progress). Use `useQuery` for online-dependent gating (AI/LLM key checks, real-time search, transient state) — it returns `undefined` when offline, correctly hiding features that require connectivity.
 - Comments should be essential-only: explain non-obvious intent, external constraints, generated/tooling requirements, suppression rationale, or behavior the code/types cannot express. Delete comments that restate names, JSX structure, test steps, or architecture facts discoverable from the code.
 
+## Consistency Guardrails
+- Use shared `src/components/ui` primitives for common controls and status UI.
+- Use route preload helpers from `src/lib/routePreload.ts` for auth-required pages.
+- Convex functions must declare validators, including `args: {}` for empty argument objects.
+- For offline-capable user state, prefer offline query hooks. For online gates, search, and transient data, use live query hooks.
+- When adding a convention, add an ESLint rule if it can be enforced with low noise.
+
 ## Data Privacy
 - Minimize user-sensitive data in the database. No PII storage (names, emails, avatars). User identity stays in Clerk; the DB stores only `tokenIdentifier` as an opaque reference.
 
