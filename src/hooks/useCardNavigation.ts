@@ -38,6 +38,43 @@ type UseCardNavigationOptions<T> = {
   onCardChange?: () => void;
 };
 
+type ResolveNavigationStateOptions<T> = {
+  orderedIds: readonly T[];
+  hiddenIds: ReadonlySet<T>;
+  currentIndex: number;
+  allowPastEnd?: boolean;
+  serverIndex?: number;
+  reconcileServerIndex?: boolean;
+};
+
+export function resolveNavigationState<T>({
+  orderedIds,
+  hiddenIds,
+  currentIndex,
+  allowPastEnd = false,
+  serverIndex,
+  reconcileServerIndex = false,
+}: ResolveNavigationStateOptions<T>) {
+  const resolvedIndex =
+    reconcileServerIndex && serverIndex !== undefined
+      ? Math.max(currentIndex, serverIndex)
+      : currentIndex;
+  const activeIds = visibleCardIds(orderedIds, hiddenIds);
+  const safeIndex = safeCardIndex(resolvedIndex, activeIds.length);
+  const isPastEnd = allowPastEnd && resolvedIndex >= activeIds.length;
+  const currentId = isPastEnd ? null : (activeIds[safeIndex] ?? null);
+
+  return {
+    activeIds,
+    currentId,
+    currentIndex: resolvedIndex,
+    safeIndex,
+    isPastEnd,
+    canPrevious: safeIndex > 0,
+    canNext: safeIndex < activeIds.length - 1,
+  };
+}
+
 export function useCardNavigation<T>({
   orderedIds,
   initialIndex = 0,
@@ -48,21 +85,26 @@ export function useCardNavigation<T>({
 }: UseCardNavigationOptions<T>) {
   const [currentIndex, setCurrentIndex] = useState(() => initialIndex);
   const [hiddenIds, setHiddenIds] = useState<Set<T>>(new Set());
-  const resolvedIndex =
-    reconcileServerIndex && serverIndex !== undefined
-      ? Math.max(currentIndex, serverIndex)
-      : currentIndex;
 
-  const activeIds = useMemo(
-    () => visibleCardIds(orderedIds, hiddenIds),
-    [hiddenIds, orderedIds],
+  const navigationState = useMemo(
+    () =>
+      resolveNavigationState({
+        orderedIds,
+        hiddenIds,
+        currentIndex,
+        allowPastEnd,
+        serverIndex,
+        reconcileServerIndex,
+      }),
+    [
+      allowPastEnd,
+      currentIndex,
+      hiddenIds,
+      orderedIds,
+      reconcileServerIndex,
+      serverIndex,
+    ],
   );
-  const safeIndex = safeCardIndex(resolvedIndex, activeIds.length);
-  const currentId =
-    allowPastEnd && resolvedIndex >= activeIds.length
-      ? null
-      : (activeIds[safeIndex] ?? null);
-  const isPastEnd = allowPastEnd && resolvedIndex >= activeIds.length;
 
   const reconcileIndex = useCallback(
     (index: number) =>
@@ -84,28 +126,43 @@ export function useCardNavigation<T>({
   const goNext = useCallback(() => {
     setCurrentIndex((index) => {
       const current = reconcileIndex(index);
-      const next = nextCardIndex(current, activeIds.length, allowPastEnd);
+      const next = nextCardIndex(
+        current,
+        navigationState.activeIds.length,
+        allowPastEnd,
+      );
       if (next !== current) onCardChange?.();
       return next;
     });
-  }, [activeIds.length, allowPastEnd, onCardChange, reconcileIndex]);
+  }, [
+    allowPastEnd,
+    navigationState.activeIds.length,
+    onCardChange,
+    reconcileIndex,
+  ]);
 
   const hideCurrent = useCallback(() => {
+    const currentId = navigationState.currentId;
     if (currentId === null) return;
     setHiddenIds((ids) => new Set(ids).add(currentId));
-    setCurrentIndex((index) => indexAfterHidingCurrent(reconcileIndex(index), activeIds.length));
+    setCurrentIndex((index) =>
+      indexAfterHidingCurrent(
+        reconcileIndex(index),
+        navigationState.activeIds.length,
+      ),
+    );
     onCardChange?.();
-  }, [activeIds.length, currentId, onCardChange, reconcileIndex]);
+  }, [navigationState, onCardChange, reconcileIndex]);
 
   return {
-    activeIds,
-    currentId,
-    currentIndex: resolvedIndex,
-    safeIndex,
+    activeIds: navigationState.activeIds,
+    currentId: navigationState.currentId,
+    currentIndex: navigationState.currentIndex,
+    safeIndex: navigationState.safeIndex,
     hiddenIds,
-    isPastEnd,
-    canPrevious: safeIndex > 0,
-    canNext: safeIndex < activeIds.length - 1,
+    isPastEnd: navigationState.isPastEnd,
+    canPrevious: navigationState.canPrevious,
+    canNext: navigationState.canNext,
     goPrevious,
     goNext,
     advance: goNext,
