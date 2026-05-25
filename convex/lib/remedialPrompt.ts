@@ -88,6 +88,17 @@ ${JSON.stringify({
 - If the fields are Chinese-oriented, include accurate Chinese, pinyin with tones, and concise English meaning.
 - Use the weak scores, reasons, metrics, and recent ratings to prioritize what to practice.
 - Keep output parseable as strict JSON.
+
+## Quality Bar
+
+- Each card must feel like a realistic study item a human tutor would write.
+- Prefer cohesive, natural examples over arbitrary combinations of weak terms.
+- Do not create text that only exists to satisfy a source-card or schema requirement.
+- Each card should test one clear idea unless the user explicitly asks for combined practice.
+- If using example sentences, make them plausible, grammatical, and useful for learning.
+- Avoid awkward, contrived, or semantically incoherent text even when targeting weak cards.
+- Use weak-card context to choose what to practice, not as mandatory words to cram into every card.
+- It is better to create fewer high-quality cohesive cards than the exact target count with low-quality filler.
 ${instructions ? `\n## Additional Instructions\n\n${instructions}\n` : ""}
 ## Weak SRS Context
 

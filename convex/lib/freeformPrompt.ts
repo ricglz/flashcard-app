@@ -48,6 +48,15 @@ ${JSON.stringify({
 - If the fields are Chinese-oriented, include accurate Chinese characters, pinyin with tones, and concise English meaning.
 - If the fields are for another language, include accurate translations and transliterations where applicable.
 - Keep output parseable as strict JSON.
+
+## Quality Bar
+
+- Each card must feel like a realistic study item a human tutor would write.
+- Prefer cohesive, natural examples over arbitrary combinations of weak terms.
+- Do not create text that only exists to satisfy a source-card or schema requirement.
+- Each card should test one clear idea unless the user explicitly asks for combined practice.
+- If using example sentences, make them plausible, grammatical, and useful for learning.
+- Avoid awkward, contrived, or semantically incoherent text even when targeting requested criteria.
 ${instructions ? `\n## Additional Instructions\n\n${instructions}\n` : ""}
 ## User Request
 
