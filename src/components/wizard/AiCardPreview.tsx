@@ -1,9 +1,8 @@
 "use client";
 
 import CardPreviewList, { type PreviewCard } from "@/components/CardPreviewList";
-import { useState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Textarea } from "@/components/ui/Textarea";
+import AiRefinementPanel from "@/components/AiRefinementPanel";
+import type { RefinementRequest } from "@/lib/refinementScope";
 
 export default function AiCardPreview({
   cards,
@@ -12,64 +11,52 @@ export default function AiCardPreview({
   onEdit,
   onRegenerate,
   onRefine,
+  refinementModel,
+  onRefinementModelChange,
   isRefining = false,
+  disabled = false,
 }: {
   cards: PreviewCard[];
   selectedCount: number;
   onToggle: (idx: number) => void;
   onEdit: (idx: number, key: string, value: string) => void;
   onRegenerate: () => void;
-  onRefine?: (instructions: string) => void | Promise<void>;
+  onRefine?: (request: RefinementRequest) => boolean | Promise<boolean>;
+  refinementModel: string;
+  onRefinementModelChange: (model: string) => void;
   isRefining?: boolean;
+  disabled?: boolean;
 }) {
-  const [refinementInstructions, setRefinementInstructions] = useState("");
-  const canRefine = Boolean(onRefine) && refinementInstructions.trim().length > 0 && !isRefining;
-
-  async function handleRefine() {
-    if (!onRefine || !canRefine) return;
-    await onRefine(refinementInstructions.trim());
-    setRefinementInstructions("");
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted">
-          {selectedCount} of {cards.length} cards selected
+          {selectedCount} of {cards.length} cards included
         </p>
         <button
           onClick={onRegenerate}
-          className="text-sm text-muted hover:text-foreground"
+          disabled={disabled || isRefining}
+          className="text-sm text-muted hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Regenerate
         </button>
       </div>
       {onRefine && (
-        <div className="space-y-2 border border-edge rounded-lg p-3">
-          <label htmlFor="wizard-ai-refinement-instructions" className="block text-sm font-medium">
-            Refine cards
-          </label>
-          <Textarea
-            id="wizard-ai-refinement-instructions"
-            value={refinementInstructions}
-            onChange={(event) => setRefinementInstructions(event.target.value)}
-            rows={2}
-            placeholder="Tell the AI what to improve in this draft."
-            disabled={isRefining}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => void handleRefine()}
-            disabled={!canRefine}
-            loading={isRefining}
-          >
-            Refine Draft
-          </Button>
-        </div>
+        <AiRefinementPanel
+          cards={cards}
+          refinementModel={refinementModel}
+          onRefinementModelChange={onRefinementModelChange}
+          onRefine={onRefine}
+          isRefining={isRefining}
+          disabled={disabled}
+        />
       )}
-      <CardPreviewList cards={cards} onToggle={onToggle} onEdit={onEdit} />
+      <CardPreviewList
+        cards={cards}
+        onToggle={onToggle}
+        onEdit={onEdit}
+        disabled={disabled || isRefining}
+      />
     </div>
   );
 }
