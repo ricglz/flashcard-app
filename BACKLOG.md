@@ -106,7 +106,6 @@
 - [ ] Outbox drain and idempotency
 - [ ] Slow/blocked Convex mutation regression coverage for SRS and Focus Study rating clicks once auth + data seeding are reliable
 - [ ] TTS voice recovery after reconnect
-- [ ] See `docs/testing-strategy.md` for current offline testing gaps
 
 ## Polish & Remaining Features
 

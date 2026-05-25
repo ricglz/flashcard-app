@@ -2,17 +2,9 @@
 
 Chinese-first flashcard PWA with a generic field-based data model. Built with Next.js, Convex, Clerk, Tailwind CSS, and pnpm.
 
-## Current Features
+## Product
 
-- Field-based flashcard sets: each set defines its own fields, roles, and metadata.
-- Set creation wizard: create sets manually or import CSV files.
-- Focus Study: on-demand scored sessions with configurable front/back fields.
-- Browse Mode: no-scoring practice with free card navigation.
-- SRS Queue: daily spaced-repetition reviews across SRS-enabled sets.
-- Progress dashboard: streaks, daily goal, activity history, accuracy, and mastery views.
-- Text-to-speech: Web Speech API with field-level language metadata and persisted playback speed.
-- Offline support: service worker, IndexedDB query cache, offline mutation outbox, and sync indicator.
-- AI assistant CLI workflow: export weak SRS context, generate remedial sets with an external assistant, validate/import generated JSON.
+See `docs/product-decisions.md` for product intent and durable architecture choices. The source and tests are the source of truth for implemented behavior.
 
 ## Development
 
@@ -65,12 +57,11 @@ pnpm flashcard-ai workflow
 
 ## Important Docs
 
-- `docs/product-decisions.md` — current product shape, architecture, and roadmap.
-- `docs/offline-strategy.md` — current offline implementation and rationale.
-- `docs/testing-strategy.md` — current test coverage and gaps.
-- `docs/ai-cli-remedial-sets.md` — current external-assistant remedial set workflow.
+- `docs/product-decisions.md` — product intent and durable architecture rationale.
+- `docs/offline-strategy.md` — offline architecture boundaries and limitations.
+- `docs/e2e-testing.md` — local E2E setup and infrastructure constraints.
+- `docs/ai-cli-remedial-sets.md` — external-assistant remedial set workflow.
 - `docs/decisions/` — concise decision records explaining why key choices were made.
-- `docs/research/` — research notes, not current source of truth.
 
 ## Project Notes
 

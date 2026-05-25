@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Explain how the app supports offline study, why the chosen approach was selected, and where the implementation lives.
+Explain the durable offline boundaries and why the app uses a cache/outbox model instead of a local-first rewrite.
 
 ## Requirements
 
@@ -16,28 +16,11 @@ Explain how the app supports offline study, why the chosen approach was selected
 - Reconnect sync that replays queued mutations against Convex.
 - Clear UI state for offline and syncing modes.
 
-## Current Implementation
+## Architecture Boundary
 
-The app uses a cloud-first cache/outbox model. Convex remains the source of truth.
+The app uses a cloud-first cache/outbox model. Convex remains the source of truth; local data is a cache plus pending mutation queue, not an independent database.
 
-### Service Worker
-
-- `src/sw.ts` contains the service worker source.
-- `scripts/generate-sw.mjs` builds it into `public/sw.js`.
-- `src/components/RegisterSW.tsx` registers it from the app layout.
-- Static Next.js assets use cache-first behavior.
-- Same-origin GET requests use network-first behavior with cache fallback.
-
-### IndexedDB Query Cache
-
-- `src/lib/offlineDb.ts` defines the `flashcard-offline` IndexedDB database.
-- Query results are stored in a generic `queryCache` store.
-- `src/lib/useOfflineQuery.ts` wraps Convex `useQuery`:
-  - live Convex data wins when available;
-  - successful live data is cached;
-  - cached data is returned when live data is unavailable.
-
-### Hook Selection Policy
+## Hook Selection Policy
 
 Use offline hooks for user-owned state that should keep rendering during study or review when the network drops:
 
@@ -52,20 +35,6 @@ Use live Convex hooks for data that is intentionally online-dependent:
 - transient assistant or generation state that should disappear when offline.
 
 Server preloads are still useful for auth-required route setup and first render, but offline-capable clients should switch to `useOfflinePreloadedQuery` or `useOfflineQuery` once hydrated.
-
-### IndexedDB Mutation Outbox
-
-- `src/lib/offlineOutbox.ts` stores queued mutations.
-- `src/lib/useOfflineMutation.ts` wraps Convex mutations:
-  - online: call Convex directly;
-  - offline: store mutation name and args in IndexedDB.
-- `src/lib/SyncProvider.tsx` drains pending outbox entries when the browser comes back online.
-- Failed sync attempts are categorized as auth-related retry or permanent failure.
-
-### UI Indicators
-
-- `src/components/OfflineIndicator.tsx` shows offline, pending, and syncing state.
-- It is mounted through `src/components/ConvexClientProvider.tsx`.
 
 ## Why This Approach
 
@@ -105,16 +74,3 @@ Rejected because mobile study often happens with unreliable connectivity.
 - Background Sync API is not used.
 - Outbox replay depends on mutations being safe enough to retry.
 - Offline/reconnect E2E coverage is still incomplete.
-
-## Related Files
-
-- `src/sw.ts`
-- `scripts/generate-sw.mjs`
-- `src/components/RegisterSW.tsx`
-- `src/lib/offlineDb.ts`
-- `src/lib/useOfflineQuery.ts`
-- `src/lib/offlineOutbox.ts`
-- `src/lib/useOfflineMutation.ts`
-- `src/lib/SyncProvider.tsx`
-- `src/components/OfflineIndicator.tsx`
-- `docs/decisions/004-offline-cache-and-outbox.md`
