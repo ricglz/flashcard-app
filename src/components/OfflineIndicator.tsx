@@ -16,8 +16,8 @@ export default function OfflineIndicator() {
     <div
       className={`px-4 py-2 text-center text-sm font-medium ${
         isOnline
-          ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-          : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+          ? "bg-info-surface text-info"
+          : "bg-warning-surface text-warning"
       }`}
     >
       {!isOnline

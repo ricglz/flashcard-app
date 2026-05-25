@@ -146,7 +146,7 @@ export default function AiSettingsSection({
           >
             Save
           </Button>
-          {llmSaved && <span className="text-sm text-green-600 dark:text-green-400">Saved</span>}
+          {llmSaved && <span className="text-sm text-success">Saved</span>}
           {settings?.hasLlmKey && (
             <span className="text-xs text-muted">
               Provider: {settings.llmProvider ?? "not set"}
