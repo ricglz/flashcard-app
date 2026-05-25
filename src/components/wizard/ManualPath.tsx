@@ -1,6 +1,10 @@
 import { useState } from "react";
-import type { FieldDefinition } from "@/lib/types";
 import CardForm from "@/components/CardForm";
+import {
+  addFieldDefinition,
+  removeFieldDefinition,
+  removeFieldValueFromCards,
+} from "@/lib/fieldDefinitionsDraft";
 import type { WizardAction, WizardState } from "./wizardState";
 
 export default function ManualPath({
@@ -13,18 +17,11 @@ export default function ManualPath({
   const [newFieldName, setNewFieldName] = useState("");
 
   const addFieldName = () => {
-    const name = newFieldName.trim();
-    if (!name) return;
-    if (state.fieldDefinitions.some((fd) => fd.name === name)) return;
-    const field: FieldDefinition = {
-      name,
-      role: "primary",
-      metadata: {},
-      order: state.fieldDefinitions.length,
-    };
+    const updated = addFieldDefinition(state.fieldDefinitions, newFieldName);
+    if (updated.length === state.fieldDefinitions.length) return;
     dispatch({
       type: "SET_FIELD_DEFINITIONS",
-      payload: [...state.fieldDefinitions, field],
+      payload: updated,
     });
     setNewFieldName("");
   };
@@ -33,18 +30,11 @@ export default function ManualPath({
     const field = state.fieldDefinitions[index];
     if (!field) return;
     const name = field.name;
-    const updatedDefs = state.fieldDefinitions
-      .filter((_, i) => i !== index)
-      .map((f, i) => ({ ...f, order: i }));
+    const updatedDefs = removeFieldDefinition(state.fieldDefinitions, index);
     dispatch({ type: "SET_FIELD_DEFINITIONS", payload: updatedDefs });
     dispatch({
       type: "SET_CARDS",
-      payload: state.cards.map((card) => {
-        const rest = Object.fromEntries(
-      Object.entries(card).filter(([key]) => key !== name)
-    );
-        return rest;
-      }),
+      payload: removeFieldValueFromCards(state.cards, name),
     });
   };
 

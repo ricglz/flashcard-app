@@ -4,6 +4,12 @@ import { useState } from "react";
 import type { FieldDefinition, FieldRole } from "@/lib/types";
 import { FIELD_ROLES, FIELD_ROLE_LABELS } from "@/lib/types";
 import { Select } from "@/components/ui/Select";
+import {
+  addFieldDefinition,
+  removeFieldDefinition,
+  toggleFieldDefinitionTts,
+  updateFieldDefinition,
+} from "@/lib/fieldDefinitionsDraft";
 
 type Props = {
   value: FieldDefinition[];
@@ -21,14 +27,9 @@ export default function FieldDefinitionEditor({
   const [newFieldName, setNewFieldName] = useState("");
 
   const addField = () => {
-    if (!newFieldName.trim()) return;
-    const field: FieldDefinition = {
-      name: newFieldName.trim(),
-      role: "primary",
-      metadata: {},
-      order: value.length,
-    };
-    onChange([...value, field]);
+    const updated = addFieldDefinition(value, newFieldName);
+    if (updated.length === value.length) return;
+    onChange(updated);
     setNewFieldName("");
   };
 
@@ -36,28 +37,15 @@ export default function FieldDefinitionEditor({
     index: number,
     updates: Partial<FieldDefinition>
   ) => {
-    const updated = value.map((f, i) =>
-      i === index ? { ...f, ...updates } : f
-    );
-    onChange(updated);
+    onChange(updateFieldDefinition(value, index, updates));
   };
 
   const removeField = (index: number) => {
-    const updated = value
-      .filter((_, i) => i !== index)
-      .map((f, i) => ({ ...f, order: i }));
-    onChange(updated);
+    onChange(removeFieldDefinition(value, index));
   };
 
   const toggleTts = (index: number) => {
-    const field = value[index];
-    if (!field) return;
-    const { tts, ...rest } = field.metadata;
-    updateField(index, {
-      metadata: tts
-        ? rest
-        : { ...field.metadata, tts: { lang: field.metadata.tts?.lang ?? "en" } },
-    });
+    onChange(toggleFieldDefinitionTts(value, index));
   };
 
   return (
