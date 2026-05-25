@@ -13,7 +13,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 const variantStyles: Record<ButtonVariant, string> = {
   primary: "bg-accent text-white hover:bg-accent-hover",
   secondary: "border border-edge hover:bg-surface-hover",
-  danger: "bg-red-600 text-white hover:bg-red-700",
+  danger: "bg-danger text-white hover:bg-danger-hover",
   ghost: "hover:bg-surface-hover",
 };
 
