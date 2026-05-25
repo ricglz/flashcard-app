@@ -14,6 +14,16 @@ import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
 import * as Effect from "effect/Effect";
 
+const BASIC_EXPLANATION_TOOL_GUIDANCE =
+  "Do not use tools for basic explanation questions. If the user asks about the visible card, sentence meaning, translation, pinyin, pronunciation, grammar, or examples, answer directly from the current card context and conversation. Use tools only when the user asks about their stored flashcard data, such as sets, weak cards, SRS history, progress, or study statistics.";
+
+const DEFAULT_STUDY_ASSISTANT_PROMPT = `${BASIC_EXPLANATION_TOOL_GUIDANCE}
+
+You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful. When you want to use a tool, invoke it through the tool-calling mechanism provided by the API. Never write function-call syntax like <function=name></function> in your responses.`;
+
+const NO_TOOLS_RETRY_PROMPT_NOTE =
+  "Answer from the current conversation and visible card context only. Flashcard-data tools are unavailable for this response.";
+
 const ChatRequestSchema = Schema.Struct({
   message: Schema.String,
   history: Schema.Array(Schema.Struct({
@@ -140,9 +150,10 @@ export async function POST(request: Request) {
   }
   if (request.signal.aborted) return new Response(null, { status: 499 });
 
-  let systemPrompt =
-    aiConfig.customChatPrompt ??
-    "You are a study assistant for a flashcard app. Help the user understand their study material. You can look up the user's flashcard sets and identify their weak cards when relevant. Be concise and helpful. When you want to use a tool, invoke it through the tool-calling mechanism provided by the API. Never write function-call syntax like <function=name></function> in your responses.";
+  const customChatPrompt = aiConfig.customChatPrompt?.trim();
+  let systemPrompt = customChatPrompt
+    ? `${BASIC_EXPLANATION_TOOL_GUIDANCE}\n\n${customChatPrompt}`
+    : DEFAULT_STUDY_ASSISTANT_PROMPT;
 
   if (body.context?.setId) {
     const setId = parseId<"flashcardSets">(body.context.setId);

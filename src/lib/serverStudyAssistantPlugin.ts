@@ -24,13 +24,13 @@ const TOOL_DEFINITIONS: PluginTool[] = [
   {
     name: "list_sets",
     description:
-      "List all of the user's flashcard sets with card counts, SRS statistics, and field definitions.",
+      "List the user's stored flashcard sets/decks with card counts, SRS statistics, and field definitions. Use only for questions about stored set/deck inventory or metadata. Do not use for basic explanations of the currently visible card.",
     parameters: [],
   },
   {
     name: "get_weak_cards",
     description:
-      "Get the user's weakest flashcards based on SRS review history. Returns cards grouped by schema with weak reasons and metrics.",
+      "Get the user's weakest flashcards based on SRS review history, lapses, difficulty, or study progress. Returns cards grouped by schema with weak reasons and metrics. Use only for weak-card, SRS, review-history, lapse, or progress questions. Do not use for basic explanations of the currently visible card.",
     parameters: [
       {
         name: "methodology",
