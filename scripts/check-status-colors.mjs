@@ -11,7 +11,6 @@ const EXEMPT_PATHS = new Set([
   "src/components/CardStatusBreakdown.tsx",
   "src/components/DailyGoalRingInner.tsx",
   "src/components/SetMasteryList.tsx",
-  "src/components/TappableCjkChar.tsx",
   "src/lib/studyResults.ts",
   "src/app/srs/SrsReviewComplete.tsx",
 ]);
