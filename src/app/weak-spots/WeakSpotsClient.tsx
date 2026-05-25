@@ -54,10 +54,13 @@ export default function WeakSpotsClient({
     [srsEnabledSets],
   );
 
-  const weakCards = useQuery(
+  const weakCardsResult = useQuery(
     api.weakAnalysis.getMyWeakCards,
     { methodology, ...(selectedSetId ? { setId: selectedSetId } : {}) }
   );
+  const weakCards = weakCardsResult?.ok ? weakCardsResult.value : null;
+  const weakCardsError =
+    weakCardsResult && !weakCardsResult.ok ? weakCardsResult.error.message : null;
 
   const totalWeakCards = useMemo(
     () => weakCards?.schemaGroups.reduce(
@@ -115,9 +118,15 @@ export default function WeakSpotsClient({
           )}
         </div>
 
-        {weakCards === undefined && (
+        {weakCardsResult === undefined && (
           <div className="flex justify-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+          </div>
+        )}
+
+        {weakCardsError && (
+          <div className="text-center py-12">
+            <p className="text-muted">{weakCardsError}</p>
           </div>
         )}
 

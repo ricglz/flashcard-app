@@ -99,11 +99,15 @@ describe("sharing.addToLibrary", () => {
     expect(userSetId).toBeDefined();
 
     const userSet = await as.query(api.userSets.get, { setId });
-    expect(userSet).not.toBeNull();
-    expect(userSet!.role).toBe("member");
-    expect(userSet!.srsEnabled).toBe(true);
-    expect(userSet!.defaultFrontFields).toEqual(["Front"]);
-    expect(userSet!.defaultBackFields).toEqual(["Back"]);
+    expect(userSet).toMatchObject({
+      ok: true,
+      value: {
+        role: "member",
+        srsEnabled: true,
+        defaultFrontFields: ["Front"],
+        defaultBackFields: ["Back"],
+      },
+    });
   });
 
   it("enrolls SRS cards for the new member", async () => {

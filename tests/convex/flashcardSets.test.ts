@@ -371,8 +371,7 @@ describe("flashcardSets.fork", () => {
     const newSetId = await unwrap(result);
 
     const userSet = await other.query(api.userSets.get, { setId: newSetId });
-    expect(userSet).not.toBeNull();
-    expect(userSet!.role).toBe("owner");
+    expect(userSet).toMatchObject({ ok: true, value: { role: "owner" } });
 
     const srsCards = await t.run(async (ctx) => {
       return await ctx.db

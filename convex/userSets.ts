@@ -118,13 +118,15 @@ export const get = query({
   args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    return await ctx.db
+    if (!identity) return fail(unauthenticated());
+    const link = await ctx.db
       .query("userSets")
       .withIndex("by_userId_and_setId", (q) =>
         q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId)
       )
       .first();
+    if (!link) return fail(notFound("Set not found"));
+    return ok(link);
   },
 });
 
