@@ -92,7 +92,7 @@ export default function AiGenerationConfig({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="ai-generation-count" className="block text-sm font-medium mb-1">
             {countLabel}

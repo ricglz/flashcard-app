@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Methodology } from "@/lib/types";
 import { METHODOLOGIES, METHODOLOGY_LABELS } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
@@ -25,26 +25,16 @@ export type GenerateConfig = {
 };
 
 export default function GenerateConfigForm({
-  initialMethodology,
-  initialSetId,
+  value,
+  onChange,
   srsEnabledSets,
   onGenerate,
 }: {
-  initialMethodology: Methodology;
-  initialSetId: string;
+  value: GenerateConfig;
+  onChange: (config: GenerateConfig) => void;
   srsEnabledSets: SrsSet[];
   onGenerate: (config: GenerateConfig) => void;
 }) {
-  const [setName, setSetName] = useState("Remedial Cards");
-  const [methodology, setMethodology] = useState<Methodology>(initialMethodology);
-  const [selectedSetId, setSelectedSetId] = useState(initialSetId);
-  const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({
-    prompt: "",
-    instructions: "",
-    targetCount: 20,
-    model: "",
-  });
-  const [addToSrs, setAddToSrs] = useState(true);
   const sourceSetOptions = useMemo(
     () => ["", ...srsEnabledSets.map((set) => set._id)],
     [srsEnabledSets],
@@ -56,6 +46,16 @@ export default function GenerateConfigForm({
     }),
     [srsEnabledSets],
   );
+  const aiConfig: AiGenerationConfigValue = {
+    prompt: "",
+    instructions: value.instructions,
+    targetCount: value.targetCount,
+    model: value.model,
+  };
+
+  function update(patch: Partial<GenerateConfig>) {
+    onChange({ ...value, ...patch });
+  }
 
   return (
     <div className="space-y-4">
@@ -63,36 +63,42 @@ export default function GenerateConfigForm({
         <label className="block text-sm font-medium mb-1">Set Name</label>
         <input
           type="text"
-          value={setName}
-          onChange={(e) => setSetName(e.target.value)}
+          value={value.setName}
+          onChange={(e) => update({ setName: e.target.value })}
           className="w-full px-3 py-2 border border-edge rounded-lg bg-transparent text-sm"
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Methodology</label>
           <Select
-            value={methodology}
+            value={value.methodology}
             options={METHODOLOGIES}
             labels={METHODOLOGY_LABELS}
-            onChange={setMethodology}
+            onChange={(methodology) => update({ methodology })}
             className="w-full"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Source Set</label>
           <Select
-            value={selectedSetId}
+            value={value.selectedSetId}
             options={sourceSetOptions}
             labels={sourceSetLabels}
-            onChange={setSelectedSetId}
+            onChange={(selectedSetId) => update({ selectedSetId })}
             className="w-full"
           />
         </div>
       </div>
       <AiGenerationConfig
         value={aiConfig}
-        onChange={setAiConfig}
+        onChange={(next) =>
+          update({
+            instructions: next.instructions,
+            targetCount: next.targetCount,
+            model: next.model,
+          })
+        }
         showPrompt={false}
         countLabel="Target Card Count"
         instructionsPlaceholder="Add guidance for the generated remedial cards."
@@ -100,21 +106,16 @@ export default function GenerateConfigForm({
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          checked={addToSrs}
-          onChange={(e) => setAddToSrs(e.target.checked)}
+          checked={value.addToSrs}
+          onChange={(e) => update({ addToSrs: e.target.checked })}
         />
         Enable SRS for generated set
       </label>
       <Button
         onClick={() =>
           onGenerate({
-            setName,
-            methodology,
-            selectedSetId,
-            targetCount: aiConfig.targetCount,
-            model: aiConfig.model,
-            instructions: aiConfig.instructions.trim(),
-            addToSrs,
+            ...value,
+            instructions: value.instructions.trim(),
           })
         }
         fullWidth

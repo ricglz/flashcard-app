@@ -8,6 +8,8 @@ import AiGenerationConfig, {
   type AiGenerationConfigValue,
 } from "@/components/AiGenerationConfig";
 import AiCardPreview from "./AiCardPreview";
+import AiErrorMessage from "@/components/AiErrorMessage";
+import { cloneGeneratedSetForAction } from "@/lib/generatedSetDraft";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
 
@@ -17,6 +19,14 @@ type GeneratedCard = Pick<GeneratedSetPayload["cards"][number], "fields" | "rati
   selected: boolean;
 };
 
+function wizardCardsFromPayload(payload: GeneratedSetPayload): GeneratedCard[] {
+  return payload.cards.map((c) => ({
+    fields: { ...c.fields },
+    rationale: c.rationale,
+    selected: true,
+  }));
+}
+
 export default function AiPath({
   state,
   dispatch,
@@ -25,6 +35,7 @@ export default function AiPath({
   dispatch: React.Dispatch<WizardAction>;
 }) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
+  const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
 
   const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({
     prompt: "",
@@ -34,8 +45,10 @@ export default function AiPath({
   });
   const [localFieldDefs, setLocalFieldDefs] = useState<FieldDefinition[]>(state.fieldDefinitions);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedCards, setGeneratedCards] = useState<GeneratedCard[]>([]);
+  const [generatedPayload, setGeneratedPayload] = useState<GeneratedSetPayload | null>(null);
 
   const hasGenerated = generatedCards.length > 0;
 
@@ -64,11 +77,8 @@ export default function AiPath({
         return;
       }
       const payload = result.value.payload;
-      const cards = payload.cards.map((c) => ({
-        fields: { ...c.fields },
-        rationale: c.rationale,
-        selected: true,
-      }));
+      const cards = wizardCardsFromPayload(payload);
+      setGeneratedPayload(payload);
       setGeneratedCards(cards);
       dispatch({ type: "SET_FIELD_DEFINITIONS", payload: [...payload.fieldDefinitions] });
       dispatch({ type: "SET_CARDS", payload: cards.filter((c) => c.selected).map(({ fields }) => fields) });
@@ -76,6 +86,38 @@ export default function AiPath({
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRefine = async (instructions: string) => {
+    if (!generatedPayload) return;
+    setIsRefining(true);
+    setError(null);
+    try {
+      const draft = cloneGeneratedSetForAction(generatedPayload, generatedCards);
+      const result = await refineGeneratedSet({
+        draft,
+        instructions,
+        ...(aiConfig.model ? { model: aiConfig.model } : {}),
+      });
+      if (!result.ok) {
+        setError(result.error.message);
+        return;
+      }
+      if (!result.value.validation.ok) {
+        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
+        return;
+      }
+      const payload = result.value.payload;
+      const cards = wizardCardsFromPayload(payload);
+      setGeneratedPayload(payload);
+      setGeneratedCards(cards);
+      dispatch({ type: "SET_FIELD_DEFINITIONS", payload: [...payload.fieldDefinitions] });
+      dispatch({ type: "SET_CARDS", payload: cards.map(({ fields }) => fields) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refinement failed");
+    } finally {
+      setIsRefining(false);
     }
   };
 
@@ -124,11 +166,7 @@ export default function AiPath({
             modelDefaultLabel="Use default for provider"
           />
 
-          {error && (
-            <div className="p-3 border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 rounded-lg text-sm text-red-800 dark:text-red-200">
-              {error}
-            </div>
-          )}
+          <AiErrorMessage message={error} />
 
           <button
             onClick={() => void handleGenerate()}
@@ -155,9 +193,12 @@ export default function AiPath({
           onEdit={updateCardField}
           onRegenerate={() => {
             setGeneratedCards([]);
+            setGeneratedPayload(null);
             setError(null);
             dispatch({ type: "SET_CARDS", payload: [] });
           }}
+          onRefine={handleRefine}
+          isRefining={isRefining}
         />
       )}
     </div>

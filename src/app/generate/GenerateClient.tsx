@@ -8,13 +8,25 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
+import { cloneFieldDefinitionsForAction, cloneGeneratedSetForAction } from "@/lib/generatedSetDraft";
 import { isMethodology } from "@/lib/types";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
+import AiErrorMessage from "@/components/AiErrorMessage";
+import PageHeader from "@/components/PageHeader";
 
 type Step = "config" | "loading" | "preview" | "done";
 
 type GeneratedCard = GeneratedSetPayload["cards"][number] & { selected: boolean };
+
+function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
+  return nextPayload.cards.map((c) => ({
+    fields: { ...c.fields },
+    sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
+    rationale: c.rationale,
+    selected: true,
+  }));
+}
 
 export default function GenerateClient({
   preloadedSets,
@@ -25,6 +37,7 @@ export default function GenerateClient({
   const searchParams = useSearchParams();
   const userSets = useOfflinePreloadedQuery(preloadedSets);
   const generateCards = useAction(api.ai.generateRemedialCards);
+  const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
 
   const srsEnabledSets = useMemo(
@@ -40,9 +53,20 @@ export default function GenerateClient({
   const initialSetId = searchParams.get("setId") ?? "";
 
   const [step, setStep] = useState<Step>("config");
+  const [isRefining, setIsRefining] = useState(false);
+  const [config, setConfig] = useState<GenerateConfig>({
+    setName: "Remedial Cards",
+    methodology: initialMethodology,
+    selectedSetId: initialSetId,
+    targetCount: 20,
+    model: "",
+    instructions: "",
+    addToSrs: true,
+  });
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
   const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
+
   const handleGenerate = async (config: GenerateConfig) => {
     setStep("loading");
     setError(null);
@@ -75,19 +99,38 @@ export default function GenerateClient({
         return;
       }
       setPayload(result.value.payload);
-      const payloadCards = result.value.payload.cards;
-      setCards(
-        payloadCards.map((c) => ({
-          fields: { ...c.fields },
-          sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
-          rationale: c.rationale,
-          selected: true,
-        }))
-      );
+      setCards(cardsFromPayload(result.value.payload));
       setStep("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setStep("config");
+    }
+  };
+  const handleRefine = async (instructions: string) => {
+    if (!payload) return;
+    const draft = cloneGeneratedSetForAction(payload, cards);
+    setIsRefining(true);
+    setError(null);
+    try {
+      const result = await refineGeneratedSet({
+        draft,
+        instructions,
+        ...(config.model ? { model: config.model } : {}),
+      });
+      if (!result.ok) {
+        setError(result.error.message);
+        return;
+      }
+      if (!result.value.validation.ok) {
+        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
+        return;
+      }
+      setPayload(result.value.payload);
+      setCards(cardsFromPayload(result.value.payload));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refinement failed");
+    } finally {
+      setIsRefining(false);
     }
   };
   const handleConfirm = async () => {
@@ -107,7 +150,7 @@ export default function GenerateClient({
         sourceSetIds: [...payload.sourceSetIds],
         sourceScope: payload.sourceScope,
         weakContextMethodology: payload.weakContextMethodology,
-        fieldDefinitions: [...payload.fieldDefinitions].map((fd) => ({ ...fd, metadata: { ...fd.metadata } })),
+        fieldDefinitions: cloneFieldDefinitionsForAction(payload.fieldDefinitions),
         addToSrs: payload.addToSrs,
         cards: selectedCards,
       });
@@ -128,28 +171,17 @@ export default function GenerateClient({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          &larr; Back
-        </button>
-        <h1 className="text-xl font-bold">AI Card Generation</h1>
-        <div className="w-14" />
-      </header>
+      <PageHeader title="AI Card Generation" onBack={() => router.back()} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
-        {error && (
-          <div className="mb-4 p-3 border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 rounded-lg text-sm text-red-800 dark:text-red-200">
-            {error}
-          </div>
-        )}
+        <div className="mb-4">
+          <AiErrorMessage message={error} />
+        </div>
 
         {step === "config" && (
           <GenerateConfigForm
-            initialMethodology={initialMethodology}
-            initialSetId={initialSetId}
+            value={config}
+            onChange={setConfig}
             srsEnabledSets={srsEnabledSets}
             onGenerate={handleGenerate}
           />
@@ -169,6 +201,8 @@ export default function GenerateClient({
             onCardsChange={setCards}
             onBack={() => setStep("config")}
             onConfirm={handleConfirm}
+            onRefine={handleRefine}
+            isRefining={isRefining}
           />
         )}
       </main>

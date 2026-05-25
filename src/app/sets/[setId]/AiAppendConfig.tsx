@@ -1,32 +1,30 @@
 "use client";
 
-import { useState } from "react";
 import AiGenerationConfig, {
   type AiGenerationConfigValue,
 } from "@/components/AiGenerationConfig";
 
-type Props = {
-  onGenerate: (config: {
-    prompt: string;
-    instructions: string;
-    targetCount: number;
-    model: string;
-  }) => void;
+export type AiAppendConfigValue = {
+  prompt: string;
+  instructions: string;
+  targetCount: number;
+  model: string;
 };
 
-export default function AiAppendConfig({ onGenerate }: Props) {
-  const [config, setConfig] = useState<AiGenerationConfigValue>({
-    prompt: "",
-    instructions: "",
-    targetCount: 10,
-    model: "",
-  });
+type Props = {
+  value: AiAppendConfigValue;
+  onChange: (config: AiAppendConfigValue) => void;
+  onGenerate: (config: AiAppendConfigValue) => void;
+};
+
+export default function AiAppendConfig({ value, onChange, onGenerate }: Props) {
+  const config: AiGenerationConfigValue = value;
 
   return (
     <div className="space-y-3">
       <AiGenerationConfig
         value={config}
-        onChange={setConfig}
+        onChange={onChange}
         maxCount={50}
         modelLabel="Model (optional)"
         modelDefaultLabel="Default"

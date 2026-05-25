@@ -6,8 +6,10 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
+import { cloneGeneratedSetForAction } from "@/lib/generatedSetDraft";
 import GeneratePreview from "@/app/generate/GeneratePreview";
-import AiAppendConfig from "./AiAppendConfig";
+import AiAppendConfig, { type AiAppendConfigValue } from "./AiAppendConfig";
+import AiErrorMessage from "@/components/AiErrorMessage";
 
 type Phase = "config" | "generating" | "preview" | "confirming";
 type GeneratedCard = GeneratedSetPayload["cards"][number] & { selected: boolean };
@@ -20,18 +22,31 @@ type Props = {
 
 export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
+  const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
   const confirmAppend = useAction(api.ai.confirmAppendCards);
 
   const [phase, setPhase] = useState<Phase>("config");
+  const [isRefining, setIsRefining] = useState(false);
+  const [config, setConfig] = useState<AiAppendConfigValue>({
+    prompt: "",
+    instructions: "",
+    targetCount: 10,
+    model: "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [cards, setCards] = useState<GeneratedCard[]>([]);
+  const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
 
-  const handleGenerate = async (config: {
-    prompt: string;
-    instructions: string;
-    targetCount: number;
-    model: string;
-  }) => {
+  function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
+    return nextPayload.cards.map((c) => ({
+      fields: { ...c.fields },
+      sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
+      rationale: c.rationale,
+      selected: true,
+    }));
+  }
+
+  const handleGenerate = async (config: AiAppendConfigValue) => {
     if (!config.prompt) return;
     setPhase("generating");
     setError(null);
@@ -60,18 +75,40 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         setPhase("config");
         return;
       }
-      const { cards } = result.value.payload;
-      setCards(
-        cards.map((c) => ({
-          fields: { ...c.fields },
-          rationale: c.rationale,
-          selected: true,
-        })),
-      );
+      setPayload(result.value.payload);
+      setCards(cardsFromPayload(result.value.payload));
       setPhase("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setPhase("config");
+    }
+  };
+
+  const handleRefine = async (instructions: string) => {
+    if (!payload) return;
+    const draft = cloneGeneratedSetForAction(payload, cards);
+    setIsRefining(true);
+    setError(null);
+    try {
+      const result = await refineGeneratedSet({
+        draft,
+        instructions,
+        ...(config.model ? { model: config.model } : {}),
+      });
+      if (!result.ok) {
+        setError(result.error.message);
+        return;
+      }
+      if (!result.value.validation.ok) {
+        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
+        return;
+      }
+      setPayload(result.value.payload);
+      setCards(cardsFromPayload(result.value.payload));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Refinement failed");
+    } finally {
+      setIsRefining(false);
     }
   };
 
@@ -118,13 +155,15 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
         </button>
       </div>
 
-      {error && (
-        <div className="p-3 border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20 rounded-lg text-sm text-red-800 dark:text-red-200">
-          {error}
-        </div>
-      )}
+      <AiErrorMessage message={error} />
 
-      {phase === "config" && <AiAppendConfig onGenerate={handleGenerate} />}
+      {phase === "config" && (
+        <AiAppendConfig
+          value={config}
+          onChange={setConfig}
+          onGenerate={handleGenerate}
+        />
+      )}
 
       {(phase === "generating" || phase === "confirming") && (
         <div className="flex flex-col items-center py-8 gap-4">
@@ -144,6 +183,8 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
           onCardsChange={setCards}
           onBack={() => setPhase("config")}
           onConfirm={handleConfirm}
+          onRefine={handleRefine}
+          isRefining={isRefining}
           confirmLabel={`Add to Set (${selectedCount} cards)`}
         />
       )}

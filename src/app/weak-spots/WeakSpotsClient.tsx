@@ -13,6 +13,7 @@ import type { WeakReason } from "@/lib/aiToolingSchemas";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Select } from "@/components/ui/Select";
+import PageHeader from "@/components/PageHeader";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 const REASON_LABELS: Record<WeakReason, string> = {
@@ -80,16 +81,7 @@ export default function WeakSpotsClient({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          &larr; Back
-        </button>
-        <h1 className="text-xl font-bold">Weak Spots</h1>
-        <div className="w-14" />
-      </header>
+      <PageHeader title="Weak Spots" onBack={() => router.back()} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <div className="grid gap-3 mb-6 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)] md:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto]">
