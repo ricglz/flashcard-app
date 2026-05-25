@@ -92,12 +92,13 @@ export default function WeakSpotsClient({
       </header>
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
-        <div className="flex gap-3 mb-6">
+        <div className="grid gap-3 mb-6 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)] md:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto]">
           <Select
             value={methodology}
             options={METHODOLOGIES}
             labels={METHODOLOGY_LABELS}
             onChange={setMethodology}
+            className="w-full min-w-0"
           />
           <Select
             value={selectedSetId ?? ""}
@@ -108,13 +109,14 @@ export default function WeakSpotsClient({
                 srsEnabledSets.find((set) => set._id === value)?._id,
               );
             }}
-            className="flex-1"
+            className="w-full min-w-0"
           />
           {ai.available && totalWeakCards > 0 && (
             <LinkButton
               href={`/generate?methodology=${methodology}${selectedSetId ? `&setId=${selectedSetId}` : ""}`}
               size="sm"
-              className="whitespace-nowrap"
+              fullWidth
+              className="whitespace-nowrap sm:col-span-2 md:col-span-1 md:w-auto"
             >
               Generate Remedial Cards
             </LinkButton>
@@ -167,9 +169,9 @@ export default function WeakSpotsClient({
                         className="border border-edge rounded-lg p-3"
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex-1 text-sm">
+                          <div className="min-w-0 flex-1 text-sm leading-6">
                             {Object.entries(card.fields).map(([key, value]) => (
-                              <span key={key} className="mr-3">
+                              <span key={key} className="mr-3 break-words">
                                 <span className="text-muted">{key}:</span> {value}
                               </span>
                             ))}
