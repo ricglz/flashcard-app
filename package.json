@@ -48,11 +48,5 @@
     "tsx": "^4.20.6",
     "typescript": "^5",
     "vitest": "^4.1.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "@clerk/shared"
-    ]
   }
 }
