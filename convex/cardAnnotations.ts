@@ -21,6 +21,7 @@ export const getForSet = query({
 });
 
 export const getAll = query({
+  args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
@@ -34,6 +35,7 @@ export const getAll = query({
 });
 
 export const getFlagged = query({
+  args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
