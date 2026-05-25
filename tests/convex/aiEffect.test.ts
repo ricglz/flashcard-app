@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { fieldDefs, TEST_USER } from "./helpers";
@@ -23,6 +23,7 @@ vi.mock("multi-llm-ts", () => ({
 }));
 
 const modules = import.meta.glob("../../convex/**/*.ts");
+const originalSentryDsn = process.env.SENTRY_DSN;
 
 function validPayload(overrides: Partial<GeneratedSetPayload> = {}): GeneratedSetPayload {
   return {
@@ -61,6 +62,17 @@ describe("AI Effect error handling", () => {
     llm.igniteModel.mockReset();
     llm.loadModels.mockReset();
     llm.igniteModel.mockReturnValue({ complete: llm.complete });
+    delete process.env.SENTRY_DSN;
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    if (originalSentryDsn === undefined) {
+      delete process.env.SENTRY_DSN;
+    } else {
+      process.env.SENTRY_DSN = originalSentryDsn;
+    }
+    vi.unstubAllGlobals();
   });
 
   it("returns LlmError when card generation rejects", async () => {
@@ -83,6 +95,9 @@ describe("AI Effect error handling", () => {
   });
 
   it("returns sanitized LlmRateLimited when the provider rejects with a rate limit", async () => {
+    process.env.SENTRY_DSN = "https://public@example.com/123";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
     const error = new Error(
       '429 {"error":{"message":"Rate limit reached for model `meta-llama/llama-4-scout-17b-16e-instruct` in organization `org_secret`. Please try again in 5.402s. Upgrade at https://console.groq.com/settings/billing","code":"rate_limit_exceeded"}}',
     ) as Error & { status: number; code: string };
@@ -111,9 +126,18 @@ describe("AI Effect error handling", () => {
       expect(result.error.message).not.toContain("billing");
       expect(result.error.message).not.toContain("{");
     }
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const body = String(fetchMock.mock.calls[0]?.[1]?.body);
+    expect(body).toContain("ai_generation_rate_limited");
+    expect(body).toContain("retryAfterSeconds");
+    expect(body).not.toContain("org_secret");
+    expect(body).not.toContain("billing");
   });
 
   it("repairs invalid JSON once before returning a generated payload", async () => {
+    process.env.SENTRY_DSN = "https://public@example.com/123";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
     llm.complete
       .mockResolvedValueOnce({ content: '{"name": "broken"' })
       .mockResolvedValueOnce({ content: JSON.stringify(validPayload()) });
@@ -144,9 +168,19 @@ describe("AI Effect error handling", () => {
       temperature: 0,
       structuredOutput: { name: "generated_flashcard_set" },
     });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const body = String(fetchMock.mock.calls[0]?.[1]?.body);
+    expect(body).toContain("ai_generation_invalid_payload");
+    expect(body).toContain('"phase":"initial"');
+    expect(body).toContain('"outcome":"repaired"');
+    expect(body).toContain("responseLength");
+    expect(body).not.toContain('"name": "broken"');
   });
 
   it("returns sanitized LlmInvalidPayload after repair fails", async () => {
+    process.env.SENTRY_DSN = "https://public@example.com/123";
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
     llm.complete
       .mockResolvedValueOnce({ content: '{"name": "broken"' })
       .mockResolvedValueOnce({ content: '{"still": "broken"' });
@@ -170,6 +204,12 @@ describe("AI Effect error handling", () => {
       expect(result.error).not.toHaveProperty("raw");
     }
     expect(llm.complete).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const body = String(fetchMock.mock.calls[0]?.[1]?.body);
+    expect(body).toContain("ai_generation_invalid_payload");
+    expect(body).toContain('"phase":"repair"');
+    expect(body).toContain('"outcome":"failed"');
+    expect(body).not.toContain('"still": "broken"');
   });
 
   it("refines an existing generated payload", async () => {

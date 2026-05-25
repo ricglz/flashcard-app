@@ -23,6 +23,12 @@ const SYSTEM_GENERATION_PROMPT =
 const INVALID_PAYLOAD_MESSAGE =
   "The model returned incomplete cards. Try fewer cards, clearer instructions, or a different model.";
 
+type AiObservabilityLevel = "warning" | "error";
+type AiObservabilityEventName =
+  | "ai_generation_invalid_payload"
+  | "ai_generation_rate_limited"
+  | "ai_generation_llm_error";
+
 const GENERATED_SET_STRUCTURE = z.object({
   name: z.string(),
   description: z.string().optional(),
@@ -204,6 +210,133 @@ function logAiFailure(
   console.warn(`[ai] ${event}`, details);
 }
 
+function sentryEnvelopeEndpoint(dsn: string): string | null {
+  try {
+    const url = new URL(dsn);
+    const publicKey = url.username;
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const projectId = pathParts.pop();
+    if (!publicKey || !projectId) return null;
+    const pathPrefix = pathParts.length > 0 ? `/${pathParts.join("/")}` : "";
+    return `${url.origin}${pathPrefix}/api/${projectId}/envelope/?sentry_key=${publicKey}&sentry_version=7`;
+  } catch {
+    return null;
+  }
+}
+
+async function captureAiObservabilityEvent({
+  name,
+  level,
+  tags,
+  extra,
+}: {
+  name: AiObservabilityEventName;
+  level: AiObservabilityLevel;
+  tags: Record<string, string>;
+  extra?: Record<string, number>;
+}): Promise<void> {
+  const dsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
+  if (!dsn) return;
+  const endpoint = sentryEnvelopeEndpoint(dsn);
+  if (!endpoint) return;
+
+  const eventId = crypto.randomUUID().replaceAll("-", "");
+  const event = {
+    event_id: eventId,
+    timestamp: Date.now() / 1000,
+    platform: "javascript",
+    logger: "convex.ai",
+    level,
+    message: name,
+    tags,
+    extra,
+    environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+    release: process.env.SENTRY_RELEASE ?? process.env.NEXT_PUBLIC_SENTRY_RELEASE,
+  };
+  const body = [
+    JSON.stringify({ event_id: eventId, sent_at: new Date().toISOString() }),
+    JSON.stringify({ type: "event" }),
+    JSON.stringify(event),
+  ].join("\n");
+
+  try {
+    await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/x-sentry-envelope" },
+      body,
+    });
+  } catch {
+    console.warn("[ai] Failed to send AI observability event", { name });
+  }
+}
+
+function trackAiProviderFailure(opts: {
+  provider: string;
+  model: string;
+  failure: AiFailure;
+}): Effect.Effect<void> {
+  if (opts.failure._tag === "LlmRateLimited") {
+    const retryAfterSeconds = "retryAfterSeconds" in opts.failure
+      ? opts.failure.retryAfterSeconds
+      : undefined;
+    return Effect.promise(() =>
+      captureAiObservabilityEvent({
+        name: "ai_generation_rate_limited",
+        level: "warning",
+        tags: {
+          provider: opts.provider,
+          model: opts.model,
+        },
+        extra: {
+          ...(retryAfterSeconds === undefined
+            ? {}
+            : { retryAfterSeconds }),
+        },
+      }),
+    );
+  }
+
+  if (opts.failure._tag === "LlmError") {
+    return Effect.promise(() =>
+      captureAiObservabilityEvent({
+        name: "ai_generation_llm_error",
+        level: "error",
+        tags: {
+          provider: opts.provider,
+          model: opts.model,
+        },
+      }),
+    );
+  }
+
+  return Effect.succeed(undefined);
+}
+
+function trackInvalidPayload(opts: {
+  provider: string;
+  model: string;
+  phase: "initial" | "repair";
+  outcome: "repaired" | "failed";
+  failure: Extract<AiFailure, { _tag: "LlmInvalidPayload" }>;
+}): Effect.Effect<void> {
+  return Effect.promise(() =>
+    captureAiObservabilityEvent({
+      name: "ai_generation_invalid_payload",
+      level: "warning",
+      tags: {
+        provider: opts.provider,
+        model: opts.model,
+        phase: opts.phase,
+        outcome: opts.outcome,
+      },
+      extra: {
+        ...(opts.failure.raw === undefined ? {} : { responseLength: opts.failure.raw.length }),
+        ...(opts.failure.issueCount === undefined ? {} : { issueCount: opts.failure.issueCount }),
+      },
+    }),
+  );
+}
+
 function decodeGeneratedPayload(
   content: string,
   opts: { provider: string; model: string },
@@ -322,7 +455,15 @@ function generateAndValidateJson(
           });
           return failure;
         },
-      });
+      }).pipe(
+        Effect.tapError((failure) =>
+          trackAiProviderFailure({
+            provider: opts.keyInfo.provider,
+            model: modelName,
+            failure,
+          }),
+        ),
+      );
       if (!response.content) {
         logAiFailure("LLM returned empty response", {
           provider: opts.keyInfo.provider,
@@ -365,8 +506,27 @@ function generateAndValidateJson(
         }),
         REPAIR_COMPLETION_OPTS,
       ).pipe(
+        Effect.tap(() =>
+          trackInvalidPayload({
+            provider: opts.keyInfo.provider,
+            model: modelName,
+            phase: "initial",
+            outcome: "repaired",
+            failure,
+          }),
+        ),
         Effect.catchTag("LlmInvalidPayload", (repairFailure) =>
-          Effect.fail(sanitizeInvalidPayloadFailure(repairFailure.issueCount)),
+          trackInvalidPayload({
+            provider: opts.keyInfo.provider,
+            model: modelName,
+            phase: "repair",
+            outcome: "failed",
+            failure: repairFailure,
+          }).pipe(
+            Effect.flatMap(() =>
+              Effect.fail(sanitizeInvalidPayloadFailure(repairFailure.issueCount)),
+            ),
+          ),
         ),
       ),
     ),
