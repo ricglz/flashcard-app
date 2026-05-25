@@ -164,8 +164,10 @@ export default function SrsReviewClient({
           <AssistantPanel
             context={{
               setId: currentItem.setId,
+              cardId: currentItem.card._id,
               setName: currentItem.setName,
               cardFields: currentItem.card.fields,
+              hasNote: Boolean(currentAnnotation?.note?.trim()),
             }}
           />
         }

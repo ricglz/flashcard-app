@@ -160,8 +160,10 @@ export default function FlaggedCardsClient({
         <AssistantPanel
           context={{
             setId: currentCard.setId,
+            cardId: currentCard.cardId,
             setName: currentCard.setName,
             cardFields: currentCard.fields,
+            hasNote: Boolean(currentCard.note?.trim()),
           }}
         />
       }

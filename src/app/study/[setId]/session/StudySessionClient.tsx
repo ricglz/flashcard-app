@@ -141,6 +141,8 @@ export default function StudySessionClient({
     );
   }
 
+  const currentAnnotation = annotationMap.get(currentCard._id);
+
   return (
     <StudyLayout
       progress={{ current: localIndex, total: session.cardOrder.length }}
@@ -162,8 +164,10 @@ export default function StudySessionClient({
         <AssistantPanel
           context={{
             setId: session.setId,
+            cardId: currentCard._id,
             setName: set.name,
             cardFields: currentCard.fields,
+            hasNote: Boolean(currentAnnotation?.note?.trim()),
           }}
         />
       }
@@ -183,7 +187,7 @@ export default function StudySessionClient({
         onRevealed={() => setRevealed(true)}
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}
-        annotation={currentCardId ? annotationMap.get(currentCardId) : undefined}
+        annotation={currentAnnotation}
         onToggleFlag={() => {
           if (currentCardId) void toggleFlag({ cardId: currentCardId, setId: flashcardSetId });
         }}

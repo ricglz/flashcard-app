@@ -67,7 +67,12 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
     setStreaming(state);
 
     try {
-      const chatContext = { setId: context.setId, cardFields: context.cardFields };
+      const chatContext = {
+        setId: context.setId,
+        cardId: context.cardId,
+        hasNote: context.hasNote,
+        cardFields: context.cardFields,
+      };
       for await (const event of streamChat(text, messages, chatContext, model, abort.signal)) {
         state = reduceEvent(state, event);
         setStreaming({ ...state });
@@ -87,7 +92,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
     setStreaming(null);
     abortRef.current = null;
     scrollToBottom(scrollRef);
-  }, [input, streaming, messages, model, context.setId, context.cardFields]);
+  }, [input, streaming, messages, model, context.setId, context.cardId, context.hasNote, context.cardFields]);
 
   const handleClear = useCallback(() => {
     abortRef.current?.abort();

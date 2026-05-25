@@ -1,5 +1,7 @@
 import * as Schema from "effect/Schema";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { ChatContext, ChatMessage } from "./chatSchemas";
+
+export type { ChatContext, ChatMessage } from "./chatSchemas";
 
 const ToolState = Schema.Literal("preparing", "running", "completed", "canceled", "error");
 
@@ -23,13 +25,6 @@ export type ChatStreamState = {
   text: string;
   toolStatus: ToolStatus | null;
 };
-
-export type ChatContext = {
-  setId?: Id<"flashcardSets">;
-  cardFields?: Record<string, string>;
-};
-
-export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export async function* streamChat(
   message: string,

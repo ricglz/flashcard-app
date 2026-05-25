@@ -1,19 +1,22 @@
-import { fetchQuery } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { MultiToolPlugin, type PluginExecutionContext, type PluginTool } from "multi-llm-ts";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { CurrentCardNoteToolParamsSchema } from "./aiToolingSchemas";
 import * as Schema from "effect/Schema";
 import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
 
 const MAX_ROUNDS = 3;
 
-const TOOL_NAME_LIST = ["list_sets", "get_weak_cards"] as const;
+const TOOL_NAME_LIST = ["list_sets", "get_weak_cards", "add_note_to_current_card"] as const;
 type ToolName = typeof TOOL_NAME_LIST[number];
 const TOOL_NAMES: ReadonlySet<string> = new Set(TOOL_NAME_LIST);
 
 const TOOL_RUNNING_DESCRIPTIONS: Record<ToolName, string> = {
   list_sets: "Looking up your flashcard sets...",
   get_weak_cards: "Analyzing your weak cards...",
+  add_note_to_current_card: "Adding note to this card...",
 };
 
 function isToolName(tool: string): tool is ToolName {
@@ -41,6 +44,20 @@ const TOOL_DEFINITIONS: PluginTool[] = [
       },
     ],
   },
+  {
+    name: "add_note_to_current_card",
+    description:
+      "Add a concise review note to the card the user is currently viewing. Use only when the user asks to save or add a note, and only if the current card has no existing note.",
+    parameters: [
+      {
+        name: "note",
+        type: "string",
+        description:
+          "A concise review note for the current card, usually 1-3 short sentences or bullets. Maximum 500 characters.",
+        required: true,
+      },
+    ],
+  },
 ];
 
 const GetWeakCardsParamsSchema = Schema.Struct({
@@ -57,11 +74,13 @@ function unwrapToolResult<T>(
 
 export class ServerStudyAssistantPlugin extends MultiToolPlugin {
   private token: string;
+  private currentCardContext?: StudyAssistantCurrentCardContext;
   private roundCount = 0;
 
-  constructor(token: string) {
+  constructor(token: string, currentCardContext?: StudyAssistantCurrentCardContext) {
     super();
     this.token = token;
+    this.currentCardContext = currentCardContext;
   }
 
   getName(): string {
@@ -133,6 +152,37 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
           );
         }
 
+        case "add_note_to_current_card": {
+          if (!this.currentCardContext) {
+            return { error: "No current card is available for adding a note." };
+          }
+          if (this.currentCardContext.hasNote) {
+            return { error: "This card already has a note." };
+          }
+
+          const paramsResult = Schema.decodeUnknownEither(CurrentCardNoteToolParamsSchema)(
+            params.parameters ?? {}
+          );
+
+          if (Either.isLeft(paramsResult)) {
+            const issues = ParseResult.ArrayFormatter.formatErrorSync(paramsResult.left);
+            console.warn("[study-assistant] Invalid parameters for add_note_to_current_card:", issues);
+            return { error: "Note must be non-empty and 500 characters or fewer." };
+          }
+
+          return unwrapToolResult(
+            await fetchMutation(
+              api.cardAnnotations.addAiNoteToCurrentCard,
+              {
+                setId: this.currentCardContext.setId,
+                cardId: this.currentCardContext.cardId,
+                note: paramsResult.right.note,
+              },
+              { token: this.token },
+            )
+          );
+        }
+
         default:
           return { error: `Unknown tool: ${params.tool}` };
       }
@@ -142,3 +192,9 @@ export class ServerStudyAssistantPlugin extends MultiToolPlugin {
     }
   }
 }
+
+export type StudyAssistantCurrentCardContext = {
+  setId: Id<"flashcardSets">;
+  cardId: Id<"flashcards">;
+  hasNote: boolean;
+};

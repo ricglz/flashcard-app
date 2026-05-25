@@ -212,6 +212,11 @@ export const GeneratedSetCreateResponseSchema = Schema.Struct({
 });
 export type GeneratedSetCreateResponse = Schema.Schema.Type<typeof GeneratedSetCreateResponseSchema>;
 
+export const CurrentCardNoteToolParamsSchema = Schema.Struct({
+  note: Schema.String.pipe(Schema.minLength(1), Schema.maxLength(500)),
+});
+export type CurrentCardNoteToolParams = Schema.Schema.Type<typeof CurrentCardNoteToolParamsSchema>;
+
 export const TokenStatusResponseSchema = Schema.Struct({
   authenticated: Schema.Boolean,
   scopes: Schema.optional(Schema.Array(CliScopeSchema)),

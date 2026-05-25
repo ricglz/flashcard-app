@@ -1,8 +1,10 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { fail, ok, unauthenticated } from "./domain/result";
+import { conflict, fail, invalidInput, notFound, ok, unauthenticated } from "./domain/result";
 import { assertMember } from "./userSets";
 import { getFieldDefinitions } from "./lib/typed";
+
+const NOTE_MAX_LENGTH = 500;
 
 export const getForSet = query({
   args: { setId: v.id("flashcardSets") },
@@ -177,5 +179,59 @@ export const setNote = mutation({
       note: trimmed || undefined,
     });
     return ok({ note: trimmed || undefined });
+  },
+});
+
+export const addAiNoteToCurrentCard = mutation({
+  args: {
+    cardId: v.id("flashcards"),
+    setId: v.id("flashcardSets"),
+    note: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return fail(unauthenticated());
+    const userId = identity.tokenIdentifier;
+
+    const memberCheck = await assertMember(ctx, userId, args.setId);
+    if (!memberCheck.ok) return memberCheck;
+
+    const card = await ctx.db.get(args.cardId);
+    if (!card || card.setId !== args.setId) {
+      return fail(notFound("Card not found."));
+    }
+
+    const trimmed = args.note.trim();
+    if (!trimmed) {
+      return fail(invalidInput("Note must not be blank.", "note"));
+    }
+    if (trimmed.length > NOTE_MAX_LENGTH) {
+      return fail(invalidInput("Note must be 500 characters or fewer.", "note"));
+    }
+
+    const existing = await ctx.db
+      .query("cardAnnotations")
+      .withIndex("by_userId_and_cardId", (q) =>
+        q.eq("userId", userId).eq("cardId", args.cardId)
+      )
+      .first();
+
+    if (existing?.note?.trim()) {
+      return fail(conflict("This card already has a note."));
+    }
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { note: trimmed });
+      return ok({ note: trimmed });
+    }
+
+    await ctx.db.insert("cardAnnotations", {
+      userId,
+      cardId: args.cardId,
+      setId: args.setId,
+      flagged: false,
+      note: trimmed,
+    });
+    return ok({ note: trimmed });
   },
 });

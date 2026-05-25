@@ -7,8 +7,10 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 export type StudyContext = {
   setId: Id<"flashcardSets">;
+  cardId: Id<"flashcards">;
   setName: string;
   cardFields: Record<string, string>;
+  hasNote: boolean;
 };
 
 export default function AssistantPanel({ context }: { context: StudyContext }) {

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import * as Either from "effect/Either";
 import * as Schema from "effect/Schema";
-import { FieldDefinitionSchema, SetsListResponseSchema } from "./aiToolingSchemas";
+import {
+  CurrentCardNoteToolParamsSchema,
+  FieldDefinitionSchema,
+  SetsListResponseSchema,
+} from "./aiToolingSchemas";
+import { ChatRequestSchema } from "./chatSchemas";
 
 describe("AI tooling ID schemas", () => {
   it("rejects malformed Convex IDs before branding", () => {
@@ -45,5 +50,42 @@ describe("AI tooling field definition schema", () => {
     });
 
     expect(Either.isLeft(decoded)).toBe(true);
+  });
+});
+
+describe("current card note tool schema", () => {
+  it("accepts a non-empty note", () => {
+    const decoded = Schema.decodeUnknownEither(CurrentCardNoteToolParamsSchema)({
+      note: "A concise review note.",
+    });
+
+    expect(Either.isRight(decoded)).toBe(true);
+  });
+
+  it("rejects missing or too-long notes", () => {
+    const missing = Schema.decodeUnknownEither(CurrentCardNoteToolParamsSchema)({});
+    const tooLong = Schema.decodeUnknownEither(CurrentCardNoteToolParamsSchema)({
+      note: "x".repeat(501),
+    });
+
+    expect(Either.isLeft(missing)).toBe(true);
+    expect(Either.isLeft(tooLong)).toBe(true);
+  });
+});
+
+describe("chat request schema", () => {
+  it("accepts current card note context", () => {
+    const decoded = Schema.decodeUnknownEither(ChatRequestSchema)({
+      message: "Add that as a note",
+      history: [],
+      context: {
+        setId: "abc123def456ghi7",
+        cardId: "abc123def456ghi8",
+        hasNote: false,
+        cardFields: { Front: "term", Back: "definition" },
+      },
+    });
+
+    expect(Either.isRight(decoded)).toBe(true);
   });
 });

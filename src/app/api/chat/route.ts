@@ -4,7 +4,10 @@ import * as Sentry from "@sentry/nextjs";
 import { igniteModel, Message } from "multi-llm-ts";
 import { api } from "../../../../convex/_generated/api";
 import { getAuthToken } from "@/lib/server";
-import { ServerStudyAssistantPlugin } from "@/lib/serverStudyAssistantPlugin";
+import {
+  ServerStudyAssistantPlugin,
+  type StudyAssistantCurrentCardContext,
+} from "@/lib/serverStudyAssistantPlugin";
 import { DEFAULT_MODELS } from "@/lib/aiDefaults";
 import { stripHallucinatedFnCalls } from "@/lib/stripHallucinatedFnCalls";
 import { parseId } from "@/lib/convexHelpers";
@@ -14,6 +17,7 @@ import {
   isToolUnsupportedError,
   sanitizeChatGenerationError,
 } from "@/lib/chatGenerationErrors";
+import { ChatRequestSchema } from "@/lib/chatSchemas";
 import * as Schema from "effect/Schema";
 import * as Either from "effect/Either";
 import * as ParseResult from "effect/ParseResult";
@@ -28,19 +32,6 @@ You are a study assistant for a flashcard app. Help the user understand their st
 
 const NO_TOOLS_RETRY_PROMPT_NOTE =
   "Answer from the current conversation and visible card context only. Flashcard-data tools are unavailable for this response.";
-
-const ChatRequestSchema = Schema.Struct({
-  message: Schema.String,
-  history: Schema.Array(Schema.Struct({
-    role: Schema.Literal("user", "assistant"),
-    content: Schema.String,
-  })),
-  model: Schema.optional(Schema.String),
-  context: Schema.optional(Schema.Struct({
-    setId: Schema.optional(Schema.String),
-    cardFields: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
-  })),
-});
 
 function sseEvent(data: unknown): string {
   return `data: ${JSON.stringify(data)}\n\n`;
@@ -62,11 +53,12 @@ async function generateWithPlugins(
   apiKey: string,
   thread: Message[],
   token: string,
+  currentCardContext: StudyAssistantCurrentCardContext | undefined,
   request: Request,
   controller: ReadableStreamDefaultController
 ): Promise<void> {
   const llm = igniteModel(provider, modelName, { apiKey });
-  llm.addPlugin(new ServerStudyAssistantPlugin(token));
+  llm.addPlugin(new ServerStudyAssistantPlugin(token, currentCardContext));
   const stream = llm.generate(thread);
   
   for await (const chunk of stream) {
@@ -155,11 +147,15 @@ export async function POST(request: Request) {
     ? `${BASIC_EXPLANATION_TOOL_GUIDANCE}\n\n${customChatPrompt}`
     : DEFAULT_STUDY_ASSISTANT_PROMPT;
 
+  let currentSetId: StudyAssistantCurrentCardContext["setId"] | undefined;
+  let currentCardContext: StudyAssistantCurrentCardContext | undefined;
+
   if (body.context?.setId) {
     const setId = parseId<"flashcardSets">(body.context.setId);
     if (!setId) {
       return Response.json({ error: "Invalid set context." }, { status: 400 });
     }
+    currentSetId = setId;
     let set: FunctionReturnType<typeof api.flashcardSets.get>;
     try {
       set = await fetchQuery(
@@ -177,6 +173,21 @@ export async function POST(request: Request) {
         .join(", ");
       systemPrompt += `\n\nThe user is studying the set "${set.value.name}" with fields: ${fieldNames}.`;
     }
+  }
+
+  if (body.context?.cardId) {
+    const cardId = parseId<"flashcards">(body.context.cardId);
+    if (!cardId || !currentSetId) {
+      return Response.json({ error: "Invalid card context." }, { status: 400 });
+    }
+    currentCardContext = {
+      setId: currentSetId,
+      cardId,
+      hasNote: body.context.hasNote ?? false,
+    };
+    systemPrompt += currentCardContext.hasNote
+      ? "\n\nThe current card already has a note. Do not use the note-adding tool for it."
+      : "\n\nThe current card does not have a note. If the user asks you to save a note for this card, use the add_note_to_current_card tool with a concise review-oriented note. The tool writes only to the current card.";
   }
 
   if (body.context?.cardFields) {
@@ -209,7 +220,7 @@ export async function POST(request: Request) {
           })
         : Effect.tryPromise({
             try: () => generateWithPlugins(
-              aiConfig.provider, modelName, aiConfig.apiKey, thread, token, request, controller
+              aiConfig.provider, modelName, aiConfig.apiKey, thread, token, currentCardContext, request, controller
             ),
             catch: normalizeGenerationError,
           }).pipe(
