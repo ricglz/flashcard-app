@@ -6,6 +6,18 @@ export type RefinementRequest = {
   scope: RefinementScope;
 };
 
+export type RefinementResult =
+  | { kind: "applied" }
+  | {
+      kind: "not_applied";
+      reason:
+        | "missing_draft"
+        | "provider_error"
+        | "validation_error"
+        | "count_mismatch"
+        | "unexpected_error";
+    };
+
 type SelectableCard = {
   selected: boolean;
 };

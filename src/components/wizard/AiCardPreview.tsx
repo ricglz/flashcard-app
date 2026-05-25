@@ -2,7 +2,7 @@
 
 import CardPreviewList, { type PreviewCard } from "@/components/CardPreviewList";
 import AiRefinementPanel from "@/components/AiRefinementPanel";
-import type { RefinementRequest } from "@/lib/refinementScope";
+import type { RefinementRequest, RefinementResult } from "@/lib/refinementScope";
 
 export default function AiCardPreview({
   cards,
@@ -13,19 +13,17 @@ export default function AiCardPreview({
   onRefine,
   refinementModel,
   onRefinementModelChange,
-  isRefining = false,
-  disabled = false,
+  locked,
 }: {
   cards: PreviewCard[];
   selectedCount: number;
   onToggle: (idx: number) => void;
   onEdit: (idx: number, key: string, value: string) => void;
   onRegenerate: () => void;
-  onRefine?: (request: RefinementRequest) => boolean | Promise<boolean>;
+  onRefine?: (request: RefinementRequest) => RefinementResult | Promise<RefinementResult>;
   refinementModel: string;
   onRefinementModelChange: (model: string) => void;
-  isRefining?: boolean;
-  disabled?: boolean;
+  locked: boolean;
 }) {
   return (
     <div className="space-y-3">
@@ -35,7 +33,7 @@ export default function AiCardPreview({
         </p>
         <button
           onClick={onRegenerate}
-          disabled={disabled || isRefining}
+          disabled={locked}
           className="text-sm text-muted hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Regenerate
@@ -47,15 +45,15 @@ export default function AiCardPreview({
           refinementModel={refinementModel}
           onRefinementModelChange={onRefinementModelChange}
           onRefine={onRefine}
-          isRefining={isRefining}
-          disabled={disabled}
+          pending={locked}
+          disabled={locked}
         />
       )}
       <CardPreviewList
         cards={cards}
         onToggle={onToggle}
         onEdit={onEdit}
-        disabled={disabled || isRefining}
+        disabled={locked}
       />
     </div>
   );

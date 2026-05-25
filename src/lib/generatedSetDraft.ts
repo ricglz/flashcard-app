@@ -1,18 +1,27 @@
-import type { FunctionArgs } from "convex/server";
+import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import type { api } from "../../convex/_generated/api";
 import type { GeneratedSetPayload } from "./aiToolingSchemas";
 import {
   formatRefinementCountMismatch,
+  getCardsForRefinement,
   mergeRefinedCards,
+  type RefinementResult,
   type RefinementScope,
 } from "./refinementScope";
 
 type RefineDraft = FunctionArgs<typeof api.ai.refineGeneratedSet>["draft"];
+type RefineResult = FunctionReturnType<typeof api.ai.refineGeneratedSet>;
 export type DraftCard = Pick<GeneratedSetPayload["cards"][number], "fields" | "sourceCardIds" | "rationale">;
 type SelectableDraftCard = DraftCard & { selected: boolean };
-type RefinedPayloadMergeResult<T extends SelectableDraftCard> =
-  | { ok: true; cards: T[]; payload: GeneratedSetPayload }
-  | { ok: false; message: string };
+type AppliedRefinement<T extends SelectableDraftCard> = {
+  kind: "applied";
+  cards: T[];
+  payload: GeneratedSetPayload;
+};
+type UnappliedRefinement = Extract<RefinementResult, { kind: "not_applied" }> & {
+  message: string;
+};
+type RefinedPayloadMergeResult<T extends SelectableDraftCard> = AppliedRefinement<T> | UnappliedRefinement;
 
 export function cloneFieldDefinitionsForAction(
   fieldDefinitions: GeneratedSetPayload["fieldDefinitions"],
@@ -47,6 +56,14 @@ export function cloneGeneratedSetForAction(
   };
 }
 
+export function cloneScopedGeneratedSetForAction(
+  payload: GeneratedSetPayload,
+  cards: ReadonlyArray<SelectableDraftCard>,
+  scope: RefinementScope,
+): RefineDraft {
+  return cloneGeneratedSetForAction(payload, getCardsForRefinement(cards, scope));
+}
+
 export function cloneGeneratedCardsForPayload(
   cards: ReadonlyArray<DraftCard>,
 ): GeneratedSetPayload["cards"] {
@@ -65,14 +82,37 @@ export function mergeRefinedPayloadCards<T extends SelectableDraftCard>(
 ): RefinedPayloadMergeResult<T> {
   const mergeResult = mergeRefinedCards(currentCards, cardsFromPayload(refinedPayload), scope);
   if (!mergeResult.ok) {
-    return { ok: false, message: formatRefinementCountMismatch(mergeResult) };
+    return {
+      kind: "not_applied",
+      reason: "count_mismatch",
+      message: formatRefinementCountMismatch(mergeResult),
+    };
   }
   return {
-    ok: true,
+    kind: "applied",
     cards: mergeResult.cards,
     payload: {
       ...refinedPayload,
       cards: cloneGeneratedCardsForPayload(mergeResult.cards),
     },
   };
+}
+
+export function resolveRefinedPayload<T extends SelectableDraftCard>(
+  result: RefineResult,
+  currentCards: readonly T[],
+  scope: RefinementScope,
+  cardsFromPayload: (payload: GeneratedSetPayload) => T[],
+): RefinedPayloadMergeResult<T> {
+  if (!result.ok) {
+    return { kind: "not_applied", reason: "provider_error", message: result.error.message };
+  }
+  if (!result.value.validation.ok) {
+    return {
+      kind: "not_applied",
+      reason: "validation_error",
+      message: `Validation issues: ${result.value.validation.issues.join(", ")}`,
+    };
+  }
+  return mergeRefinedPayloadCards(currentCards, result.value.payload, scope, cardsFromPayload);
 }

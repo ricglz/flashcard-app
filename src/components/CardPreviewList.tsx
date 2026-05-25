@@ -10,12 +10,12 @@ export default function CardPreviewList({
   cards,
   onToggle,
   onEdit,
-  disabled = false,
+  disabled,
 }: {
   cards: PreviewCard[];
   onToggle: (idx: number) => void;
   onEdit: (idx: number, key: string, value: string) => void;
-  disabled?: boolean;
+  disabled: boolean;
 }) {
   return (
     <div className="space-y-2">

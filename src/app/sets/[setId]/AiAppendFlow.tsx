@@ -6,11 +6,7 @@ import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import { cloneGeneratedSetForAction, mergeRefinedPayloadCards } from "@/lib/generatedSetDraft";
-import {
-  getCardsForRefinement,
-  type RefinementRequest,
-} from "@/lib/refinementScope";
+import { useGeneratedSetRefinement } from "@/hooks/useGeneratedSetRefinement";
 import GeneratePreview from "@/app/generate/GeneratePreview";
 import AiAppendConfig, { type AiAppendConfigValue } from "./AiAppendConfig";
 import AiErrorMessage from "@/components/AiErrorMessage";
@@ -42,13 +38,20 @@ function cardsForAppend(cards: readonly GeneratedCard[]) {
     }));
 }
 
+function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
+  return nextPayload.cards.map((c) => ({
+    fields: { ...c.fields },
+    sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
+    rationale: c.rationale,
+    selected: true,
+  }));
+}
+
 export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
-  const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
   const confirmAppend = useAction(api.ai.confirmAppendCards);
 
   const [phase, setPhase] = useState<Phase>("config");
-  const [isRefining, setIsRefining] = useState(false);
   const [config, setConfig] = useState<AiAppendConfigValue>({
     prompt: "",
     instructions: "",
@@ -59,15 +62,16 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
   const [cards, setCards] = useState<GeneratedCard[]>([]);
   const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
   const [refinementModel, setRefinementModel] = useState("");
-
-  function cardsFromPayload(nextPayload: GeneratedSetPayload): GeneratedCard[] {
-    return nextPayload.cards.map((c) => ({
-      fields: { ...c.fields },
-      sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
-      rationale: c.rationale,
-      selected: true,
-    }));
-  }
+  const { isRefining, refineDraft } = useGeneratedSetRefinement({
+    payload,
+    cards,
+    cardsFromPayload,
+    onApply: (refinement) => {
+      setPayload(refinement.payload);
+      setCards(refinement.cards);
+    },
+    onError: setError,
+  });
 
   const handleGenerate = async (config: AiAppendConfigValue) => {
     if (!config.prompt) return;
@@ -100,47 +104,6 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setPhase("config");
-    }
-  };
-
-  const handleRefine = async ({ instructions, model, scope }: RefinementRequest) => {
-    if (!payload) return false;
-    const cardsToRefine = getCardsForRefinement(cards, scope);
-    const draft = cloneGeneratedSetForAction(payload, cardsToRefine);
-    setIsRefining(true);
-    setError(null);
-    try {
-      const result = await refineGeneratedSet({
-        draft,
-        instructions,
-        ...(model ? { model } : {}),
-      });
-      if (!result.ok) {
-        setError(result.error.message);
-        return false;
-      }
-      if (!result.value.validation.ok) {
-        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
-        return false;
-      }
-      const mergeResult = mergeRefinedPayloadCards(
-        cards,
-        result.value.payload,
-        scope,
-        cardsFromPayload,
-      );
-      if (!mergeResult.ok) {
-        setError(mergeResult.message);
-        return false;
-      }
-      setPayload(mergeResult.payload);
-      setCards(mergeResult.cards);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Refinement failed");
-      return false;
-    } finally {
-      setIsRefining(false);
     }
   };
 
@@ -208,7 +171,7 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
           onCardsChange={setCards}
           onBack={() => setPhase("config")}
           onConfirm={handleConfirm}
-          onRefine={handleRefine}
+          onRefine={refineDraft}
           refinementModel={refinementModel}
           onRefinementModelChange={setRefinementModel}
           isRefining={isRefining}

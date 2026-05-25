@@ -8,15 +8,8 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parseId } from "@/lib/convexHelpers";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import {
-  cloneFieldDefinitionsForAction,
-  cloneGeneratedSetForAction,
-  mergeRefinedPayloadCards,
-} from "@/lib/generatedSetDraft";
-import {
-  getCardsForRefinement,
-  type RefinementRequest,
-} from "@/lib/refinementScope";
+import { cloneFieldDefinitionsForAction } from "@/lib/generatedSetDraft";
+import { useGeneratedSetRefinement } from "@/hooks/useGeneratedSetRefinement";
 import { isMethodology } from "@/lib/types";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
@@ -46,13 +39,6 @@ function cardsForConfirm(cards: readonly GeneratedCard[]) {
     }));
 }
 
-const LOADING_STATE = (
-  <div className="flex flex-col items-center py-12 gap-4">
-    <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-    <p className="text-muted text-sm">Generating cards... this may take 10-30 seconds.</p>
-  </div>
-);
-
 export default function GenerateClient({
   preloadedSets,
 }: {
@@ -62,10 +48,12 @@ export default function GenerateClient({
   const searchParams = useSearchParams();
   const userSets = useOfflinePreloadedQuery(preloadedSets);
   const generateCards = useAction(api.ai.generateRemedialCards);
-  const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
 
-  const srsEnabledSets = useMemo(() => userSets.filter((s) => s.userSet.srsEnabled), [userSets]);
+  const srsEnabledSets = useMemo(
+    () => userSets.filter((s) => s.userSet.srsEnabled),
+    [userSets],
+  );
 
   const methodologyParam = searchParams.get("methodology");
   const initialMethodology = isMethodology(methodologyParam) ? methodologyParam : "balanced";
@@ -73,7 +61,6 @@ export default function GenerateClient({
   const initialSetId = searchParams.get("setId") ?? "";
 
   const [step, setStep] = useState<Step>("config");
-  const [isRefining, setIsRefining] = useState(false);
   const [config, setConfig] = useState<GenerateConfig>({
     setName: "Remedial Cards",
     methodology: initialMethodology,
@@ -87,6 +74,16 @@ export default function GenerateClient({
   const [cards, setCards] = useState<GeneratedCard[]>([]);
   const [payload, setPayload] = useState<GeneratedSetPayload | null>(null);
   const [refinementModel, setRefinementModel] = useState("");
+  const { isRefining, refineDraft } = useGeneratedSetRefinement({
+    payload,
+    cards,
+    cardsFromPayload,
+    onApply: (refinement) => {
+      setPayload(refinement.payload);
+      setCards(refinement.cards);
+    },
+    onError: setError,
+  });
 
   const handleGenerate = async (config: GenerateConfig) => {
     setStep("loading");
@@ -126,46 +123,6 @@ export default function GenerateClient({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
       setStep("config");
-    }
-  };
-  const handleRefine = async ({ instructions, model, scope }: RefinementRequest) => {
-    if (!payload) return false;
-    const cardsToRefine = getCardsForRefinement(cards, scope);
-    const draft = cloneGeneratedSetForAction(payload, cardsToRefine);
-    setIsRefining(true);
-    setError(null);
-    try {
-      const result = await refineGeneratedSet({
-        draft,
-        instructions,
-        ...(model ? { model } : {}),
-      });
-      if (!result.ok) {
-        setError(result.error.message);
-        return false;
-      }
-      if (!result.value.validation.ok) {
-        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
-        return false;
-      }
-      const mergeResult = mergeRefinedPayloadCards(
-        cards,
-        result.value.payload,
-        scope,
-        cardsFromPayload,
-      );
-      if (!mergeResult.ok) {
-        setError(mergeResult.message);
-        return false;
-      }
-      setPayload(mergeResult.payload);
-      setCards(mergeResult.cards);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Refinement failed");
-      return false;
-    } finally {
-      setIsRefining(false);
     }
   };
   const handleConfirm = async () => {
@@ -217,7 +174,10 @@ export default function GenerateClient({
         )}
 
         {step === "loading" && (
-          LOADING_STATE
+          <div className="flex flex-col items-center py-12 gap-4">
+            <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+            <p className="text-muted text-sm">Generating cards... this may take 10-30 seconds.</p>
+          </div>
         )}
 
         {step === "preview" && (
@@ -227,7 +187,7 @@ export default function GenerateClient({
             onCardsChange={setCards}
             onBack={() => setStep("config")}
             onConfirm={handleConfirm}
-            onRefine={handleRefine}
+            onRefine={refineDraft}
             refinementModel={refinementModel}
             onRefinementModelChange={setRefinementModel}
             isRefining={isRefining}

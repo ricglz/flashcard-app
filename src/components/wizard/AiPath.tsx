@@ -9,15 +9,10 @@ import AiGenerationConfig, {
 } from "@/components/AiGenerationConfig";
 import AiCardPreview from "./AiCardPreview";
 import AiErrorMessage from "@/components/AiErrorMessage";
-import { cloneGeneratedSetForAction, mergeRefinedPayloadCards } from "@/lib/generatedSetDraft";
-import {
-  getCardsForRefinement,
-  type RefinementRequest,
-} from "@/lib/refinementScope";
+import { useGeneratedSetRefinement } from "@/hooks/useGeneratedSetRefinement";
+import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
-
-import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
 
 type GeneratedCard = Pick<GeneratedSetPayload["cards"][number], "fields" | "rationale"> & {
   selected: boolean;
@@ -35,13 +30,6 @@ function includedCardFields(cards: readonly GeneratedCard[]) {
   return cards.filter((c) => c.selected).map(({ fields }) => fields);
 }
 
-const GENERATING_INDICATOR = (
-  <div className="flex flex-col items-center py-4 gap-2">
-    <div className="animate-spin h-6 w-6 border-4 border-accent border-t-transparent rounded-full" />
-    <p className="text-muted text-xs">This may take 10-30 seconds.</p>
-  </div>
-);
-
 export default function AiPath({
   state,
   dispatch,
@@ -50,16 +38,34 @@ export default function AiPath({
   dispatch: React.Dispatch<WizardAction>;
 }) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
-  const refineGeneratedSet = useAction(api.ai.refineGeneratedSet);
 
-  const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({ prompt: "", instructions: "", targetCount: 20, model: "" });
+  const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({
+    prompt: "",
+    instructions: "",
+    targetCount: 20,
+    model: "",
+  });
   const [localFieldDefs, setLocalFieldDefs] = useState<FieldDefinition[]>(state.fieldDefinitions);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isRefining, setIsRefining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedCards, setGeneratedCards] = useState<GeneratedCard[]>([]);
   const [generatedPayload, setGeneratedPayload] = useState<GeneratedSetPayload | null>(null);
   const [refinementModel, setRefinementModel] = useState("");
+  const { isRefining, refineDraft } = useGeneratedSetRefinement({
+    payload: generatedPayload,
+    cards: generatedCards,
+    cardsFromPayload: wizardCardsFromPayload,
+    onApply: (refinement) => {
+      setGeneratedPayload(refinement.payload);
+      setGeneratedCards(refinement.cards);
+      dispatch({
+        type: "SET_FIELD_DEFINITIONS",
+        payload: [...refinement.payload.fieldDefinitions],
+      });
+      dispatch({ type: "SET_CARDS", payload: includedCardFields(refinement.cards) });
+    },
+    onError: setError,
+  });
 
   const hasGenerated = generatedCards.length > 0;
 
@@ -101,49 +107,6 @@ export default function AiPath({
     }
   };
 
-  const handleRefine = async ({ instructions, model, scope }: RefinementRequest) => {
-    if (!generatedPayload) return false;
-    setIsRefining(true);
-    setError(null);
-    try {
-      const cardsToRefine = getCardsForRefinement(generatedCards, scope);
-      const draft = cloneGeneratedSetForAction(generatedPayload, cardsToRefine);
-      const result = await refineGeneratedSet({
-        draft,
-        instructions,
-        ...(model ? { model } : {}),
-      });
-      if (!result.ok) {
-        setError(result.error.message);
-        return false;
-      }
-      if (!result.value.validation.ok) {
-        setError(`Validation issues: ${result.value.validation.issues.join(", ")}`);
-        return false;
-      }
-      const mergeResult = mergeRefinedPayloadCards(
-        generatedCards,
-        result.value.payload,
-        scope,
-        wizardCardsFromPayload,
-      );
-      if (!mergeResult.ok) {
-        setError(mergeResult.message);
-        return false;
-      }
-      setGeneratedPayload(mergeResult.payload);
-      setGeneratedCards(mergeResult.cards);
-      dispatch({ type: "SET_FIELD_DEFINITIONS", payload: [...result.value.payload.fieldDefinitions] });
-      dispatch({ type: "SET_CARDS", payload: includedCardFields(mergeResult.cards) });
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Refinement failed");
-      return false;
-    } finally {
-      setIsRefining(false);
-    }
-  };
-
   const toggleCard = (idx: number) => {
     if (isRefining) return;
     const updated = [...generatedCards];
@@ -163,6 +126,16 @@ export default function AiPath({
     setGeneratedCards(updated);
     dispatch({ type: "SET_CARDS", payload: includedCardFields(updated) });
   };
+
+  const resetGeneratedCards = () => {
+    if (isRefining) return;
+    setGeneratedCards([]);
+    setGeneratedPayload(null);
+    setError(null);
+    dispatch({ type: "SET_CARDS", payload: [] });
+  };
+
+  const selectedCount = generatedCards.filter((c) => c.selected).length;
 
   return (
     <div className="space-y-4">
@@ -200,7 +173,10 @@ export default function AiPath({
           </button>
 
           {isGenerating && (
-            GENERATING_INDICATOR
+            <div className="flex flex-col items-center py-4 gap-2">
+              <div className="animate-spin h-6 w-6 border-4 border-accent border-t-transparent rounded-full" />
+              <p className="text-muted text-xs">This may take 10-30 seconds.</p>
+            </div>
           )}
         </>
       )}
@@ -208,21 +184,14 @@ export default function AiPath({
       {hasGenerated && (
         <AiCardPreview
           cards={generatedCards}
-          selectedCount={generatedCards.filter((c) => c.selected).length}
+          selectedCount={selectedCount}
           onToggle={toggleCard}
           onEdit={updateCardField}
-          onRegenerate={() => {
-            if (isRefining) return;
-            setGeneratedCards([]);
-            setGeneratedPayload(null);
-            setError(null);
-            dispatch({ type: "SET_CARDS", payload: [] });
-          }}
-          onRefine={handleRefine}
+          onRegenerate={resetGeneratedCards}
+          onRefine={refineDraft}
           refinementModel={refinementModel}
           onRefinementModelChange={setRefinementModel}
-          isRefining={isRefining}
-          disabled={isRefining}
+          locked={isRefining}
         />
       )}
     </div>

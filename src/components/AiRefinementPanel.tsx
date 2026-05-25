@@ -8,6 +8,7 @@ import { useAvailableModels } from "@/hooks/useAvailableModels";
 import {
   getRefinementScopeCount,
   type RefinementRequest,
+  type RefinementResult,
   type RefinementScope,
 } from "@/lib/refinementScope";
 
@@ -22,14 +23,14 @@ export default function AiRefinementPanel({
   refinementModel,
   onRefinementModelChange,
   onRefine,
-  isRefining = false,
+  pending = false,
   disabled = false,
 }: {
   cards: readonly SelectableCard[];
   refinementModel: string;
   onRefinementModelChange: (model: string) => void;
-  onRefine: (request: RefinementRequest) => boolean | Promise<boolean>;
-  isRefining?: boolean;
+  onRefine: (request: RefinementRequest) => RefinementResult | Promise<RefinementResult>;
+  pending?: boolean;
   disabled?: boolean;
 }) {
   const [instructions, setInstructions] = useState("");
@@ -68,16 +69,16 @@ export default function AiRefinementPanel({
     [cards],
   );
 
-  const canRefine = trimmedInstructions.length > 0 && scopeCount > 0 && !isRefining && !disabled;
+  const canRefine = trimmedInstructions.length > 0 && scopeCount > 0 && !pending && !disabled;
 
   async function handleRefine() {
     if (!canRefine) return;
-    const refined = await onRefine({
+    const result = await onRefine({
       instructions: trimmedInstructions,
       model: refinementModel,
       scope,
     });
-    if (refined) setInstructions("");
+    if (result.kind === "applied") setInstructions("");
   }
 
   return (
@@ -92,7 +93,7 @@ export default function AiRefinementPanel({
           onChange={(event) => setInstructions(event.target.value)}
           rows={2}
           placeholder="Tell the AI what to improve in this draft."
-          disabled={isRefining || disabled}
+          disabled={pending || disabled}
         />
       </div>
 
@@ -107,7 +108,7 @@ export default function AiRefinementPanel({
             options={REFINEMENT_SCOPES}
             labels={scopeLabels}
             onChange={setScope}
-            disabled={isRefining || disabled}
+            disabled={pending || disabled}
             className="w-full"
           />
         </div>
@@ -121,7 +122,7 @@ export default function AiRefinementPanel({
             options={modelOptions}
             labels={modelLabels}
             onChange={onRefinementModelChange}
-            disabled={isRefining || disabled}
+            disabled={pending || disabled}
             className="w-full"
           />
         </div>
@@ -133,7 +134,7 @@ export default function AiRefinementPanel({
         size="sm"
         onClick={() => void handleRefine()}
         disabled={!canRefine}
-        loading={isRefining}
+        loading={pending}
       >
         Refine Draft
       </Button>

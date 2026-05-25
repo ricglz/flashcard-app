@@ -3,7 +3,7 @@
 import CardPreviewList, { type PreviewCard } from "@/components/CardPreviewList";
 import AiRefinementPanel from "@/components/AiRefinementPanel";
 import type { GeneratedSetPayload } from "@/lib/aiToolingSchemas";
-import type { RefinementRequest } from "@/lib/refinementScope";
+import type { RefinementRequest, RefinementResult } from "@/lib/refinementScope";
 
 type GeneratedCard = GeneratedSetPayload["cards"][number] & PreviewCard;
 
@@ -13,7 +13,7 @@ type GeneratePreviewProps = {
   onCardsChange: (cards: GeneratedCard[]) => void;
   onBack: () => void;
   onConfirm: () => void;
-  onRefine?: (request: RefinementRequest) => boolean | Promise<boolean>;
+  onRefine?: (request: RefinementRequest) => RefinementResult | Promise<RefinementResult>;
   refinementModel: string;
   onRefinementModelChange: (model: string) => void;
   isRefining?: boolean;
@@ -63,7 +63,7 @@ export default function GeneratePreview({
           refinementModel={refinementModel}
           onRefinementModelChange={onRefinementModelChange}
           onRefine={onRefine}
-          isRefining={isRefining}
+          pending={isRefining}
           disabled={isBusy}
         />
       )}
