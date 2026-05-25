@@ -9,16 +9,17 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
+### Schema Requiredness Audit
+- [ ] Audit optional schema fields that should become required, starting with `flashcards.origin`.
+  - Use widen-migrate-narrow for Convex schema tightening when existing data may violate the new shape.
+  - For `flashcards.origin`, add/keep the full origin union including `forked`, check for existing rows missing `origin`, default missing existing rows to `manual` unless reliable set-level evidence says otherwise, then make the field required.
+
 ### SRS Queue / Scheduling
-- [ ] Validate review actions before scheduling:
-  - SRS card belongs to user,
-  - queue item exists or action is an idempotent replay,
-  - rating is supported.
-  - **PARTIAL**: Basic validation exists, but could be enhanced with more specific failure types.
+- [ ] Centralize review queue row creation if more queue writers are added, so denormalized `reviewQueue.cardId` / `setId` fields stay consistent with their `srsCardId`.
 
 ### TTS / External Integration Boundary
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
-- [ ] Extract shared TTS interaction state if TTS button/status behavior keeps expanding across `TtsButton`, `TappableCjkChar`, and `StudyCard`.
+- [ ] Make `TtsEvent` a stricter discriminated union so failure statuses require failure fields like `message` and `kind`, and consumers can narrow on the event shape instead of classifying status strings.
 
 ## Code Quality — React Component Structure
 
@@ -39,6 +40,7 @@
 
 ### SRS Queue Population
 - [ ] Centralize Convex card creation paths so manual, AI/tooling, fork, and append flows share one backend helper for flashcard inserts, card counts, origin metadata, and SRS enrollment hooks.
+  - Consider moving the pure validation portion of `convex/lib/cardCreation.ts` to Effect only if card creation grows into a larger typed-failure pipeline or needs cleaner composition inside `Effect.gen` callers. Keep ordinary Convex DB insert failures as defects unless there is a concrete recovery path.
 - [ ] Batch SRS enrollment for large shared sets if public/marketplace sets start accumulating many users.
   - Current bounded per-card enrollment is acceptable for side-project scale.
   - Move to scheduled batches if a single card creation needs to enroll more users than fits comfortably in one Convex mutation.
@@ -74,8 +76,7 @@
   - classify each `null` return as valid optional domain state, access-control failure, missing entity, or intentionally hidden signed-out state,
   - migrate only route/client contracts that are ready to change together.
   - Include a broad Convex nullable-to-domain-result migration once the route/client contracts are ready to change together.
-  - `userSets.get`: return a typed failure for unauthenticated/missing membership if callers need to show access or library state explicitly.
-  - Auth-gated dashboard/query surfaces such as `srsReviewQueue.getQueueStats`, `weakAnalysis.getMyWeakCards`, and progress queries should either return a domain result or be documented as intentionally empty/hidden when signed out.
+  - Auth-gated dashboard/query surfaces such as `srsReviewQueue.getQueueStats` and progress queries should either return a domain result or be documented as intentionally empty/hidden when signed out.
   - Keep valid optional-state queries nullable where `null` is the useful domain value, such as “no active study session” or “no fork sync status”.
 
 ### Effect Boundary Cleanup
