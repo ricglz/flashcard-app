@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -8,6 +7,7 @@ import StudyLayout from "@/components/StudyLayout";
 import StudyCard from "@/components/StudyCard";
 import AssistantPanel from "@/components/AssistantPanel";
 import { useTtsControls } from "@/hooks/useTtsControls";
+import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
 import Link from "next/link";
 
@@ -34,16 +34,16 @@ export default function FlaggedCardsClient({
   const setNoteMutation = useMutation(api.cardAnnotations.setNote);
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
-  const [unflaggedIds, setUnflaggedIds] = useState<Set<string>>(new Set());
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const flaggedCards = liveQuery.filter(isFlaggedCard);
+  const navigation = useCardNavigation({
+    orderedIds: flaggedCards.map((card) => card.cardId),
+    onCardChange: resetReveal,
+  });
+  const currentCard = navigation.currentId
+    ? (flaggedCards.find((card) => card.cardId === navigation.currentId) ?? null)
+    : null;
 
-  const activeCards = liveQuery
-    .filter(isFlaggedCard)
-    .filter((card) => !unflaggedIds.has(card.cardId));
-  const safeIndex = Math.min(currentIndex, Math.max(0, activeCards.length - 1));
-  const currentCard = activeCards[safeIndex];
-
-  if (liveQuery.length === 0 && unflaggedIds.size === 0) {
+  if (liveQuery.length === 0 && navigation.hiddenIds.size === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <header className="border-b px-4 sm:px-6 py-4">
@@ -71,7 +71,7 @@ export default function FlaggedCardsClient({
     );
   }
 
-  if (activeCards.length === 0 && unflaggedIds.size > 0) {
+  if (navigation.activeIds.length === 0 && navigation.hiddenIds.size > 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <header className="border-b px-4 sm:px-6 py-4">
@@ -87,7 +87,7 @@ export default function FlaggedCardsClient({
             You&apos;ve reviewed all flagged cards!
           </p>
           <p className="text-muted text-sm mb-6">
-            {unflaggedIds.size} card{unflaggedIds.size !== 1 ? "s" : ""}{" "}
+            {navigation.hiddenIds.size} card{navigation.hiddenIds.size !== 1 ? "s" : ""}{" "}
             unflagged
           </p>
           <Link
@@ -109,40 +109,13 @@ export default function FlaggedCardsClient({
     );
   }
 
-  const handlePrev = () => {
-    if (safeIndex > 0) {
-      setCurrentIndex(safeIndex - 1);
-      resetReveal();
-    }
-  };
-
-  const handleNext = () => {
-    if (safeIndex < activeCards.length - 1) {
-      setCurrentIndex(safeIndex + 1);
-      resetReveal();
-    }
-  };
-
   const handleToggleFlag = () => {
     const cardId = currentCard.cardId;
     void toggleFlag({
       cardId,
       setId: currentCard.setId,
     });
-    if (!unflaggedIds.has(cardId)) {
-      const newUnflagged = new Set(unflaggedIds);
-      newUnflagged.add(cardId);
-      setUnflaggedIds(newUnflagged);
-      resetReveal();
-      const newActiveLength = activeCards.length - 1;
-      if (safeIndex >= newActiveLength) {
-        setCurrentIndex(Math.max(0, newActiveLength - 1));
-      }
-    } else {
-      const newUnflagged = new Set(unflaggedIds);
-      newUnflagged.delete(cardId);
-      setUnflaggedIds(newUnflagged);
-    }
+    navigation.hideCurrent();
   };
 
   const handleSetNote = (note: string) => {
@@ -155,7 +128,7 @@ export default function FlaggedCardsClient({
 
   return (
     <StudyLayout
-      progress={{ current: safeIndex, total: activeCards.length }}
+      progress={{ current: navigation.safeIndex, total: navigation.activeIds.length }}
       tts={tts}
       assistant={
         <AssistantPanel
@@ -180,7 +153,7 @@ export default function FlaggedCardsClient({
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}
         annotation={{
-          flagged: !unflaggedIds.has(currentCard.cardId),
+          flagged: !navigation.hiddenIds.has(currentCard.cardId),
           note: currentCard.note,
         }}
         onToggleFlag={handleToggleFlag}
@@ -190,15 +163,15 @@ export default function FlaggedCardsClient({
       {revealed && (
         <div className="flex gap-3 justify-center mt-8">
           <button
-            onClick={handlePrev}
-            disabled={safeIndex <= 0}
+            onClick={navigation.goPrevious}
+            disabled={!navigation.canPrevious}
             className="px-5 py-2 border border-edge rounded-lg text-sm font-medium hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             &larr; Prev
           </button>
           <button
-            onClick={handleNext}
-            disabled={safeIndex >= activeCards.length - 1}
+            onClick={navigation.goNext}
+            disabled={!navigation.canNext}
             className="px-5 py-2 border border-edge rounded-lg text-sm font-medium hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Next &rarr;

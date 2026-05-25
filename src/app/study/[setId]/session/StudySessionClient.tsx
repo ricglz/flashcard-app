@@ -1,7 +1,7 @@
 "use client";
 
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
@@ -20,7 +20,9 @@ import {
 import SetAccessError from "@/components/SetAccessError";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
+import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
+import InlineError from "@/components/InlineError";
 import StudySessionLocalResults, {
   type LocalStudyResult,
 } from "./StudySessionLocalResults";
@@ -64,20 +66,21 @@ export default function StudySessionClient({
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [localIndex, setLocalIndex] = useState(() => session.currentIndex);
   const [localResults, setLocalResults] = useState<LocalStudyResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLocalIndex((index) =>
-      session.currentIndex > index ? session.currentIndex : index,
-    );
-  }, [session.currentIndex]);
+  const navigation = useCardNavigation({
+    orderedIds: session.cardOrder,
+    initialIndex: session.currentIndex,
+    serverIndex: session.currentIndex,
+    reconcileServerIndex: true,
+    allowPastEnd: true,
+    onCardChange: resetReveal,
+  });
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
       if (isSubmitting) return;
-      const currentCardId = session.cardOrder[localIndex];
+      const currentCardId = navigation.currentId;
       if (!currentCardId) return;
       setIsSubmitting(true);
       setError(null);
@@ -88,30 +91,27 @@ export default function StudySessionClient({
           setError(result.error.message);
           return;
         }
-        resetReveal();
         setLocalResults((previous) => [...previous, { cardId: currentCardId, rating }]);
-        setLocalIndex((index) => Math.max(index, localIndex + 1));
+        navigation.advance();
       } finally {
         setIsSubmitting(false);
       }
     },
     [
-      session,
       sessionId,
-      localIndex,
       isSubmitting,
+      navigation,
       recordResult,
-      resetReveal,
     ],
   );
 
   const cardsMap = useMemo(() => new Map(cards.map((c) => [c._id, c])), [cards]);
-  const currentCardId = session.cardOrder[localIndex];
+  const currentCardId = navigation.currentId;
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
-  const sessionComplete = localIndex >= session.cardOrder.length;
+  const sessionComplete = navigation.isPastEnd;
   const completedCards = Math.min(
     session.cardOrder.length,
-    Math.max(localIndex, session.currentIndex),
+    Math.max(navigation.currentIndex, session.currentIndex),
   );
 
   if (!setResult.ok) {
@@ -147,7 +147,7 @@ export default function StudySessionClient({
 
   return (
     <StudyLayout
-      progress={{ current: localIndex, total: session.cardOrder.length }}
+      progress={{ current: navigation.currentIndex, total: session.cardOrder.length }}
       tts={tts}
       actionButton={{
         label: localResults.length > 0 ? "End Session" : "Abandon",
@@ -174,11 +174,7 @@ export default function StudySessionClient({
         />
       }
     >
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <InlineError message={error} />
       <StudyCard
         key={currentCardId}
         card={currentCard}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import type { api } from "../../../../../convex/_generated/api";
@@ -17,6 +17,7 @@ import {
 import SetAccessError from "@/components/SetAccessError";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
+import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
 import { shuffleArray } from "@/lib/shuffle";
 
@@ -55,9 +56,6 @@ export default function BrowseClient({
   const { annotationMap, toggleFlag, setNote } = useCardAnnotationsForSetPreloaded(preloadedAnnotations);
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [dismissed, setDismissed] = useState<Set<Id<"flashcards">>>(new Set());
-
   const [cardOrder] = useState<Id<"flashcards">[]>(() => {
     const sorted = [...cards]
       .sort((a, b) => a.order - b.order)
@@ -68,10 +66,10 @@ export default function BrowseClient({
     }
     return order;
   });
-
-  const activeCardIds = useMemo(() => {
-    return cardOrder.filter((id) => !dismissed.has(id));
-  }, [cardOrder, dismissed]);
+  const navigation = useCardNavigation({
+    orderedIds: cardOrder,
+    onCardChange: resetReveal,
+  });
 
   if (!setResult.ok) {
     return <SetAccessError message={setResult.error.message} href={`/study/${setId}`} label="Back to study" />;
@@ -86,7 +84,7 @@ export default function BrowseClient({
   const validTtsOnlyFields = ttsOnlyFields.filter((f) => validFieldNames.has(f));
   const cardsMap = new Map(cards.map((c) => [c._id, c]));
 
-  if (activeCardIds.length === 0) {
+  if (navigation.activeIds.length === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <header className="border-b px-4 sm:px-6 py-4">
@@ -99,7 +97,7 @@ export default function BrowseClient({
         </header>
         <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
           <p className="text-lg font-medium mb-4">
-            {dismissed.size > 0
+            {navigation.hiddenIds.size > 0
               ? "You've reviewed all the cards!"
               : "No cards to browse."}
           </p>
@@ -114,8 +112,8 @@ export default function BrowseClient({
     );
   }
 
-  const safeIndex = Math.min(currentIndex, activeCardIds.length - 1);
-  const currentCardId = activeCardIds[safeIndex];
+  const safeIndex = navigation.safeIndex;
+  const currentCardId = navigation.currentId;
   const currentCard = currentCardId ? cardsMap.get(currentCardId) : null;
 
   if (!currentCard) {
@@ -126,34 +124,11 @@ export default function BrowseClient({
     );
   }
 
-  const handlePrev = () => {
-    if (safeIndex > 0) {
-      setCurrentIndex(safeIndex - 1);
-      resetReveal();
-    }
-  };
-
-  const handleNext = () => {
-    if (safeIndex < activeCardIds.length - 1) {
-      setCurrentIndex(safeIndex + 1);
-      resetReveal();
-    }
-  };
-
-  const handleDismiss = () => {
-    if (!currentCardId) return;
-    setDismissed(new Set([...dismissed, currentCardId]));
-    resetReveal();
-    if (safeIndex >= activeCardIds.length - 2) {
-      setCurrentIndex(Math.max(0, safeIndex - 1));
-    }
-  };
-
   const currentAnnotation = annotationMap.get(currentCard._id);
 
   return (
     <StudyLayout
-      progress={{ current: safeIndex, total: activeCardIds.length, dismissed: dismissed.size }}
+      progress={{ current: safeIndex, total: navigation.activeIds.length, dismissed: navigation.hiddenIds.size }}
       tts={tts}
       assistant={
         <AssistantPanel
@@ -188,11 +163,11 @@ export default function BrowseClient({
 
       {revealed && (
         <BrowseNavigation
-          onPrev={handlePrev}
-          onNext={handleNext}
-          onDismiss={handleDismiss}
-          canPrev={safeIndex > 0}
-          canNext={safeIndex < activeCardIds.length - 1}
+          onPrev={navigation.goPrevious}
+          onNext={navigation.goNext}
+          onDismiss={navigation.hideCurrent}
+          canPrev={navigation.canPrevious}
+          canNext={navigation.canNext}
         />
       )}
     </StudyLayout>

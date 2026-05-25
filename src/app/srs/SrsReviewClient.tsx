@@ -16,6 +16,7 @@ import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 import InlineError from "@/components/InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
+import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
 
 type Props = {
@@ -60,7 +61,6 @@ export default function SrsReviewClient({
     good: 0,
     easy: 0,
   });
-  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const displayError = error ?? refreshError;
   const initialQueueSize = useRef(effectiveQueue.length);
@@ -69,16 +69,21 @@ export default function SrsReviewClient({
     initialReviewedToday.current = stats.reviewedToday;
   }
 
-  const visibleQueue = effectiveQueue.filter((item) => !reviewedIds.has(item._id));
-  const totalCards = visibleQueue.length + reviewedCount;
-  const currentItem = visibleQueue.length > 0 ? visibleQueue[0] : null;
+  const navigation = useCardNavigation({
+    orderedIds: effectiveQueue.map((item) => item._id),
+    onCardChange: resetReveal,
+  });
+  const totalCards = navigation.activeIds.length + reviewedCount;
+  const currentItem = navigation.currentId
+    ? (effectiveQueue.find((item) => item._id === navigation.currentId) ?? null)
+    : null;
   const reviewedToday = Math.max(
     stats?.reviewedToday ?? 0,
     (initialReviewedToday.current ?? stats?.reviewedToday ?? 0) + reviewedCount,
   );
 
   const isSessionComplete =
-    visibleQueue.length === 0 && reviewedCount >= initialQueueSize.current;
+    navigation.activeIds.length === 0 && reviewedCount >= initialQueueSize.current;
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
@@ -96,18 +101,17 @@ export default function SrsReviewClient({
           setError(result.error.message);
           return;
         }
-        resetReveal();
         setReviewedCount((c) => c + 1);
         setRatingCounts((prev) => ({
           ...prev,
           [rating]: prev[rating] + 1,
         }));
-        setReviewedIds((prev) => new Set(prev).add(currentItem._id));
+        navigation.hideCurrent();
       } finally {
         setIsSubmitting(false);
       }
     },
-    [clearRefreshError, currentItem, isSubmitting, recordReview, resetReveal],
+    [clearRefreshError, currentItem, isSubmitting, navigation, recordReview],
   );
 
   if (isSessionComplete) {
