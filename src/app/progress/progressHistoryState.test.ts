@@ -70,4 +70,16 @@ describe("classifyProgressHistoryResult", () => {
       message: "Progress data could not be loaded. Refreshing...",
     });
   });
+
+  it("flags successful results with malformed history entries as malformed cache", () => {
+    expect(
+      classifyProgressHistoryResult({
+        ok: true,
+        value: [{ ...historyEntry, totalCards: "4" }],
+      }),
+    ).toEqual({
+      status: "malformedCache",
+      message: "Progress data could not be loaded. Refreshing...",
+    });
+  });
 });
