@@ -11,7 +11,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test": "vitest run",
     "test:watch": "vitest",
-    "flashcard-ai": "tsx scripts/flashcard-ai.ts"
+    "flashcard-ai": "tsx scripts/flashcard-ai.ts",
+    "skills:update": "npx skills add get-convex/agent-skills --yes"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.8",
