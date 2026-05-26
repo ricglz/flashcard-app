@@ -9,4 +9,6 @@ allowBuilds:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+patchedDependencies:
+  multi-llm-ts@5.1.0-beta4: patches/multi-llm-ts@5.1.0-beta4.patch
 storeDir: /Users/ricglz/play-repos/flashcard-app/.pnpm-store

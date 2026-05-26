@@ -49,7 +49,7 @@ const sentryBuildOptions: SentryBuildOptions = {
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
   telemetry: false,
-  silent: !process.env.CI,
+  silent: !canUploadSentrySourceMaps || !process.env.CI,
   sourcemaps: {
     disable: !canUploadSentrySourceMaps,
   },

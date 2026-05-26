@@ -1,9 +1,13 @@
 import type { GeneratedSetPayload } from "./aiToolingSchemas";
 import type { DraftCard } from "./generatedSetDraft";
+import type { FunctionArgs } from "convex/server";
+import type { api } from "../../convex/_generated/api";
 
 export type GeneratedDraftCard = GeneratedSetPayload["cards"][number] & {
   selected: boolean;
 };
+
+type ConfirmGeneratedSetCards = FunctionArgs<typeof api.ai.confirmGeneratedSet>["cards"];
 
 export function generatedCardsFromPayload(
   payload: GeneratedSetPayload,
@@ -18,7 +22,7 @@ export function generatedCardsFromPayload(
 
 export function selectedCardsForConfirm(
   cards: readonly GeneratedDraftCard[],
-): DraftCard[] {
+): ConfirmGeneratedSetCards {
   return cards
     .filter((card) => card.selected)
     .map((card) => ({
