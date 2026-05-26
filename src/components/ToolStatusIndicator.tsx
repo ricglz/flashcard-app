@@ -3,6 +3,7 @@ import type { ToolStatus } from "@/lib/chatStream";
 const TOOL_LABELS: Record<string, string> = {
   list_sets: "Looking up your sets",
   get_weak_cards: "Analyzing weak cards",
+  add_note_to_current_card: "Adding note to this card",
 };
 
 export default function ToolStatusIndicator({ status }: { status: ToolStatus }) {
