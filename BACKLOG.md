@@ -52,6 +52,18 @@
 
 ## Marketplace & Multi-User
 
+### Shared Learning / Coaching
+- [ ] Coach-visible learner progress for explicitly shared relationships.
+  - Keep consent explicit: the learner should opt in before another user can view progress.
+  - Start with read-only progress summaries and weak spots, not account impersonation or direct access to private data.
+  - Avoid storing PII for invitations or profiles; identify users through Clerk and store only opaque references in Convex.
+- [ ] Lightweight invite flow for one learner to join an unlisted set.
+  - Make the recommended owner workflow clear: share link → learner adds to library → owner can keep adding cards.
+  - Preserve the distinction between adding to library and forking, since forking intentionally breaks future owner updates.
+- [ ] Shared-set member view that explains update behavior.
+  - Tell members when the set owner adds or changes cards, and clarify that their SRS/progress remains personal.
+  - Consider a simple "new cards added" signal before building notification infrastructure.
+
 ### Marketplace / Browse
 - [ ] Sort options (most forked, most users)
 - [ ] User public profile page — deferred until proper username management exists (no PII in DB)
@@ -109,6 +121,8 @@
 
 ### Sharing & Marketplace Flows
 - [ ] Share a set via link → open link as another user → view shared set
+- [ ] Add unlisted set to library as another user → verify independent SRS enrollment and progress state
+- [ ] Owner adds cards to shared set → verify SRS-enabled members are enrolled in the new cards
 - [ ] Fork a shared set → verify independent copy with editable cards
 - [ ] Browse public marketplace → search → preview → fork
 - [ ] Visibility toggle (private ↔ public) and verify marketplace listing
