@@ -70,3 +70,12 @@ export async function getCachedQuery<T>(key: string): Promise<T | undefined> {
     return undefined;
   }
 }
+
+export async function deleteCachedQuery(key: string): Promise<void> {
+  try {
+    const db = await getDb();
+    await db.delete("queryCache", key);
+  } catch {
+    // IndexedDB unavailable (e.g. private browsing) — silently skip
+  }
+}

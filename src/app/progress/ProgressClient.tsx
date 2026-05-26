@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import * as Sentry from "@sentry/nextjs";
+import { useEffect, useState } from "react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useOfflineQuery } from "@/hooks/useOfflineQuery";
+import { buildCacheKey, useOfflineQuery } from "@/hooks/useOfflineQuery";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
+import { deleteCachedQuery } from "@/lib/offlineDb";
 import StreakBadge from "@/components/StreakBadge";
 import DailyGoalRing from "@/components/DailyGoalRing";
 import DailyActivityChart from "@/components/DailyActivityChart";
 import AccuracyChart from "@/components/AccuracyChart";
 import CardStatusBreakdown from "@/components/CardStatusBreakdown";
 import SetMasteryList from "@/components/SetMasteryList";
+import { classifyProgressHistoryResult } from "./progressHistoryState";
 
 type Props = {
   preloadedSrsSummary: Preloaded<typeof api.progress.getSrsProgressSummary>;
@@ -25,12 +28,30 @@ export default function ProgressClient({
 }: Props) {
   const [days, setDays] = useState<7 | 30>(7);
   const historyResult = useOfflineQuery(api.progress.getDailyHistory, { days });
-  const history = historyResult?.ok ? historyResult.value : undefined;
-  const historyError =
-    historyResult && !historyResult.ok ? historyResult.error.message : null;
+  const historyState = classifyProgressHistoryResult(historyResult);
+  const history =
+    historyState.status === "ready" ? historyState.history : undefined;
   const srsSummary = useOfflinePreloadedQuery(preloadedSrsSummary);
   const breakdown = srsSummary.breakdown;
   const mastery = srsSummary.mastery;
+  const historyCacheKey = buildCacheKey(api.progress.getDailyHistory, { days });
+
+  useEffect(() => {
+    if (historyState.status !== "malformedCache") return;
+
+    Sentry.captureMessage("Malformed cached progress history result", {
+      level: "warning",
+      tags: {
+        query: "progress.getDailyHistory",
+      },
+      contexts: {
+        progressHistory: {
+          days,
+        },
+      },
+    });
+    void deleteCachedQuery(historyCacheKey);
+  }, [days, historyCacheKey, historyState.status]);
 
   const maxCards =
     history && history.length > 0
@@ -46,17 +67,18 @@ export default function ProgressClient({
         <DailyGoalRing preloaded={preloadedGoal} />
       </div>
 
-      {historyResult === undefined ? (
+      {historyState.status === "loading" ? (
         <div className="h-40 flex items-center justify-center">
           <div className="animate-spin h-6 w-6 border-2 border-accent border-t-transparent rounded-full" />
         </div>
-      ) : historyError ? (
+      ) : historyState.status === "error" ||
+        historyState.status === "malformedCache" ? (
         <div className="h-40 flex items-center justify-center text-sm text-muted">
-          {historyError}
+          {historyState.message}
         </div>
       ) : (
         <DailyActivityChart
-          history={history ?? []}
+          history={historyState.history}
           maxCards={maxCards}
           days={days}
           onDaysChange={setDays}
