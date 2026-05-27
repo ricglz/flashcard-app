@@ -13,6 +13,10 @@ type SeedCard = {
   back: string;
 };
 
+type SeedSrsSetup =
+  | { kind: "disabled" }
+  | { kind: "enabled"; queue: "none" | "all" };
+
 type SeededFlashcardSet = {
   setId: string;
   cardIds: string[];
@@ -108,21 +112,18 @@ export async function getTestUserTokenIdentifier(): Promise<string> {
 export async function seedFlashcardSet({
   name,
   cards,
-  srsEnabled = false,
-  queueSrsCards = false,
+  srs = { kind: "disabled" },
 }: {
   name: string;
   cards: SeedCard[];
-  srsEnabled?: boolean;
-  queueSrsCards?: boolean;
+  srs?: SeedSrsSetup;
 }): Promise<SeededFlashcardSet> {
   const userId = await getTestUserTokenIdentifier();
   return runTestingFunction<SeededFlashcardSet>("seedFlashcardSet", {
     userId,
     name,
     cards,
-    srsEnabled,
-    queueSrsCards,
+    srs,
   });
 }
 

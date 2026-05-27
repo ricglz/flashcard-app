@@ -5,8 +5,7 @@ test.describe("SRS review", () => {
   test("reviews a queued SRS card and updates scheduling state", async ({ page }) => {
     const seeded = await seedFlashcardSet({
       name: "E2E SRS Seeded Set",
-      srsEnabled: true,
-      queueSrsCards: true,
+      srs: { kind: "enabled", queue: "all" },
       cards: [
         { front: "uno", back: "one" },
         { front: "dos", back: "two" },

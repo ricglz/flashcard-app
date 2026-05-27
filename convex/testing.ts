@@ -13,6 +13,14 @@ const seedCardValidator = v.object({
   back: v.string(),
 });
 
+const seedSrsSetupValidator = v.union(
+  v.object({ kind: v.literal("disabled") }),
+  v.object({
+    kind: v.literal("enabled"),
+    queue: v.union(v.literal("none"), v.literal("all")),
+  }),
+);
+
 export const cleanupTestUser = internalMutation({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
@@ -65,8 +73,7 @@ export const seedFlashcardSet = internalMutation({
     userId: v.string(),
     name: v.string(),
     cards: v.array(seedCardValidator),
-    srsEnabled: v.optional(v.boolean()),
-    queueSrsCards: v.optional(v.boolean()),
+    srs: seedSrsSetupValidator,
   },
   handler: async (ctx, args) => {
     if (args.cards.length === 0) {
@@ -92,7 +99,7 @@ export const seedFlashcardSet = internalMutation({
       userId: args.userId,
       setId,
       role: "owner",
-      srsEnabled: args.srsEnabled ?? false,
+      srsEnabled: args.srs.kind === "enabled",
       defaultFrontFields: ["Front"],
       defaultBackFields: ["Back"],
       defaultTtsOnlyFields: [],
@@ -111,7 +118,7 @@ export const seedFlashcardSet = internalMutation({
     }
 
     const srsCardIds: Id<"srsCards">[] = [];
-    if (args.srsEnabled) {
+    if (args.srs.kind === "enabled") {
       for (const cardId of cardIds) {
         const srsCardId = await insertDefaultSrsCard(ctx, {
           userId: args.userId,
@@ -122,10 +129,7 @@ export const seedFlashcardSet = internalMutation({
       }
     }
 
-    if (args.queueSrsCards) {
-      if (!args.srsEnabled) {
-        throw new Error("queueSrsCards requires srsEnabled");
-      }
+    if (args.srs.kind === "enabled" && args.srs.queue === "all") {
       for (const [order, srsCardId] of srsCardIds.entries()) {
         const cardId = cardIds[order];
         if (!cardId) continue;
@@ -144,7 +148,10 @@ export const seedFlashcardSet = internalMutation({
       setId,
       cardIds,
       srsCardIds,
-      queuedCount: args.queueSrsCards ? srsCardIds.length : 0,
+      queuedCount:
+        args.srs.kind === "enabled" && args.srs.queue === "all"
+          ? srsCardIds.length
+          : 0,
     };
   },
 });
