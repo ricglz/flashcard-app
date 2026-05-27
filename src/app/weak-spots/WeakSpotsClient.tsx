@@ -6,24 +6,17 @@ import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { METHODOLOGIES, METHODOLOGY_LABELS, type Methodology } from "@/lib/types";
-import type { WeakReason } from "@/lib/aiToolingSchemas";
-import { Badge } from "@/components/ui/Badge";
+import {
+  formatWeakCardsReviewFilter,
+  parseWeakCardsDateRangeParams,
+} from "@/lib/weakCardsDateRange";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Select } from "@/components/ui/Select";
 import PageHeader from "@/components/PageHeader";
 import type { Id } from "../../../convex/_generated/dataModel";
-
-const REASON_LABELS: Record<WeakReason, string> = {
-  recent_wrong_rating: "Wrong",
-  recent_hard_rating: "Hard",
-  low_ease_factor: "Low Ease",
-  learning_status: "Learning",
-  many_reviews_not_graduated: "Not Graduating",
-  recently_due_again: "Due Again",
-};
+import WeakCardsList from "./WeakCardsList";
 
 export default function WeakSpotsClient({
   preloadedSets,
@@ -35,9 +28,15 @@ export default function WeakSpotsClient({
   const [methodology, setMethodology] = useState<Methodology>("balanced");
   const [selectedSetId, setSelectedSetId] = useState<Id<"flashcardSets"> | undefined>();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const userSets = useOfflinePreloadedQuery(preloadedSets);
+  const dateRange = useMemo(
+    () => parseWeakCardsDateRangeParams(searchParams.get("from"), searchParams.get("to")),
+    [searchParams],
+  );
   const srsEnabledSets = useMemo(
     () => userSets.filter((s) => s.userSet.srsEnabled),
     [userSets]
@@ -56,11 +55,31 @@ export default function WeakSpotsClient({
 
   const weakCardsResult = useQuery(
     api.weakAnalysis.getMyWeakCards,
-    { methodology, ...(selectedSetId ? { setId: selectedSetId } : {}) }
+    dateRange.ok
+      ? {
+          methodology,
+          reviewFilter: dateRange.reviewFilter,
+          ...(selectedSetId ? { setId: selectedSetId } : {}),
+        }
+      : "skip",
   );
   const weakCards = weakCardsResult?.ok ? weakCardsResult.value : null;
   const weakCardsError =
-    weakCardsResult && !weakCardsResult.ok ? weakCardsResult.error.message : null;
+    !dateRange.ok
+      ? dateRange.error
+      : weakCardsResult && !weakCardsResult.ok
+        ? weakCardsResult.error.message
+        : null;
+  const generateHref = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("methodology", methodology);
+    if (selectedSetId) params.set("setId", selectedSetId);
+    if (dateRange.ok) {
+      params.set("from", dateRange.from);
+      params.set("to", dateRange.to);
+    }
+    return `/generate?${params.toString()}`;
+  }, [dateRange, methodology, selectedSetId]);
 
   const totalWeakCards = useMemo(
     () => weakCards?.schemaGroups.reduce(
@@ -82,43 +101,81 @@ export default function WeakSpotsClient({
     return Math.round((total / totalWeakCards) * 10) / 10;
   }, [weakCards, totalWeakCards]);
 
+  const updateDateParam = (name: "from" | "to", value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(name, value);
+    else params.delete(name);
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  };
+
   return (
     <div className="min-h-screen">
       <PageHeader title="Weak Spots" onBack={() => router.back()} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
-        <div className="grid gap-3 mb-6 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)] md:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_auto]">
-          <Select
-            value={methodology}
-            options={METHODOLOGIES}
-            labels={METHODOLOGY_LABELS}
-            onChange={setMethodology}
-            className="w-full min-w-0"
-          />
-          <Select
-            value={selectedSetId ?? ""}
-            options={setFilterOptions}
-            labels={setFilterLabels}
-            onChange={(value) => {
-              setSelectedSetId(
-                srsEnabledSets.find((set) => set._id === value)?._id,
-              );
-            }}
-            className="w-full min-w-0"
-          />
+        <div className="grid gap-3 mb-6 sm:grid-cols-2 md:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_minmax(0,8.5rem)_minmax(0,8.5rem)]">
+          <label className="block min-w-0">
+            <span className="block text-xs text-muted mb-1">Methodology</span>
+            <Select
+              value={methodology}
+              options={METHODOLOGIES}
+              labels={METHODOLOGY_LABELS}
+              onChange={setMethodology}
+              className="w-full min-w-0"
+            />
+          </label>
+          <label className="block min-w-0">
+            <span className="block text-xs text-muted mb-1">Set</span>
+            <Select
+              value={selectedSetId ?? ""}
+              options={setFilterOptions}
+              labels={setFilterLabels}
+              onChange={(value) => {
+                setSelectedSetId(
+                  srsEnabledSets.find((set) => set._id === value)?._id,
+                );
+              }}
+              className="w-full min-w-0"
+            />
+          </label>
+          <label className="block min-w-0">
+            <span className="block text-xs text-muted mb-1">From</span>
+            <input
+              type="date"
+              value={dateRange.from}
+              onChange={(event) => updateDateParam("from", event.target.value)}
+              className="w-full min-w-0 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </label>
+          <label className="block min-w-0">
+            <span className="block text-xs text-muted mb-1">To</span>
+            <input
+              type="date"
+              value={dateRange.to}
+              onChange={(event) => updateDateParam("to", event.target.value)}
+              className="w-full min-w-0 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </label>
           {ai.available && totalWeakCards > 0 && (
             <LinkButton
-              href={`/generate?methodology=${methodology}${selectedSetId ? `&setId=${selectedSetId}` : ""}`}
+              href={generateHref}
               size="sm"
               fullWidth
-              className="whitespace-nowrap sm:col-span-2 md:col-span-1 md:w-auto"
+              className="whitespace-nowrap sm:col-span-2 md:col-span-4"
             >
               Generate Remedial Cards
             </LinkButton>
           )}
         </div>
 
-        {weakCardsResult === undefined && (
+        {weakCards && (
+          <p className="text-xs text-muted mb-4">
+            Review range: {formatWeakCardsReviewFilter(weakCards.reviewFilter)}
+          </p>
+        )}
+
+        {dateRange.ok && weakCardsResult === undefined && (
           <div className="flex justify-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
           </div>
@@ -132,80 +189,16 @@ export default function WeakSpotsClient({
 
         {weakCards && totalWeakCards === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted">No weak spots found. Keep studying!</p>
+            <p className="text-muted">No weak spots found for this range.</p>
           </div>
         )}
 
         {weakCards && totalWeakCards > 0 && (
-          <>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="p-3 border border-edge rounded-lg">
-                <p className="text-xs text-muted">Weak Cards</p>
-                <p className="text-2xl font-bold">{totalWeakCards}</p>
-              </div>
-              <div className="p-3 border border-edge rounded-lg">
-                <p className="text-xs text-muted">Avg Score</p>
-                <p className="text-2xl font-bold">{avgScore}</p>
-              </div>
-            </div>
-
-            {weakCards.schemaGroups.map((group) =>
-              group.sets.map((set) => (
-                <div key={set.setId} className="mb-6">
-                  <h3 className="font-semibold mb-3">
-                    <Link
-                      href={`/sets/${set.setId}`}
-                      className="text-accent hover:underline"
-                    >
-                      {set.name}
-                    </Link>
-                    <span className="text-sm text-muted ml-2">
-                      ({set.weakCards.length} weak)
-                    </span>
-                  </h3>
-                  <div className="space-y-2">
-                    {set.weakCards.map((card) => (
-                      <div
-                        key={card.cardId}
-                        className="border border-edge rounded-lg p-3"
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="min-w-0 flex-1 text-sm leading-6">
-                            {Object.entries(card.fields).map(([key, value]) => (
-                              <span key={key} className="mr-3 break-words">
-                                <span className="text-muted">{key}:</span> {value}
-                              </span>
-                            ))}
-                          </div>
-                          <Badge
-                            variant={
-                              card.weakScore >= 10
-                                ? "danger"
-                                : card.weakScore >= 5
-                                  ? "warning"
-                                  : "neutral"
-                            }
-                          >
-                            {Math.round(card.weakScore * 10) / 10}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {card.weakReasons.map((reason) => (
-                            <Badge key={reason} variant="neutral" size="sm">
-                              {REASON_LABELS[reason]}
-                            </Badge>
-                          ))}
-                          <span className="px-1.5 py-0.5 text-xs text-muted">
-                            ease: {card.metrics.easeFactor.toFixed(1)} | reviews: {card.metrics.reviewCount}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </>
+          <WeakCardsList
+            weakCards={weakCards}
+            totalWeakCards={totalWeakCards}
+            avgScore={avgScore}
+          />
         )}
       </main>
     </div>
