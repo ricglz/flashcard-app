@@ -47,11 +47,6 @@
 
 ## Code Quality — Convex Performance
 
-### Generated API Artifacts
-- [ ] Decide whether Convex generated API files should be committed after function API changes.
-  - If yes, document the expected regeneration command and include generated diffs in API-changing commits.
-  - If no, document that local tests and typechecking derive enough from source for this repo workflow.
-
 ### SRS Queue Population
 - [ ] Centralize Convex card creation paths so manual, AI/tooling, fork, and append flows share one backend helper for flashcard inserts, card counts, origin metadata, and SRS enrollment hooks.
   - Consider moving the pure validation portion of `convex/lib/cardCreation.ts` to Effect only if card creation grows into a larger typed-failure pipeline or needs cleaner composition inside `Effect.gen` callers. Keep ordinary Convex DB insert failures as defects unless there is a concrete recovery path.

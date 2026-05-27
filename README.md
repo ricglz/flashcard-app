@@ -15,6 +15,19 @@ pnpm dev
 
 Open http://localhost:3000.
 
+### Convex Generated API Files
+
+Convex generated API files under `convex/_generated/` are committed when
+function APIs or schema-derived types change. After changing Convex functions,
+schema, or validators, regenerate them with:
+
+```bash
+npx convex codegen
+```
+
+Include the generated diffs in the same commit as the API-changing source
+change.
+
 ## Observability
 
 Sentry is optional. Error reporting is disabled unless a DSN is configured.
