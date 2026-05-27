@@ -68,6 +68,8 @@ export default function BrowseClient({
   });
   const navigation = useCardNavigation({
     orderedIds: cardOrder,
+    initialIndex: 0,
+    mode: { kind: "bounded" },
     onCardChange: resetReveal,
   });
 

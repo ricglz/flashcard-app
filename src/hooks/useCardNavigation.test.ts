@@ -21,13 +21,14 @@ describe("card navigation helpers", () => {
   });
 
   it("advances within the range by default", () => {
-    expect(nextCardIndex(0, 3)).toBe(1);
-    expect(nextCardIndex(2, 3)).toBe(2);
+    expect(nextCardIndex(0, 3, { kind: "bounded" })).toBe(1);
+    expect(nextCardIndex(2, 3, { kind: "bounded" })).toBe(2);
   });
 
-  it("can advance one past the end for completion flows", () => {
-    expect(nextCardIndex(2, 3, true)).toBe(3);
-    expect(nextCardIndex(3, 3, true)).toBe(3);
+  it("can advance one past the end in session mode", () => {
+    const mode = { kind: "session" as const, serverIndex: 0 };
+    expect(nextCardIndex(2, 3, mode)).toBe(3);
+    expect(nextCardIndex(3, 3, mode)).toBe(3);
   });
 
   it("moves backward without going negative", () => {
@@ -46,8 +47,7 @@ describe("card navigation helpers", () => {
       orderedIds: ["a", "b", "c"],
       hiddenIds: new Set(),
       currentIndex: 0,
-      serverIndex: 2,
-      reconcileServerIndex: true,
+      mode: { kind: "session", serverIndex: 2 },
     });
 
     expect(state.currentIndex).toBe(2);
@@ -59,6 +59,7 @@ describe("card navigation helpers", () => {
       orderedIds: ["a", "b", "c"],
       hiddenIds: new Set(["b"]),
       currentIndex: 1,
+      mode: { kind: "bounded" },
     });
 
     expect(state.activeIds).toEqual(["a", "c"]);

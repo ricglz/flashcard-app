@@ -37,6 +37,8 @@ export default function FlaggedCardsClient({
   const flaggedCards = liveQuery.filter(isFlaggedCard);
   const navigation = useCardNavigation({
     orderedIds: flaggedCards.map((card) => card.cardId),
+    initialIndex: 0,
+    mode: { kind: "bounded" },
     onCardChange: resetReveal,
   });
   const currentCard = navigation.currentId

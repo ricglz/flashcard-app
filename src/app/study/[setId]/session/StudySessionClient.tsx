@@ -71,9 +71,7 @@ export default function StudySessionClient({
   const navigation = useCardNavigation({
     orderedIds: session.cardOrder,
     initialIndex: session.currentIndex,
-    serverIndex: session.currentIndex,
-    reconcileServerIndex: true,
-    allowPastEnd: true,
+    mode: { kind: "session", serverIndex: session.currentIndex },
     onCardChange: resetReveal,
   });
 

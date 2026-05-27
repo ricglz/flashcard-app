@@ -71,6 +71,8 @@ export default function SrsReviewClient({
 
   const navigation = useCardNavigation({
     orderedIds: effectiveQueue.map((item) => item._id),
+    initialIndex: 0,
+    mode: { kind: "bounded" },
     onCardChange: resetReveal,
   });
   const totalCards = navigation.activeIds.length + reviewedCount;

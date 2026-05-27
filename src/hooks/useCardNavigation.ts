@@ -14,8 +14,16 @@ export function safeCardIndex(index: number, total: number): number {
   return Math.min(Math.max(0, index), total - 1);
 }
 
-export function nextCardIndex(index: number, total: number, allowPastEnd = false): number {
-  const max = allowPastEnd ? total : Math.max(0, total - 1);
+export type CardNavigationMode =
+  | { kind: "bounded" }
+  | { kind: "session"; serverIndex: number };
+
+export function nextCardIndex(
+  index: number,
+  total: number,
+  mode: CardNavigationMode,
+): number {
+  const max = mode.kind === "session" ? total : Math.max(0, total - 1);
   return Math.min(index + 1, max);
 }
 
@@ -31,10 +39,8 @@ export function indexAfterHidingCurrent(index: number, totalBeforeHide: number):
 
 type UseCardNavigationOptions<T> = {
   orderedIds: readonly T[];
-  initialIndex?: number;
-  allowPastEnd?: boolean;
-  serverIndex?: number;
-  reconcileServerIndex?: boolean;
+  initialIndex: number;
+  mode: CardNavigationMode;
   onCardChange?: () => void;
 };
 
@@ -42,26 +48,22 @@ type ResolveNavigationStateOptions<T> = {
   orderedIds: readonly T[];
   hiddenIds: ReadonlySet<T>;
   currentIndex: number;
-  allowPastEnd?: boolean;
-  serverIndex?: number;
-  reconcileServerIndex?: boolean;
+  mode: CardNavigationMode;
 };
 
 export function resolveNavigationState<T>({
   orderedIds,
   hiddenIds,
   currentIndex,
-  allowPastEnd = false,
-  serverIndex,
-  reconcileServerIndex = false,
+  mode,
 }: ResolveNavigationStateOptions<T>) {
   const resolvedIndex =
-    reconcileServerIndex && serverIndex !== undefined
-      ? Math.max(currentIndex, serverIndex)
+    mode.kind === "session"
+      ? Math.max(currentIndex, mode.serverIndex)
       : currentIndex;
   const activeIds = visibleCardIds(orderedIds, hiddenIds);
   const safeIndex = safeCardIndex(resolvedIndex, activeIds.length);
-  const isPastEnd = allowPastEnd && resolvedIndex >= activeIds.length;
+  const isPastEnd = mode.kind === "session" && resolvedIndex >= activeIds.length;
   const currentId = isPastEnd ? null : (activeIds[safeIndex] ?? null);
 
   return {
@@ -77,14 +79,13 @@ export function resolveNavigationState<T>({
 
 export function useCardNavigation<T>({
   orderedIds,
-  initialIndex = 0,
-  allowPastEnd = false,
-  serverIndex,
-  reconcileServerIndex = false,
+  initialIndex,
+  mode,
   onCardChange,
 }: UseCardNavigationOptions<T>) {
   const [currentIndex, setCurrentIndex] = useState(() => initialIndex);
   const [hiddenIds, setHiddenIds] = useState<Set<T>>(new Set());
+  const sessionServerIndex = mode.kind === "session" ? mode.serverIndex : null;
 
   const navigationState = useMemo(
     () =>
@@ -92,26 +93,22 @@ export function useCardNavigation<T>({
         orderedIds,
         hiddenIds,
         currentIndex,
-        allowPastEnd,
-        serverIndex,
-        reconcileServerIndex,
+        mode,
       }),
     [
-      allowPastEnd,
       currentIndex,
       hiddenIds,
+      mode,
       orderedIds,
-      reconcileServerIndex,
-      serverIndex,
     ],
   );
 
   const reconcileIndex = useCallback(
     (index: number) =>
-      reconcileServerIndex && serverIndex !== undefined
-        ? Math.max(index, serverIndex)
+      sessionServerIndex !== null
+        ? Math.max(index, sessionServerIndex)
         : index,
-    [reconcileServerIndex, serverIndex],
+    [sessionServerIndex],
   );
 
   const goPrevious = useCallback(() => {
@@ -129,13 +126,13 @@ export function useCardNavigation<T>({
       const next = nextCardIndex(
         current,
         navigationState.activeIds.length,
-        allowPastEnd,
+        mode,
       );
       if (next !== current) onCardChange?.();
       return next;
     });
   }, [
-    allowPastEnd,
+    mode,
     navigationState.activeIds.length,
     onCardChange,
     reconcileIndex,
