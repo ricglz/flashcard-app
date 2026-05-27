@@ -116,6 +116,14 @@
 ### Status Color Guardrails
 - [ ] Expand status color guardrail exemptions or semantic primitives only when new legitimate data-color surfaces appear. Keep chart, rating, and CJK colors exempt because those colors encode data.
 
+## Testing Tooling
+
+### Vitest Warning Noise
+- [ ] Investigate the Vitest `DEP0205 module.register()` warning.
+  - It appears on `pnpm test` runs.
+  - Identify whether it comes from Vitest, `tsx`, `convex-test`, or Node version drift.
+  - Prefer dependency/config cleanup over suppressing the warning.
+
 ## E2E Testing
 
 ### Infrastructure
