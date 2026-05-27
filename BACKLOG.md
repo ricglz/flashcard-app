@@ -9,6 +9,12 @@
 
 ## Code Quality — Typed Domain Validation Candidates
 
+### Boolean / Optional Branch Guardrails
+- [ ] Add a low-noise static guardrail for exported helper/hook boolean parameters if this pattern keeps recurring.
+  - Flag boolean parameters on exported non-component functions where a union or named command would better express behavior.
+  - Exempt React component props, real binary domain fields, result tags, and UI state props such as `disabled`, `loading`, `selected`, and `flagged`.
+  - Prefer a small custom ESLint rule only if it can avoid noisy false positives.
+
 ### Schema Requiredness Audit
 - [ ] Audit optional schema fields that should become required, starting with `flashcards.origin`.
   - Use widen-migrate-narrow for Convex schema tightening when existing data may violate the new shape.
@@ -24,7 +30,7 @@
 ## Code Quality — React Component Structure
 
 ### Form / Draft State Helpers
-- [ ] Extract reusable local draft helpers for editable settings forms if more settings sections need nullable draft-over-server-state behavior.
+- [ ] Extend reusable local draft helpers beyond `useDraftValue` if more settings sections need nullable draft-over-server-state behavior.
 
 ### Async Action State
 - [ ] Evaluate `@convex-dev/react-query` / TanStack Query for components that still hand-roll `isSaving`/`error`/success state around Convex mutations.
@@ -35,8 +41,16 @@
   - Keep the local helper for one-shot Convex mutations that only need button loading, inline errors, and success callbacks.
   - Revisit TanStack Query instead of adding more local abstraction when multiple features need shared mutation/query state, retry/backoff policy, cancellation/deduping, cache invalidation/refetch orchestration, or optimistic updates beyond the offline outbox.
   - Adopt `@convex-dev/react-query` only if a prototype proves it can coexist with or simplify the current offline cache/outbox without weakening core study-flow reliability.
+- [ ] Make SRS settings save transactional if partial saves become a practical issue.
+  - Keep explicit SRS intent, but consider a backend command with `{ defaults, srsAction: "unchanged" | "enable" | "disable" }` so field defaults and SRS enable/disable are applied in one mutation.
+  - Preserve the current explicit `enableSrs` / `disableSrs` commands for call sites that only need enrollment state changes.
 
 ## Code Quality — Convex Performance
+
+### Generated API Artifacts
+- [ ] Decide whether Convex generated API files should be committed after function API changes.
+  - If yes, document the expected regeneration command and include generated diffs in API-changing commits.
+  - If no, document that local tests and typechecking derive enough from source for this repo workflow.
 
 ### SRS Queue Population
 - [ ] Centralize Convex card creation paths so manual, AI/tooling, fork, and append flows share one backend helper for flashcard inserts, card counts, origin metadata, and SRS enrollment hooks.
@@ -78,7 +92,7 @@
 - [ ] Build optional MCP wrapper around the same tooling API if CLI workflow proves useful.
 
 ### Study Assistant Tool Expansion
-- [ ] Expand tool set beyond `list_sets` and `get_weak_cards` if usage shows demand (e.g., study stats, mastery levels, annotations)
+- [ ] Expand tool set beyond the current `list_sets`, `get_weak_cards`, and `add_note_to_current_card` tools if usage shows demand (e.g., study stats, mastery levels, richer annotation workflows)
 
 ## Code Quality — Error Handling
 
@@ -115,6 +129,10 @@
 - [ ] Playwright CI integration (GitHub Actions)
 
 ### SRS Queue Flows
+- [ ] Convex unit coverage for SRS enrollment commands.
+  - `enableSrs` is idempotent and enrolls cards only when transitioning from disabled to enabled.
+  - `disableSrs` preserves existing SRS cards and queue rows.
+  - non-members cannot enable or disable SRS for another user's set.
 - [ ] SRS enrollment (add set to library → enable SRS → verify srsCards created)
 - [ ] New card introduction (verify daily limit, round-robin across sets)
 - [ ] Queue carry-over (unfinished cards persist to next day)
