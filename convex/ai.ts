@@ -16,6 +16,10 @@ import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/
 import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
 import type { CommonFailure, DomainResult } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
+import {
+  validateWeakCardsReviewFilter,
+  weakCardsReviewFilterValidator,
+} from "./weakCardsReviewFilter";
 
 const SYSTEM_GENERATION_PROMPT =
   "You are an expert flashcard author. Return only valid JSON. Prioritize realistic, cohesive, human-studyable cards over mechanically satisfying constraints.";
@@ -538,6 +542,7 @@ export const generateRemedialCards = action({
   args: {
     methodology: v.optional(weakContextMethodologyValidator),
     setId: v.optional(v.id("flashcardSets")),
+    reviewFilter: v.optional(weakCardsReviewFilterValidator),
     targetCardCount: v.optional(v.number()),
     name: v.string(),
     model: v.optional(v.string()),
@@ -551,12 +556,17 @@ export const generateRemedialCards = action({
       const scope = args.setId
         ? { kind: "set" as const, setId: args.setId }
         : { kind: "srs_enabled_sets" as const };
+      const reviewFilterResult = validateWeakCardsReviewFilter(args.reviewFilter);
+      if (!reviewFilterResult.ok) return yield* Effect.fail(reviewFilterResult.error);
 
       const weakCards = yield* Effect.promise(() =>
           ctx.runQuery(internal.tooling.getWeakCardsForTool, {
             userId,
             scope,
             methodology: args.methodology,
+            filters: {
+              reviewFilter: reviewFilterResult.value,
+            },
             include: { recentRatings: true },
           }),
         );

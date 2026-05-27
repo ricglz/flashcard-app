@@ -11,6 +11,7 @@ import { cloneFieldDefinitionsForAction } from "@/lib/generatedSetDraft";
 import { selectedCardsForConfirm } from "@/lib/generatedDraftCards";
 import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import { isMethodology } from "@/lib/types";
+import { parseOptionalWeakCardsDateRangeParams } from "@/lib/weakCardsDateRange";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
 import GeneratePreview from "./GeneratePreview";
 import AiErrorMessage from "@/components/AiErrorMessage";
@@ -38,6 +39,10 @@ export default function GenerateClient({
   const initialMethodology = isMethodology(methodologyParam) ? methodologyParam : "balanced";
 
   const initialSetId = searchParams.get("setId") ?? "";
+  const incomingDateRange = parseOptionalWeakCardsDateRangeParams(
+    searchParams.get("from"),
+    searchParams.get("to"),
+  );
 
   const [step, setStep] = useState<Step>("config");
   const [config, setConfig] = useState<GenerateConfig>({
@@ -68,6 +73,11 @@ export default function GenerateClient({
     setStep("loading");
     setError(null);
     try {
+      if (incomingDateRange.status === "invalid") {
+        setError(incomingDateRange.error);
+        setStep("config");
+        return;
+      }
       const selectedSetId = config.selectedSetId
         ? parseId<"flashcardSets">(config.selectedSetId)
         : null;
@@ -83,6 +93,9 @@ export default function GenerateClient({
         name: config.setName,
         ...(config.model ? { model: config.model } : {}),
         ...(config.instructions ? { instructions: config.instructions } : {}),
+        ...(incomingDateRange.status === "valid"
+          ? { reviewFilter: incomingDateRange.reviewFilter }
+          : {}),
         addToSrs: config.addToSrs,
       });
       if (!result.ok) {
