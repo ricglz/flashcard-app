@@ -129,10 +129,6 @@
 - [ ] Playwright CI integration (GitHub Actions)
 
 ### SRS Queue Flows
-- [ ] Convex unit coverage for SRS enrollment commands.
-  - `enableSrs` is idempotent and enrolls cards only when transitioning from disabled to enabled.
-  - `disableSrs` preserves existing SRS cards and queue rows.
-  - non-members cannot enable or disable SRS for another user's set.
 - [ ] SRS enrollment (add set to library → enable SRS → verify srsCards created)
 - [ ] New card introduction (verify daily limit, round-robin across sets)
 - [ ] Queue carry-over (unfinished cards persist to next day)
