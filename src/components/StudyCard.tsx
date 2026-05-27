@@ -44,7 +44,9 @@ export default function StudyCard({
   const updateTtsStatus = (event: TtsEvent) => {
     if (isTtsProblem(event.status)) {
       setTtsMessage(
-        event.message ?? "Couldn't play audio. Check volume or tap again.",
+        "message" in event
+          ? event.message
+          : "Couldn't play audio. Check volume or tap again.",
       );
       return;
     }
