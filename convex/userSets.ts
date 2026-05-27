@@ -177,13 +177,12 @@ export const add = mutation({
   ),
 });
 
-export const update = mutation({
+export const updateStudyDefaults = mutation({
   args: {
     setId: v.id("flashcardSets"),
-    srsEnabled: v.optional(v.boolean()),
-    defaultFrontFields: v.optional(v.array(v.string())),
-    defaultBackFields: v.optional(v.array(v.string())),
-    defaultTtsOnlyFields: v.optional(v.array(v.string())),
+    defaultFrontFields: v.array(v.string()),
+    defaultBackFields: v.array(v.string()),
+    defaultTtsOnlyFields: v.array(v.string()),
   },
   handler: (ctx, args) => toDomainResultAsync(
     Effect.gen(function* () {
@@ -198,40 +197,68 @@ export const update = mutation({
       );
       const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
 
-      if (
-        args.defaultFrontFields !== undefined ||
-        args.defaultBackFields !== undefined ||
-        args.defaultTtsOnlyFields !== undefined
-      ) {
-        yield* validateStudySessionSetupEffect({
-          fieldDefinitions: getFieldDefinitions(set),
-          frontFields: args.defaultFrontFields ?? link.defaultFrontFields,
-          backFields: args.defaultBackFields ?? link.defaultBackFields,
-          ttsOnlyFields: args.defaultTtsOnlyFields ?? link.defaultTtsOnlyFields,
-        });
-      }
+      yield* validateStudySessionSetupEffect({
+        fieldDefinitions: getFieldDefinitions(set),
+        frontFields: args.defaultFrontFields,
+        backFields: args.defaultBackFields,
+        ttsOnlyFields: args.defaultTtsOnlyFields,
+      });
 
-      const wasSrsEnabled = link.srsEnabled;
-      const patch: {
-        srsEnabled?: boolean;
-        defaultFrontFields?: string[];
-        defaultBackFields?: string[];
-        defaultTtsOnlyFields?: string[];
-      } = {};
-      if (args.srsEnabled !== undefined) patch.srsEnabled = args.srsEnabled;
-      if (args.defaultFrontFields !== undefined)
-        patch.defaultFrontFields = args.defaultFrontFields;
-      if (args.defaultBackFields !== undefined)
-        patch.defaultBackFields = args.defaultBackFields;
-      if (args.defaultTtsOnlyFields !== undefined)
-        patch.defaultTtsOnlyFields = args.defaultTtsOnlyFields;
+      yield* Effect.promise(() =>
+        ctx.db.patch(link._id, {
+          defaultFrontFields: args.defaultFrontFields,
+          defaultBackFields: args.defaultBackFields,
+          defaultTtsOnlyFields: args.defaultTtsOnlyFields,
+        }),
+      );
 
-      yield* Effect.promise(() => ctx.db.patch(link._id, patch));
+      return null;
+    }),
+  ),
+});
 
-      if (args.srsEnabled && !wasSrsEnabled) {
+export const enableSrs = mutation({
+  args: { setId: v.id("flashcardSets") },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      yield* requireEntity(ctx.db.get(args.setId), "Set not found");
+      const link = yield* requireEntity(
+        ctx.db.query("userSets")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId),
+          )
+          .first(),
+        "Set not found",
+      );
+
+      if (!link.srsEnabled) {
+        yield* Effect.promise(() => ctx.db.patch(link._id, { srsEnabled: true }));
         yield* Effect.promise(() =>
           enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId),
         );
+      }
+      return null;
+    }),
+  ),
+});
+
+export const disableSrs = mutation({
+  args: { setId: v.id("flashcardSets") },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const link = yield* requireEntity(
+        ctx.db.query("userSets")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId),
+          )
+          .first(),
+        "Set not found",
+      );
+
+      if (link.srsEnabled) {
+        yield* Effect.promise(() => ctx.db.patch(link._id, { srsEnabled: false }));
       }
       return null;
     }),

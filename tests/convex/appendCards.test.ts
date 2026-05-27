@@ -179,7 +179,7 @@ describe("appendGeneratedCardsForTool", () => {
     const t = convexTest(schema, modules);
     const { setId, as } = await createSetWithCards(t, { cardCount: 1 });
 
-    await as.mutation(api.userSets.update, { setId, srsEnabled: true });
+    await as.mutation(api.userSets.enableSrs, { setId });
 
     await t.mutation(internal.tooling.appendGeneratedCardsForTool, {
       userId: TEST_USER.tokenIdentifier,

@@ -27,7 +27,9 @@ export default function SrsSetConfig({
   defaultTtsOnlyFields,
   fieldDefinitions,
 }: Props) {
-  const updateUserSet = useMutation(api.userSets.update);
+  const updateStudyDefaults = useMutation(api.userSets.updateStudyDefaults);
+  const enableSrs = useMutation(api.userSets.enableSrs);
+  const disableSrs = useMutation(api.userSets.disableSrs);
   const [localSrsEnabled, setLocalSrsEnabled] = useState(srsEnabled);
   const { execute, isSaving, error } = useSaveHandler<null>();
   const { assignment, toggleField } = useFieldAssignment({
@@ -47,22 +49,31 @@ export default function SrsSetConfig({
   const sortedFields = getDisplayableFields(fieldDefinitions);
   const allFieldNames = sortedFields.map((fd) => fd.name);
 
-  const hasChanges =
-    localSrsEnabled !== srsEnabled ||
+  const srsChanged = localSrsEnabled !== srsEnabled;
+  const defaultsChanged =
     JSON.stringify(localFront) !== JSON.stringify(defaultFrontFields) ||
     JSON.stringify(localBack) !== JSON.stringify(defaultBackFields) ||
     JSON.stringify(localTtsOnly) !== JSON.stringify(defaultTtsOnlyFields);
+  const hasChanges = srsChanged || defaultsChanged;
 
   async function handleSave() {
-    await execute(() =>
-      updateUserSet({
-        setId,
-        srsEnabled: localSrsEnabled,
-        defaultFrontFields: localFront,
-        defaultBackFields: localBack,
-        defaultTtsOnlyFields: localTtsOnly,
-      }),
-    );
+    await execute(async () => {
+      if (defaultsChanged) {
+        const result = await updateStudyDefaults({
+          setId,
+          defaultFrontFields: localFront,
+          defaultBackFields: localBack,
+          defaultTtsOnlyFields: localTtsOnly,
+        });
+        if (!result.ok) return result;
+      }
+
+      if (!srsChanged) return { ok: true, value: null };
+
+      return localSrsEnabled
+        ? enableSrs({ setId })
+        : disableSrs({ setId });
+    });
   }
 
   return (
