@@ -103,12 +103,57 @@ export const WeakCardsScopeSchema = Schema.Union(
 );
 export type WeakCardsScope = Schema.Schema.Type<typeof WeakCardsScopeSchema>;
 
+const MAX_REVIEW_FILTER_MS = 365 * 24 * 60 * 60 * 1000;
+
+export type WeakCardsReviewFilter =
+  | { kind: "relative_days"; days: number }
+  | { kind: "calendar_range"; startMs: number; endMs: number };
+
+function isRecord(input: unknown): input is Record<string, unknown> {
+  return typeof input === "object" && input !== null && !Array.isArray(input);
+}
+
+function hasOnlyKeys(input: Record<string, unknown>, keys: readonly string[]): boolean {
+  const allowed = new Set(keys);
+  return Object.keys(input).every((key) => allowed.has(key));
+}
+
+function isWeakCardsReviewFilter(input: unknown): input is WeakCardsReviewFilter {
+  if (!isRecord(input)) return false;
+  if (input.kind === "relative_days") {
+    return (
+      hasOnlyKeys(input, ["kind", "days"]) &&
+      typeof input.days === "number" &&
+      Number.isFinite(input.days) &&
+      Number.isInteger(input.days) &&
+      input.days >= 1 &&
+      input.days <= 365
+    );
+  }
+  if (input.kind === "calendar_range") {
+    return (
+      hasOnlyKeys(input, ["kind", "startMs", "endMs"]) &&
+      typeof input.startMs === "number" &&
+      typeof input.endMs === "number" &&
+      Number.isFinite(input.startMs) &&
+      Number.isFinite(input.endMs) &&
+      input.startMs < input.endMs &&
+      input.endMs - input.startMs <= MAX_REVIEW_FILTER_MS
+    );
+  }
+  return false;
+}
+
+export const WeakCardsReviewFilterSchema = Schema.declare(
+  isWeakCardsReviewFilter,
+);
+
 export const WeakCardsRequestSchema = Schema.Struct({
   scope: Schema.optional(WeakCardsScopeSchema),
   methodology: Schema.optional(WeakContextMethodologySchema),
   filters: Schema.optional(
     Schema.Struct({
-      days: Schema.optional(Schema.Number),
+      reviewFilter: Schema.optional(WeakCardsReviewFilterSchema),
       minReviews: Schema.optional(Schema.Number),
       ratings: Schema.optional(Schema.Array(CardRatingSchema)),
       statuses: Schema.optional(Schema.Array(SrsCardStatusSchema)),
@@ -145,6 +190,7 @@ export type WeakReason = Schema.Schema.Type<typeof WeakReasonSchema>;
 export const WeakCardsResponseSchema = Schema.Struct({
   scope: WeakCardsScopeSchema,
   methodology: WeakContextMethodologySchema,
+  reviewFilter: WeakCardsReviewFilterSchema,
   generatedAt: Schema.Number,
   schemaGroups: Schema.Array(
     Schema.Struct({

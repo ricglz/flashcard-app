@@ -5,6 +5,7 @@ import {
   CurrentCardNoteToolParamsSchema,
   FieldDefinitionSchema,
   SetsListResponseSchema,
+  WeakCardsReviewFilterSchema,
 } from "./aiToolingSchemas";
 import { ChatRequestSchema } from "./chatSchemas";
 
@@ -50,6 +51,51 @@ describe("AI tooling field definition schema", () => {
     });
 
     expect(Either.isLeft(decoded)).toBe(true);
+  });
+});
+
+describe("weak cards review filter schema", () => {
+  it("accepts valid relative day and calendar range filters", () => {
+    const relative = Schema.decodeUnknownEither(WeakCardsReviewFilterSchema)({
+      kind: "relative_days",
+      days: 30,
+    });
+    const calendar = Schema.decodeUnknownEither(WeakCardsReviewFilterSchema)({
+      kind: "calendar_range",
+      startMs: 1000,
+      endMs: 2000,
+    });
+
+    expect(Either.isRight(relative)).toBe(true);
+    expect(Either.isRight(calendar)).toBe(true);
+  });
+
+  it("rejects malformed or mixed filter shapes", () => {
+    const mixed = Schema.decodeUnknownEither(WeakCardsReviewFilterSchema)({
+      kind: "relative_days",
+      days: 30,
+      startMs: 1000,
+      endMs: 2000,
+    });
+    const badDays = Schema.decodeUnknownEither(WeakCardsReviewFilterSchema)({
+      kind: "relative_days",
+      days: 0,
+    });
+    const badRange = Schema.decodeUnknownEither(WeakCardsReviewFilterSchema)({
+      kind: "calendar_range",
+      startMs: 2000,
+      endMs: 1000,
+    });
+    const nonFinite = Schema.decodeUnknownEither(WeakCardsReviewFilterSchema)({
+      kind: "calendar_range",
+      startMs: Number.NaN,
+      endMs: 1000,
+    });
+
+    expect(Either.isLeft(mixed)).toBe(true);
+    expect(Either.isLeft(badDays)).toBe(true);
+    expect(Either.isLeft(badRange)).toBe(true);
+    expect(Either.isLeft(nonFinite)).toBe(true);
   });
 });
 

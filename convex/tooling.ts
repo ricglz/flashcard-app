@@ -28,8 +28,16 @@ import type {
   GeneratedSetPayload,
   SetsListResponse,
   WeakCardsResponse,
+  WeakCardsReviewFilter,
 } from "../src/lib/aiToolingSchemas";
 import type { CardRating, FieldDefinition } from "../src/lib/types";
+import {
+  DEFAULT_WEAK_CARDS_REVIEW_FILTER,
+  MS_PER_DAY,
+  resolveWeakCardsReviewWindow,
+  validateWeakCardsReviewFilter,
+  weakCardsReviewFilterValidator,
+} from "./weakCardsReviewFilter";
 
 type Methodology = "balanced" | "recent_lapses" | "low_ease" | "learning_stuck";
 type SourceScope = GeneratedSetPayload["sourceScope"];
@@ -47,11 +55,9 @@ type MutableWeakGroup = Omit<WeakSchemaGroup, "fieldDefinitions" | "sets"> & {
   sets: MutableWeakSet[];
 };
 
-const DEFAULT_DAYS = 90;
 const DEFAULT_LIMIT_PER_SET = 10;
 const DEFAULT_TOTAL_LIMIT = 40;
 const LOW_EASE_THRESHOLD = 2.0;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const setsListIncludeValidator = v.object({
   srsSummary: v.optional(v.boolean()),
@@ -209,7 +215,7 @@ export const getWeakCardsForTool = internalQuery({
     scope: v.optional(weakCardsScopeValidator),
     methodology: v.optional(weakContextMethodologyValidator),
     filters: v.optional(v.object({
-      days: v.optional(v.number()),
+      reviewFilter: v.optional(weakCardsReviewFilterValidator),
       minReviews: v.optional(v.number()),
       ratings: v.optional(v.array(ratingValidator)),
       statuses: v.optional(v.array(srsCardStatusValidator)),
@@ -238,7 +244,7 @@ export async function getWeakCardsHelper(
     scope?: { kind: "srs_enabled_sets" } | { kind: "set"; setId: Id<"flashcardSets"> } | { kind: "sets"; setIds: Id<"flashcardSets">[] };
     methodology?: Methodology;
     filters?: {
-      days?: number;
+      reviewFilter?: WeakCardsReviewFilter;
       minReviews?: number;
       ratings?: CardRating[];
       statuses?: Array<"new" | "learning" | "review">;
@@ -252,8 +258,8 @@ export async function getWeakCardsHelper(
     const now = Date.now();
     const methodology = args.methodology ?? "balanced";
     const scope = args.scope ?? { kind: "srs_enabled_sets" as const };
-    const days = Math.min(Math.max(args.filters?.days ?? DEFAULT_DAYS, 1), 365);
-    const since = now - days * MS_PER_DAY;
+    const reviewFilter = args.filters?.reviewFilter ?? DEFAULT_WEAK_CARDS_REVIEW_FILTER;
+    const reviewWindow = resolveWeakCardsReviewWindow(reviewFilter, now);
     const limitPerSet = Math.min(Math.max(args.limits?.limitPerSet ?? DEFAULT_LIMIT_PER_SET, 1), 50);
     const totalLimit = Math.min(Math.max(args.limits?.totalLimit ?? DEFAULT_TOTAL_LIMIT, 1), 200);
     const includeRecentRatings = args.include?.recentRatings ?? true;
@@ -281,7 +287,12 @@ export async function getWeakCardsHelper(
 
     const allReviews = await ctx.db
       .query("srsReviews")
-      .withIndex("by_userId_and_timestamp", (q) => q.eq("userId", args.userId).gte("timestamp", since))
+      .withIndex("by_userId_and_timestamp", (q) =>
+        q
+          .eq("userId", args.userId)
+          .gte("timestamp", reviewWindow.startMs)
+          .lt("timestamp", reviewWindow.endMs)
+      )
       .order("desc")
       .take(5000);
     const reviewsBySrsCardId = new Map<string, typeof allReviews>();
@@ -320,7 +331,11 @@ export async function getWeakCardsHelper(
         if (args.filters?.statuses && !args.filters.statuses.includes(srsCard.status)) continue;
         if (args.filters?.maxEaseFactor !== undefined && srsCard.easeFactor > args.filters.maxEaseFactor) continue;
         const reviews = reviewsBySrsCardId.get(srsCard._id) ?? [];
-        const recentReviews = reviews.filter((review) => review.timestamp >= since);
+        const recentReviews = reviews.filter(
+          (review) =>
+            review.timestamp >= reviewWindow.startMs &&
+            review.timestamp < reviewWindow.endMs,
+        );
         if ((args.filters?.minReviews ?? 0) > recentReviews.length) continue;
         if (args.filters?.ratings && !recentReviews.some((review) => args.filters?.ratings?.includes(review.rating))) continue;
         const scored = scoreWeakCard({ methodology, srsCard, reviews: recentReviews, now });
@@ -383,7 +398,13 @@ export async function getWeakCardsHelper(
       });
     }
 
-    return { scope, methodology, generatedAt: now, schemaGroups: [...groups.values()] };
+    return {
+      scope,
+      methodology,
+      reviewFilter,
+      generatedAt: now,
+      schemaGroups: [...groups.values()],
+    };
 }
 
 function normalizeGeneratedPayload(args: GeneratedSetPayload): GeneratedSetPayload {
@@ -641,6 +662,9 @@ export const getWeakCardsPublic = query({
   args: {
     scope: v.optional(weakCardsScopeValidator),
     methodology: v.optional(weakContextMethodologyValidator),
+    filters: v.optional(v.object({
+      reviewFilter: v.optional(weakCardsReviewFilterValidator),
+    })),
     include: v.optional(v.object({
       recentRatings: v.optional(v.boolean()),
     })),
@@ -651,10 +675,15 @@ export const getWeakCardsPublic = query({
   ): Promise<DomainResult<WeakCardsResponse, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return fail(unauthenticated());
+    const reviewFilterResult = validateWeakCardsReviewFilter(args.filters?.reviewFilter);
+    if (!reviewFilterResult.ok) return reviewFilterResult;
     return ok(await getWeakCardsHelper(ctx, {
       userId: identity.tokenIdentifier,
       scope: args.scope,
       methodology: args.methodology,
+      filters: {
+        reviewFilter: reviewFilterResult.value,
+      },
       include: args.include,
     }));
   },
