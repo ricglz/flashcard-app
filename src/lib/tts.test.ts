@@ -320,6 +320,26 @@ describe("timeout behavior", () => {
 });
 
 describe("speech flow", () => {
+  it("emits an unsupported event with failure details when speech synthesis is unavailable", async () => {
+    vi.stubGlobal("SpeechSynthesisUtterance", undefined);
+    const { speak } = await importTts();
+    const onEvent = vi.fn();
+
+    await expect(speak("hello", "en-US", { onEvent })).resolves.toEqual({
+      ok: false,
+      status: "unsupported",
+      kind: "unsupported_browser",
+      message: "Text-to-speech is not supported in this browser.",
+    });
+    expect(onEvent).toHaveBeenCalledWith({
+      status: "unsupported",
+      text: "hello",
+      lang: "en-US",
+      kind: "unsupported_browser",
+      message: "Text-to-speech is not supported in this browser.",
+    });
+  });
+
   it("emits preparing, queued, speaking, and ended for a successful utterance", async () => {
     const voice = makeVoice({ name: "English Voice", lang: "en-US" });
     const synth = installSpeechSynthesis({ voices: [voice] });
@@ -362,7 +382,11 @@ describe("speech flow", () => {
 
       await expect(resultPromise).resolves.toEqual({ ok: true, status: "cancelled" });
       expect(onEvent).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "cancelled", message: "Speech was interrupted." }),
+        expect.objectContaining({
+          status: "cancelled",
+          kind: "unknown",
+          message: "Speech was interrupted.",
+        }),
       );
     }
   });
@@ -388,6 +412,7 @@ describe("speech flow", () => {
     expect(onEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "error",
+        kind: "permission_blocked",
         message: "Your browser blocked audio. Tap the speaker button again.",
       }),
     );

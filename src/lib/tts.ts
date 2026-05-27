@@ -9,6 +9,8 @@ export type TtsStatus =
   | "timeout"
   | "error";
 
+export type TtsProblemStatus = "unsupported" | "timeout" | "error";
+
 export type TtsFailureKind =
   | "unsupported_browser"
   | "permission_blocked"
@@ -21,15 +23,33 @@ export type TtsFailureKind =
   | "timeout"
   | "unknown";
 
-export type TtsEvent = {
-  status: TtsStatus;
+type TtsEventBase = {
   text?: string;
   lang?: string;
-  message?: string;
-  kind?: TtsFailureKind;
   voiceName?: string;
   voiceLang?: string;
 };
+
+type TtsProgressEvent = TtsEventBase & {
+  status: "preparing" | "queued" | "speaking" | "ended";
+};
+
+type TtsCancelledEvent = TtsEventBase & {
+  status: "cancelled";
+  kind: TtsFailureKind;
+  message: string;
+};
+
+type TtsFailureEvent = TtsEventBase & {
+  status: TtsProblemStatus;
+  kind: TtsFailureKind;
+  message: string;
+};
+
+export type TtsEvent =
+  | TtsProgressEvent
+  | TtsCancelledEvent
+  | TtsFailureEvent;
 
 export type TtsResult =
   | {

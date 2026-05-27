@@ -62,6 +62,7 @@ export default function TtsButton({
         status: "unsupported",
         text,
         lang,
+        kind: "unsupported_browser",
         message: "Text-to-speech is not supported in this browser.",
       };
       handleTtsEvent(event);

@@ -25,7 +25,6 @@
 
 ### TTS / External Integration Boundary
 - [ ] Consider richer orchestration helpers only if retry/timeout/fallback flows become more complex than current promise helpers.
-- [ ] Make `TtsEvent` a stricter discriminated union so failure statuses require failure fields like `message` and `kind`, and consumers can narrow on the event shape instead of classifying status strings.
 
 ## Code Quality — React Component Structure
 

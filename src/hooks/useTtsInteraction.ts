@@ -1,18 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { TtsEvent, TtsStatus } from "@/lib/tts";
+import type { TtsEvent, TtsProblemStatus, TtsStatus } from "@/lib/tts";
 
 export function isTtsBusy(status: TtsStatus): boolean {
   return status === "preparing" || status === "queued" || status === "speaking";
 }
 
-export function isTtsProblem(status: TtsStatus): boolean {
+export function isTtsProblem(status: TtsStatus): status is TtsProblemStatus {
   return status === "unsupported" || status === "timeout" || status === "error";
 }
 
 function isTerminalStatus(status: TtsStatus): boolean {
   return status === "ended" || status === "cancelled";
+}
+
+function hasTtsMessage(
+  event: TtsEvent,
+): event is Extract<TtsEvent, { status: TtsProblemStatus | "cancelled" }> {
+  return event.status === "cancelled" || isTtsProblem(event.status);
 }
 
 export function useTtsInteraction({
@@ -45,8 +51,11 @@ export function useTtsInteraction({
   const handleTtsEvent = useCallback(
     (event: TtsEvent) => {
       setStatus(event.status);
-      if (event.message) setMessage(event.message);
-      if (!isTtsProblem(event.status) && !event.message) setMessage(null);
+      if (hasTtsMessage(event)) {
+        setMessage(event.message);
+      } else {
+        setMessage(null);
+      }
       onTtsEvent?.(event);
 
       if (isTerminalStatus(event.status)) {
