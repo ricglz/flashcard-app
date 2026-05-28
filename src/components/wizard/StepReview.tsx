@@ -22,7 +22,7 @@ export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }:
 
       <div>
         <h4 className="text-sm font-medium mb-2">Fields</h4>
-        <div className="border rounded overflow-hidden">
+        <div className="border rounded overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-raised">

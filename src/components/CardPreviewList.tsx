@@ -24,8 +24,8 @@ export default function CardPreviewList({
           key={idx}
           className={`border rounded-lg p-3 ${card.selected ? "border-edge" : "border-edge opacity-50"}`}
         >
-          <div className="flex items-start gap-2">
-            <label className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+          <div className="flex flex-wrap items-start gap-2">
+            <label className="mt-0.5 flex shrink-0 items-center gap-1.5 text-xs text-muted">
               <input
                 type="checkbox"
                 checked={card.selected}
@@ -36,21 +36,26 @@ export default function CardPreviewList({
               />
               Include
             </label>
-            <div className="flex-1 text-sm">
+            <div className="min-w-0 flex-1 text-sm">
               {Object.entries(card.fields).map(([key, value]) => (
-                <div key={key} className="mb-1">
-                  <span className="text-muted">{key}:</span>{" "}
+                <div
+                  key={key}
+                  className="mb-1 flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-1"
+                >
+                  <span className="min-w-0 text-muted break-words">
+                    {key}:
+                  </span>
                   <input
                     type="text"
                     value={value}
                     onChange={(e) => onEdit(idx, key, e.target.value)}
                     disabled={disabled}
-                    className="border-b border-edge bg-transparent px-1 focus:outline-none focus:border-accent disabled:opacity-60"
+                    className="min-w-0 w-full sm:w-auto sm:flex-1 border-b border-edge bg-transparent px-1 focus:outline-none focus:border-accent disabled:opacity-60"
                   />
                 </div>
               ))}
               {card.rationale && (
-                <div className="text-xs text-muted mt-1 italic">
+                <div className="min-w-0 text-xs text-muted mt-1 italic break-words">
                   <MarkdownContent compact>{card.rationale}</MarkdownContent>
                 </div>
               )}
