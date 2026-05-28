@@ -41,17 +41,17 @@ export default function CardStatusBreakdown({
             />
           )}
         </div>
-        <div className="flex gap-4 text-sm">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-green-500" />
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          <span className="min-w-0 flex items-center gap-1.5">
+            <span className="h-3 w-3 shrink-0 rounded bg-green-500" />
             Review: {breakdown.review}
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-yellow-500" />
+          <span className="min-w-0 flex items-center gap-1.5">
+            <span className="h-3 w-3 shrink-0 rounded bg-yellow-500" />
             Learning: {breakdown.learning}
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-gray-300 dark:bg-gray-600" />
+          <span className="min-w-0 flex items-center gap-1.5">
+            <span className="h-3 w-3 shrink-0 rounded bg-gray-300 dark:bg-gray-600" />
             New: {breakdown.new}
           </span>
         </div>

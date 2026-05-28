@@ -21,9 +21,13 @@ export default function SetMasteryList({
             s.total > 0 ? Math.round((s.review / s.total) * 100) : 0;
           return (
             <div key={s.setId} className="border border-edge rounded-lg p-3">
-              <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium">{s.setName}</span>
-                <span className="text-xs text-muted">{pct}% mastered</span>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 mb-1">
+                <span className="min-w-0 text-sm font-medium break-words">
+                  {s.setName}
+                </span>
+                <span className="shrink-0 text-xs text-muted">
+                  {pct}% mastered
+                </span>
               </div>
               <div className="h-2 bg-raised rounded-full overflow-hidden flex">
                 {s.review > 0 && (
@@ -39,7 +43,7 @@ export default function SetMasteryList({
                   />
                 )}
               </div>
-              <div className="flex gap-3 mt-1.5 text-xs text-muted">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted">
                 <span>{s.review} review</span>
                 <span>{s.learning} learning</span>
                 <span>{s.new} new</span>
