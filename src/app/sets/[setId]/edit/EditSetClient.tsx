@@ -104,12 +104,12 @@ export default function EditSetClient({
             .map((card, idx) => (
               <div
                 key={card._id}
-                className="flex items-center justify-between p-3 border rounded mb-2"
+                className="flex flex-wrap items-start justify-between gap-3 p-3 border rounded mb-2"
               >
-                <div className="flex gap-4 text-sm">
-                  <span className="text-muted w-6">{idx + 1}</span>
+                <div className="min-w-0 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <span className="shrink-0 text-muted w-6">{idx + 1}</span>
                   {sortedFieldDefs.map((fd) => (
-                    <span key={fd.name}>
+                    <span key={fd.name} className="min-w-0 break-words">
                       <span className="text-muted">{fd.name}: </span>
                       {card.fields[fd.name] ?? ""}
                     </span>
@@ -120,7 +120,7 @@ export default function EditSetClient({
                     const result = await removeCard({ id: card._id });
                     if (!result.ok) setError(result.error.message);
                   }}
-                  className="text-danger hover:text-danger-hover text-sm transition-colors"
+                  className="shrink-0 text-danger hover:text-danger-hover text-sm transition-colors"
                 >
                   Remove
                 </button>

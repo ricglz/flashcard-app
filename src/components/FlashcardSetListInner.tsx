@@ -44,8 +44,10 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
               className="border rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col"
             >
               <Link href={`/sets/${set._id}`} className="block flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-lg">{set.name}</h3>
+                <div className="min-w-0 flex items-start gap-2 mb-1">
+                  <h3 className="min-w-0 font-semibold text-lg break-words">
+                    {set.name}
+                  </h3>
                   {set.origin.kind === "ai_generated" && (
                     <Badge variant="info" size="sm">
                       AI generated
@@ -58,7 +60,7 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
                   )}
                 </div>
                 {set.description && (
-                  <p className="text-muted text-sm mb-2">
+                  <p className="text-muted text-sm mb-2 break-words">
                     {set.description}
                   </p>
                 )}

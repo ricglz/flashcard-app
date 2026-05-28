@@ -20,8 +20,10 @@ export function SetCard({
       href={`/sets/${set._id}`}
       className="border border-edge rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col"
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-lg mb-1">{set.name}</h3>
+      <div className="min-w-0 flex items-start justify-between gap-2">
+        <h3 className="min-w-0 font-semibold text-lg mb-1 break-words">
+          {set.name}
+        </h3>
         {lang && (
           <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-medium rounded bg-accent-surface text-accent-surface-text">
             {languageLabel(lang)}
@@ -29,7 +31,7 @@ export function SetCard({
         )}
       </div>
       {set.description && (
-        <p className="text-muted text-sm mb-2 line-clamp-2">
+        <p className="text-muted text-sm mb-2 line-clamp-2 break-words">
           {set.description}
         </p>
       )}

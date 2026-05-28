@@ -54,10 +54,10 @@ export default function FieldDefinitionEditor({
       {value.map((field, index) => (
         <div
           key={index}
-          className="flex items-center gap-2 p-2 border rounded"
+          className="grid gap-2 p-2 border rounded sm:grid-cols-[minmax(0,1fr)_minmax(8rem,10rem)_auto_auto_auto] sm:items-center"
         >
           {readOnlyNames ? (
-            <span className="flex-1 px-2 py-1 text-sm font-medium">
+            <span className="min-w-0 w-full px-2 py-1 text-sm font-medium break-words">
               {field.name}
             </span>
           ) : (
@@ -65,7 +65,7 @@ export default function FieldDefinitionEditor({
               type="text"
               value={field.name}
               onChange={(e) => updateField(index, { name: e.target.value })}
-              className="flex-1 px-2 py-1 border rounded text-sm"
+              className="min-w-0 w-full px-2 py-1 border rounded text-sm"
               placeholder="Field name"
             />
           )}
@@ -74,9 +74,9 @@ export default function FieldDefinitionEditor({
             options={FIELD_ROLES}
             labels={FIELD_ROLE_LABELS}
             onChange={(role: FieldRole) => updateField(index, { role })}
-            className="px-2 py-1"
+            className="w-full min-w-0 px-2 py-1"
           />
-          <label className="flex items-center gap-1 text-xs">
+          <label className="flex items-center gap-1 text-xs sm:justify-self-center">
             <input
               type="checkbox"
               checked={!!field.metadata.tts}
@@ -96,14 +96,14 @@ export default function FieldDefinitionEditor({
                   },
                 })
               }
-              className="w-16 px-2 py-1 border rounded text-xs"
+              className="w-full sm:w-16 px-2 py-1 border rounded text-xs"
               placeholder="lang"
             />
           )}
           {allowAddRemove && (
             <button
               onClick={() => removeField(index)}
-              className="text-danger hover:text-danger-hover text-sm px-1 transition-colors"
+              className="justify-self-start sm:justify-self-end text-danger hover:text-danger-hover text-sm px-1 transition-colors"
             >
               X
             </button>
@@ -111,18 +111,18 @@ export default function FieldDefinitionEditor({
         </div>
       ))}
       {allowAddRemove && (
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
           <input
             type="text"
             value={newFieldName}
             onChange={(e) => setNewFieldName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addField()}
-            className="flex-1 px-3 py-2 border rounded text-sm"
+            className="min-w-0 w-full px-3 py-2 border rounded text-sm"
             placeholder="New field name..."
           />
           <button
             onClick={addField}
-            className="px-3 py-2 bg-raised border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
+            className="w-full sm:w-auto px-3 py-2 bg-raised border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
           >
             Add Field
           </button>
