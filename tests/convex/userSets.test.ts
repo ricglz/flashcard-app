@@ -121,7 +121,7 @@ describe("userSets SRS enrollment commands", () => {
     expect(srsCards.map((card) => card._id).sort()).toEqual(originalIds);
   });
 
-  it("disables SRS without deleting existing SRS cards or queue rows", async () => {
+  it("disables SRS without deleting existing SRS cards", async () => {
     const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
     const { setId } = await createSetWithCards(as, { cardCount: 2 });
@@ -151,14 +151,14 @@ describe("userSets SRS enrollment commands", () => {
         originalSrsCards.map((card) => expect.objectContaining({ _id: card._id })),
       ),
     );
-    expect(await getQueueRowsForSrsCardIds(t, [queuedCard._id])).toHaveLength(1);
+    expect(await getQueueRowsForSrsCardIds(t, [queuedCard._id])).toHaveLength(0);
 
     expect(await as.mutation(api.userSets.disableSrs, { setId })).toEqual({
       ok: true,
       value: null,
     });
     expect(await getSrsCards(t, TEST_USER.tokenIdentifier, setId)).toHaveLength(2);
-    expect(await getQueueRowsForSrsCardIds(t, [queuedCard._id])).toHaveLength(1);
+    expect(await getQueueRowsForSrsCardIds(t, [queuedCard._id])).toHaveLength(0);
   });
 
   it("rejects non-members enabling or disabling SRS for another user's set", async () => {

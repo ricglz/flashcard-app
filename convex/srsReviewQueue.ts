@@ -83,7 +83,7 @@ export const getHydratedQueue = query({
     const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
 
     for (const { setId, set, userSet } of perSetData) {
-      if (!set || !userSet) continue;
+      if (!set || !userSet || !userSet.srsEnabled) continue;
       setMap.set(setId, { name: set.name, fieldDefinitions: getFieldDefinitions(set) });
       userSetMap.set(setId, {
         defaultFrontFields: userSet.defaultFrontFields,

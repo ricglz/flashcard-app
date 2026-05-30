@@ -20,6 +20,7 @@ export async function populateQueue(
   const srsSetIds = userSetLinks
     .filter((us) => us.srsEnabled)
     .map((us) => us.setId);
+  const enabledSetIds = new Set(srsSetIds);
 
   if (srsSetIds.length === 0) return 0;
 
@@ -71,7 +72,10 @@ export async function populateQueue(
     .take(500);
 
   const dueSrsCards = dueCards.filter(
-    (sc) => sc.status !== "new" && !alreadyQueued.has(sc._id)
+    (sc) =>
+      sc.status !== "new" &&
+      enabledSetIds.has(sc.setId) &&
+      !alreadyQueued.has(sc._id)
   );
 
   const newCards: typeof dueCards = [];

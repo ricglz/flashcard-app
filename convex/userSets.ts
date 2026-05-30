@@ -94,6 +94,20 @@ export function requireSetContentAccessEffect(
   });
 }
 
+async function deleteReviewQueueRowsForUserSet(
+  ctx: MutationCtx,
+  userId: string,
+  setId: Id<"flashcardSets">,
+) {
+  for await (
+    const item of ctx.db
+      .query("reviewQueue")
+      .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
+  ) {
+    if (item.setId === setId) await ctx.db.delete(item._id);
+  }
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -259,6 +273,9 @@ export const disableSrs = mutation({
 
       if (link.srsEnabled) {
         yield* Effect.promise(() => ctx.db.patch(link._id, { srsEnabled: false }));
+        yield* Effect.promise(() =>
+          deleteReviewQueueRowsForUserSet(ctx, identity.tokenIdentifier, args.setId),
+        );
       }
       return null;
     }),

@@ -148,6 +148,36 @@ describe("populateQueueForUser respects dayResetUtcHour", () => {
     const count = await getQueueLength(t);
     expect(count).toBe(1);
   });
+
+  it("does not queue due review cards from disabled sets", async () => {
+    vi.setSystemTime(new Date("2025-06-15T14:00:00Z"));
+    const t = convexTest(schema, modules);
+    const { setId, as } = await setupSrsSet(t, 1);
+    await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 8, dailyGoal: 0 });
+
+    await t.run(async (ctx) => {
+      const srsCard = await ctx.db
+        .query("srsCards")
+        .withIndex("by_userId_and_setId", (q) =>
+          q.eq("userId", TEST_USER.tokenIdentifier).eq("setId", setId)
+        )
+        .first();
+      expect(srsCard).not.toBeNull();
+      if (srsCard) {
+        await ctx.db.patch(srsCard._id, {
+          interval: 1,
+          repetitions: 2,
+          nextReviewAt: new Date("2025-06-14T00:00:00Z").getTime(),
+          status: "review",
+        });
+      }
+    });
+    await unwrap(await as.mutation(api.userSets.disableSrs, { setId }));
+
+    await populateForTestUser(t);
+
+    expect(await getQueueLength(t)).toBe(0);
+  });
 });
 
 describe("populateQueueForUser queue population edge cases", () => {
