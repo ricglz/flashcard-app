@@ -79,6 +79,7 @@ export default function EditSetClient({
             <SetInfoEditor
               set={set}
               fieldDefinitions={set.fieldDefinitions}
+              lockFieldNames={set.cardCount > 0}
               onSave={async (updates) => {
                 setError(null);
                 const result = await updateSet({ id: set._id, ...updates });

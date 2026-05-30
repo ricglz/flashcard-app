@@ -15,7 +15,6 @@ import StudyResultsSummary from "@/components/StudyResultsSummary";
 type Props = {
   setId: string;
   preloadedResults: Preloaded<typeof api.studySessions.getResults>;
-  preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   initialSet: FlashcardSetWithViewer;
 };
@@ -23,22 +22,19 @@ type Props = {
 export default function ResultsClient({
   setId,
   preloadedResults,
-  preloadedCards,
   preloadedSet,
   initialSet,
 }: Props) {
   const data = usePreloadedQuery(preloadedResults);
-  const cardsResult = usePreloadedQuery(preloadedCards);
-  const cards = cardsResult.ok ? cardsResult.value : [];
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
 
   if (!setResult.ok) {
     return <SetAccessError message={setResult.error.message} href={`/study/${setId}`} label="Back to study" />;
   }
-  if (!cardsResult.ok || !data.ok) return null;
+  if (!data.ok) return null;
 
   const { set } = setResult.value;
-  const { session } = data.value;
+  const { session, cards } = data.value;
   const results = data.value.results;
   const totalCards = session.cardOrder.length;
   const completedCards = results.length;

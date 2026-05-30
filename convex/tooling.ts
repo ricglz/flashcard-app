@@ -22,7 +22,7 @@ import {
 import { getFieldDefinitions } from "./lib/typed";
 import { enrollCardsForSetHelper } from "./userSets";
 import { getDefaultFieldLayout } from "../src/lib/types";
-import { insertCards } from "./lib/cardCreation";
+import { insertCards, MAX_CARDS_PER_SET, validateCardSetLimit } from "./lib/cardCreation";
 import { schemaFingerprint } from "../src/lib/aiToolingSchemas";
 import type {
   GeneratedSetPayload,
@@ -425,6 +425,7 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   if (normalized.name.length === 0) issues.push("Set name is required.");
   if (normalized.cards.length === 0) issues.push("At least one generated card is required.");
   if (normalized.cards.length > 100) issues.push("Generated sets are limited to 100 cards.");
+  if (normalized.cards.length > MAX_CARDS_PER_SET) issues.push(`A set can contain at most ${MAX_CARDS_PER_SET} active cards.`);
 
   const accessible = await assertAccessibleSets(ctx, userId, normalized.sourceSetIds, normalized.sourceScope);
   if (!accessible.ok) issues.push(accessible.error.message);
@@ -585,6 +586,8 @@ export const appendGeneratedCardsForTool = internalMutation({
     if (args.cards.length > 100) {
       return fail(invalidInput("Appending is limited to 100 cards at a time."));
     }
+    const limitCheck = validateCardSetLimit(targetSet.cardCount, args.cards.length);
+    if (!limitCheck.ok) return limitCheck;
 
     const existingCards = await ctx.db
       .query("flashcards")

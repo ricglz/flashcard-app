@@ -7,10 +7,12 @@ import type { FieldDefinition } from "@/lib/types";
 export default function SetInfoEditor({
   set,
   fieldDefinitions,
+  lockFieldNames,
   onSave,
 }: {
   set: { name: string; description?: string };
   fieldDefinitions: FieldDefinition[];
+  lockFieldNames: boolean;
   onSave: (updates: {
     name?: string;
     description?: string;
@@ -41,7 +43,12 @@ export default function SetInfoEditor({
           rows={2}
         />
       </div>
-      <FieldDefinitionEditor value={fds} onChange={setFds} />
+      <FieldDefinitionEditor
+        value={fds}
+        onChange={setFds}
+        readOnlyNames={lockFieldNames}
+        allowAddRemove={!lockFieldNames}
+      />
       <button
         onClick={() =>
           onSave({

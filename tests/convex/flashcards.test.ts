@@ -3,10 +3,15 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import type { Id } from "../../convex/_generated/dataModel";
+import { MAX_CARDS_PER_BATCH, MAX_CARDS_PER_SET } from "../../convex/lib/cardCreation";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
 import type { TestIdentity } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
+const OTHER_USER = {
+  tokenIdentifier: "test-user-2",
+  subject: "user2",
+};
 
 async function createSet(
   as: TestIdentity,
@@ -175,6 +180,47 @@ describe("flashcards.batchCreate", () => {
     const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards).toEqual([]);
   });
+
+  it("rejects oversized batches before inserting cards", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    const result = await as.mutation(api.flashcards.batchCreate, {
+      setId,
+      cards: Array.from({ length: MAX_CARDS_PER_BATCH + 1 }, (_, index) => ({
+        fields: { Front: `Q${index}`, Back: `A${index}` },
+        order: index,
+      })),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput" },
+    });
+    expect(await unwrap(await as.query(api.flashcards.list, { setId }))).toEqual([]);
+  });
+
+  it("rejects batches that would exceed the active card limit", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(setId, { cardCount: MAX_CARDS_PER_SET });
+    });
+
+    const result = await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "Too many", Back: "Nope" },
+      order: 0,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput" },
+    });
+  });
 });
 
 describe("flashcards.update", () => {
@@ -233,11 +279,6 @@ describe("flashcards.update", () => {
 });
 
 describe("flashcards.list access control", () => {
-  const OTHER_USER = {
-    tokenIdentifier: "test-user-2",
-    subject: "user2",
-  };
-
   async function createSetWithCards(as: TestIdentity) {
     const setId = await createSet(as);
     await unwrap(await as.mutation(api.flashcards.create, {
@@ -352,5 +393,95 @@ describe("flashcards.list access control", () => {
     const result = await as.query(api.flashcards.list, { setId });
 
     expect(result).toEqual({ ok: true, value: [] });
+  });
+});
+
+describe("flashcards.remove", () => {
+  it("archives cards, hides them from lists, clears operational state, and closes active sessions", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+    const cardId = await unwrap(await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "Question", Back: "Answer" },
+      order: 0,
+    }));
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    await unwrap(await as.mutation(api.cardAnnotations.toggleFlag, { setId, cardId }));
+    const srsCard = await t.run(async (ctx) =>
+      await ctx.db
+        .query("srsCards")
+        .withIndex("by_cardId_and_userId", (q) =>
+          q.eq("cardId", cardId).eq("userId", TEST_USER.tokenIdentifier),
+        )
+        .first()
+    );
+    expect(srsCard).not.toBeNull();
+    if (srsCard) {
+      await t.run(async (ctx) => {
+        await ctx.db.insert("reviewQueue", {
+          userId: TEST_USER.tokenIdentifier,
+          cardId,
+          srsCardId: srsCard._id,
+          setId,
+          queuedAt: Date.now(),
+          order: 0,
+        });
+      });
+    }
+
+    await unwrap(await as.mutation(api.flashcards.remove, { id: cardId }));
+
+    expect(await unwrap(await as.query(api.flashcards.list, { setId }))).toEqual([]);
+    const archived = await t.run(async (ctx) => await ctx.db.get(cardId));
+    expect(archived?.archivedAt).toEqual(expect.any(Number));
+    const remainingOperationalRows = await t.run(async (ctx) => ({
+      srsCards: await ctx.db.query("srsCards").withIndex("by_cardId", (q) => q.eq("cardId", cardId)).take(10),
+      annotations: await ctx.db.query("cardAnnotations").withIndex("by_cardId", (q) => q.eq("cardId", cardId)).take(10),
+      queue: srsCard
+        ? await ctx.db.query("reviewQueue").withIndex("by_srsCardId", (q) => q.eq("srsCardId", srsCard._id)).take(10)
+        : [],
+    }));
+    expect(remainingOperationalRows).toEqual({
+      srsCards: [],
+      annotations: [],
+      queue: [],
+    });
+    const session = await unwrap(await as.query(api.studySessions.get, { id: sessionId }));
+    expect(session.status).toBe("abandoned");
+  });
+
+  it("clears member SRS state when an owner removes a shared card", async () => {
+    const t = convexTest(schema, modules);
+    const owner = t.withIdentity(TEST_USER);
+    const member = t.withIdentity(OTHER_USER);
+    const setId = await createSet(owner);
+    const cardId = await unwrap(await owner.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "Question", Back: "Answer" },
+      order: 0,
+    }));
+    await unwrap(await owner.mutation(api.flashcardSets.updateVisibility, {
+      id: setId,
+      visibility: "public",
+    }));
+    await unwrap(await member.mutation(api.sharing.addToLibrary, { setId }));
+
+    await unwrap(await owner.mutation(api.flashcards.remove, { id: cardId }));
+
+    const memberSrsCards = await t.run(async (ctx) =>
+      await ctx.db
+        .query("srsCards")
+        .withIndex("by_cardId_and_userId", (q) =>
+          q.eq("cardId", cardId).eq("userId", OTHER_USER.tokenIdentifier),
+        )
+        .take(10)
+    );
+    expect(memberSrsCards).toEqual([]);
   });
 });

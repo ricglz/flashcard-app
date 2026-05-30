@@ -190,6 +190,37 @@ describe("studySessions.getResults", () => {
       },
     });
   });
+
+  it("hydrates archived cards for completed historical results", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    const session = await getStudySession(as, sessionId);
+    const cardId = session.cardOrder[0]!;
+    await unwrap(await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId,
+      rating: "good",
+    }));
+    await unwrap(await as.mutation(api.flashcards.remove, { id: cardId }));
+
+    const result = await as.query(api.studySessions.getResults, { sessionId });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        session: { _id: sessionId, status: "completed" },
+        results: [{ cardId }],
+        cards: [{ _id: cardId, fields: { Front: "Front0", Back: "Back0" } }],
+      },
+    });
+  });
 });
 
 describe("computeOverallScore", () => {

@@ -99,7 +99,9 @@ export default defineSchema({
     fields: v.record(v.string(), v.string()),
     order: v.number(),
     origin: v.optional(literalUnion(FLASHCARD_ORIGINS)),
-  }).index("by_setId", ["setId"]),
+    archivedAt: v.optional(v.number()),
+  })
+    .index("by_setId", ["setId"]),
 
   studySessions: defineTable({
     setId: v.id("flashcardSets"),
@@ -157,6 +159,7 @@ export default defineSchema({
     .index("by_userId_and_nextReviewAt", ["userId", "nextReviewAt"])
     .index("by_userId_and_setId", ["userId", "setId"])
     .index("by_cardId_and_userId", ["cardId", "userId"])
+    .index("by_cardId", ["cardId"])
     .index("by_setId", ["setId"]),
 
   reviewQueue: defineTable({
@@ -232,5 +235,6 @@ export default defineSchema({
     .index("by_userId_and_cardId", ["userId", "cardId"])
     .index("by_userId_and_setId", ["userId", "setId"])
     .index("by_userId_and_flagged", ["userId", "flagged"])
+    .index("by_cardId", ["cardId"])
     .index("by_userId", ["userId"]),
 });

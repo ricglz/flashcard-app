@@ -118,6 +118,99 @@ describe("flashcardSets.update", () => {
     const result = await other.mutation(api.flashcardSets.update, { id, name: "Hacked" });
     expect(result).toMatchObject({ ok: false, error: { _tag: "NotFound" } });
   });
+
+  it("allows non-structural field definition edits after cards exist", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
+      name: "Test",
+      fieldDefinitions: fieldDefs,
+    }));
+    await unwrap(await as.mutation(api.flashcards.create, {
+      setId: id,
+      fields: { Front: "Q", Back: "A" },
+      order: 0,
+    }));
+
+    const updatedFields = [
+      { name: "Front", role: "primary" as const, metadata: { tts: { lang: "en-US" } }, order: 1 },
+      { name: "Back", role: "note" as const, metadata: {}, order: 0 },
+    ];
+    const result = await as.mutation(api.flashcardSets.update, {
+      id,
+      fieldDefinitions: updatedFields,
+    });
+
+    expect(result).toEqual({ ok: true, value: null });
+    const set = await unwrap(await as.query(api.flashcardSets.get, { id }));
+    expect(set.fieldDefinitions).toEqual(updatedFields);
+  });
+
+  it("rejects structural field definition edits after cards exist", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
+      name: "Test",
+      fieldDefinitions: fieldDefs,
+    }));
+    await unwrap(await as.mutation(api.flashcards.create, {
+      setId: id,
+      fields: { Front: "Q", Back: "A" },
+      order: 0,
+    }));
+
+    const renamed = await as.mutation(api.flashcardSets.update, {
+      id,
+      fieldDefinitions: [
+        { name: "Prompt", role: "primary" as const, metadata: {}, order: 0 },
+        { name: "Back", role: "definition" as const, metadata: {}, order: 1 },
+      ],
+    });
+    const removed = await as.mutation(api.flashcardSets.update, {
+      id,
+      fieldDefinitions: [
+        { name: "Front", role: "primary" as const, metadata: {}, order: 0 },
+      ],
+    });
+    const added = await as.mutation(api.flashcardSets.update, {
+      id,
+      fieldDefinitions: [
+        ...fieldDefs,
+        { name: "Hint", role: "note" as const, metadata: {}, order: 2 },
+      ],
+    });
+
+    for (const result of [renamed, removed, added]) {
+      expect(result).toMatchObject({
+        ok: false,
+        error: { _tag: "InvalidInput" },
+      });
+    }
+  });
+
+  it("allows structural field definition edits while a set is empty", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const id = await unwrap(await as.mutation(api.flashcardSets.create, {
+      name: "Test",
+      fieldDefinitions: fieldDefs,
+    }));
+
+    const updatedFields = [
+      { name: "Prompt", role: "primary" as const, metadata: {}, order: 0 },
+      { name: "Answer", role: "definition" as const, metadata: {}, order: 1 },
+      { name: "Hint", role: "note" as const, metadata: {}, order: 2 },
+    ];
+
+    const result = await as.mutation(api.flashcardSets.update, {
+      id,
+      fieldDefinitions: updatedFields,
+    });
+
+    expect(result).toEqual({ ok: true, value: null });
+    const set = await unwrap(await as.query(api.flashcardSets.get, { id }));
+    expect(set.fieldDefinitions).toEqual(updatedFields);
+  });
 });
 
 describe("flashcardSets.get visibility gating", () => {

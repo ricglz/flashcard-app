@@ -8,6 +8,7 @@ import type { Doc } from "./_generated/dataModel";
 import {
   fail,
   forbidden,
+  invalidInput,
   notFound,
   ok,
   unauthenticated,
@@ -29,7 +30,7 @@ import { isPublicFlashcardSet } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
-import { insertCards } from "./lib/cardCreation";
+import { insertCards, MAX_CARDS_PER_SET, validateCardSetLimit } from "./lib/cardCreation";
 
 export type SetWithViewer = Doc<"flashcardSets"> & {
   viewer:
@@ -37,6 +38,15 @@ export type SetWithViewer = Doc<"flashcardSets"> & {
     | { role: "member"; userSet: Doc<"userSets"> }
     | { role: "visitor"; userSet: null };
 };
+
+function hasStructuralFieldDefinitionChange(
+  current: readonly FieldDefinition[],
+  next: readonly FieldDefinition[],
+) {
+  if (current.length !== next.length) return true;
+  const currentNames = new Set(current.map((field) => field.name));
+  return next.some((field) => !currentNames.has(field.name));
+}
 
 export const list = query({
   args: {},
@@ -140,6 +150,7 @@ export const update = mutation({
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
+      const set = yield* requireEntity(ctx.db.get(args.id), "Set not found");
       const validation = yield* fromDomainResult(
         validateSetFieldsResult(
           args.name,
@@ -154,6 +165,17 @@ export const update = mutation({
       if (validation.name !== undefined) patch.name = validation.name;
       if (args.description !== undefined) patch.description = args.description.trim() || undefined;
       if (validation.fieldDefinitions !== undefined) {
+        if (
+          set.cardCount > 0 &&
+          hasStructuralFieldDefinitionChange(
+            getFieldDefinitions(set),
+            validation.fieldDefinitions,
+          )
+        ) {
+          return yield* Effect.fail(
+            invalidInput("Field names cannot be added, removed, or renamed after cards exist."),
+          );
+        }
         patch.fieldDefinitions = validation.fieldDefinitions;
       }
       yield* Effect.promise(() => ctx.db.patch(args.id, { ...patch, updatedAt: Date.now() }));
@@ -358,8 +380,10 @@ export const fork = mutation({
         ctx.db
           .query("flashcards")
           .withIndex("by_setId", (q) => q.eq("setId", args.sourceSetId))
-          .take(1000),
+          .take(MAX_CARDS_PER_SET),
       );
+      const activeSourceCards = sourceCards.filter((card) => card.archivedAt === undefined);
+      yield* fromDomainResult(validateCardSetLimit(0, activeSourceCards.length));
 
       const newSetId = yield* Effect.promise(() =>
         ctx.db.insert("flashcardSets", {
@@ -373,7 +397,7 @@ export const fork = mutation({
             forkedAt: now,
           },
           visibility: "private",
-          cardCount: sourceCards.length,
+          cardCount: activeSourceCards.length,
           updatedAt: now,
           createdAt: now,
         }),
@@ -384,7 +408,7 @@ export const fork = mutation({
           insertCards(ctx, {
             setId: newSetId,
             fieldNames: sourceSet.fieldDefinitions.map((field) => field.name),
-            cards: sourceCards.map((card) => ({
+            cards: activeSourceCards.map((card) => ({
               fields: card.fields,
               order: card.order,
             })),

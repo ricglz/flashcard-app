@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { SRS_DEFAULTS } from "../../convex/srs";
+import { MAX_CARDS_PER_BATCH } from "../../convex/lib/cardCreation";
 import type { FieldDefinition } from "../../src/lib/types";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import type { MutationCtx } from "../../convex/_generated/server";
@@ -75,15 +76,18 @@ export async function createSetWithCards(
     }));
 
   if (cardInputs.length > 0) {
-    await unwrap(
-      await as.mutation(api.flashcards.batchCreate, {
-        setId,
-        cards: cardInputs.map((card, index) => ({
-          fields: card.fields,
-          order: card.order ?? index,
-        })),
-      }),
-    );
+    for (let start = 0; start < cardInputs.length; start += MAX_CARDS_PER_BATCH) {
+      const batch = cardInputs.slice(start, start + MAX_CARDS_PER_BATCH);
+      await unwrap(
+        await as.mutation(api.flashcards.batchCreate, {
+          setId,
+          cards: batch.map((card, index) => ({
+            fields: card.fields,
+            order: card.order ?? start + index,
+          })),
+        }),
+      );
+    }
   }
 
   const createdCards = await unwrap(await as.query(api.flashcards.list, { setId }));

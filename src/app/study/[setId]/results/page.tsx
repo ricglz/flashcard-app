@@ -47,18 +47,10 @@ export default async function ResultsPage({
     redirect(`/study/${resultsValue.session.setId}/results?sessionId=${sessionId}`);
   }
 
-  const preloadedCards = await preloadRouteQuery(
-    api.flashcards.list,
-    { setId: flashcardSetId },
-    { token }
-  );
-  requirePreloadedDomainResult(preloadedCards);
-
   return (
     <ResultsClient
       setId={setId}
       preloadedResults={preloadedResults}
-      preloadedCards={preloadedCards}
       preloadedSet={preloadedSet}
       initialSet={setData}
     />

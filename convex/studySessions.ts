@@ -13,6 +13,7 @@ import { CARD_RATING_SCORES } from "../src/lib/types";
 import { computeOverallScore } from "../src/lib/studyResults";
 import { getFieldDefinitions } from "./lib/typed";
 import type { Doc } from "./_generated/dataModel";
+import { MAX_CARDS_PER_SET } from "./lib/cardCreation";
 
 function isActiveStudySession(
   session: Doc<"studySessions"> | null,
@@ -75,7 +76,9 @@ export const getResults = query({
       .query("cardResults")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .take(1000);
-    return ok({ session, results });
+    const uniqueCardIds = [...new Set(results.map((result) => result.cardId))];
+    const cards = await Promise.all(uniqueCardIds.map((cardId) => ctx.db.get(cardId)));
+    return ok({ session, results, cards: cards.filter((card) => card !== null) });
   },
 });
 
@@ -109,8 +112,9 @@ export const start = mutation({
       const cards = yield* Effect.promise(() =>
         ctx.db.query("flashcards")
           .withIndex("by_setId", (q) => q.eq("setId", args.setId))
-          .take(1000),
+          .take(MAX_CARDS_PER_SET),
       );
+      const activeCards = cards.filter((card) => card.archivedAt === undefined);
 
       const setup = yield* validateStudySessionSetupEffect({
         fieldDefinitions: getFieldDefinitions(set),
@@ -118,10 +122,10 @@ export const start = mutation({
         backFields: args.backFields,
         ttsOnlyFields: args.ttsOnlyFields,
         cardLimit: args.cardLimit,
-        availableCardCount: cards.length,
+        availableCardCount: activeCards.length,
       });
 
-      let cardOrder = cards
+      let cardOrder = activeCards
         .sort((a, b) => a.order - b.order)
         .map((c) => c._id);
 
