@@ -12,6 +12,7 @@ import type { StudyContext } from "./AssistantPanel";
 import { Select } from "@/components/ui/Select";
 import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
+import type { LlmModel } from "@/lib/aiModels";
 
 function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
   queueMicrotask(() => {
@@ -21,7 +22,7 @@ function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
   });
 }
 
-function getModelSelectData(availableModels: { id: string; name: string }[]) {
+function getModelSelectData(availableModels: readonly LlmModel[]) {
   return {
     modelOptions: ["", ...availableModels.map((model) => model.id)],
     modelLabels: {
@@ -33,7 +34,12 @@ function getModelSelectData(availableModels: { id: string; name: string }[]) {
   };
 }
 
-export default function AssistantPanelInner({ context }: { context: StudyContext }) {
+type AssistantPanelInnerProps = {
+  context: StudyContext;
+  initialModels?: readonly LlmModel[];
+};
+
+export default function AssistantPanelInner({ context, initialModels }: AssistantPanelInnerProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -43,7 +49,7 @@ export default function AssistantPanelInner({ context }: { context: StudyContext
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const { models: availableModels } = useAvailableModels(open);
+  const { models: availableModels } = useAvailableModels(open, initialModels);
   const { modelOptions, modelLabels } = getModelSelectData(availableModels);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);

@@ -3,14 +3,16 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import type { LlmModel } from "@/lib/aiModels";
 
-type LlmModel = { id: string; name: string };
-
-export function useAvailableModels(enabled = true) {
+export function useAvailableModels(
+  enabled = true,
+  initialModels?: readonly LlmModel[],
+) {
   const getModels = useAction(api.ai.getAvailableModels);
-  const [models, setModels] = useState<LlmModel[]>([]);
+  const [models, setModels] = useState<LlmModel[]>(() => [...(initialModels ?? [])]);
   const [loading, setLoading] = useState(false);
-  const hasFetched = useRef(false);
+  const hasFetched = useRef(initialModels !== undefined);
 
   const fetchModels = useCallback(async () => {
     setLoading(true);
@@ -21,6 +23,12 @@ export function useAvailableModels(enabled = true) {
       setLoading(false);
     }
   }, [getModels]);
+
+  useEffect(() => {
+    if (initialModels === undefined) return;
+    hasFetched.current = true;
+    setModels([...initialModels]);
+  }, [initialModels]);
 
   useEffect(() => {
     if (!enabled || hasFetched.current) return;
