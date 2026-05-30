@@ -20,6 +20,7 @@ import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
 import { shuffleArray } from "@/lib/shuffle";
+import type { LlmModel } from "@/lib/aiModels";
 
 type Props = {
   flashcardSetId: Id<"flashcardSets">;
@@ -33,6 +34,7 @@ type Props = {
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
+  initialAssistantModels?: readonly LlmModel[];
 };
 
 export default function BrowseClient({
@@ -47,6 +49,7 @@ export default function BrowseClient({
   preloadedCards,
   preloadedTtsConfig,
   preloadedAnnotations,
+  initialAssistantModels,
 }: Props) {
   const setId = String(flashcardSetId);
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
@@ -134,6 +137,7 @@ export default function BrowseClient({
       tts={tts}
       assistant={
         <AssistantPanel
+          initialModels={initialAssistantModels}
           context={{
             setId: flashcardSetId,
             cardId: currentCard._id,

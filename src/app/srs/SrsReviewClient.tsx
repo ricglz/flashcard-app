@@ -18,12 +18,14 @@ import InlineError from "@/components/InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
+import type { LlmModel } from "@/lib/aiModels";
 
 type Props = {
   preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
   preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getAll>;
+  initialAssistantModels?: readonly LlmModel[];
 };
 
 export default function SrsReviewClient({
@@ -31,6 +33,7 @@ export default function SrsReviewClient({
   preloadedStats,
   preloadedTtsConfig,
   preloadedAnnotations,
+  initialAssistantModels,
 }: Props) {
   const router = useRouter();
   const queue = usePreloadedQuery(preloadedQueue);
@@ -169,6 +172,7 @@ export default function SrsReviewClient({
         }}
         assistant={
           <AssistantPanel
+            initialModels={initialAssistantModels}
             context={{
               setId: currentItem.setId,
               cardId: currentItem.card._id,

@@ -9,11 +9,13 @@ import AssistantPanel from "@/components/AssistantPanel";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
+import type { LlmModel } from "@/lib/aiModels";
 import Link from "next/link";
 
 type Props = {
   preloaded: Preloaded<typeof api.cardAnnotations.getFlagged>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
+  initialAssistantModels?: readonly LlmModel[];
 };
 
 type FlaggedCard = NonNullable<
@@ -27,6 +29,7 @@ function isFlaggedCard(card: FlaggedCard | null): card is FlaggedCard {
 export default function FlaggedCardsClient({
   preloaded,
   preloadedTtsConfig,
+  initialAssistantModels,
 }: Props) {
   const liveQuery = usePreloadedQuery(preloaded);
   const tts = useTtsControls(preloadedTtsConfig);
@@ -134,6 +137,7 @@ export default function FlaggedCardsClient({
       tts={tts}
       assistant={
         <AssistantPanel
+          initialModels={initialAssistantModels}
           context={{
             setId: currentCard.setId,
             cardId: currentCard.cardId,
