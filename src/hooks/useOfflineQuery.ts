@@ -16,8 +16,26 @@ export function buildCacheKey(
       ? queryOrName
       : getFunctionName(queryOrName);
   if (args === undefined || args === null) return name;
-  const sortedArgs = JSON.stringify(args, Object.keys(args as object).sort());
+  const sortedArgs = stableStringify(args);
   return `${name}:${sortedArgs}`;
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(sortForStableStringify(value));
+}
+
+function sortForStableStringify(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortForStableStringify);
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, sortForStableStringify(nested)]),
+  );
 }
 
 export function useOfflineQuery<Query extends FunctionReference<"query">>(
