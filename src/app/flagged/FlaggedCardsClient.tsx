@@ -1,14 +1,18 @@
 "use client";
 
-import { usePreloadedQuery, useMutation } from "convex/react";
+import { useState } from "react";
 import type { Preloaded } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import StudyLayout from "@/components/StudyLayout";
 import StudyCard from "@/components/StudyCard";
 import AssistantPanel from "@/components/AssistantPanel";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import type { LlmModel } from "@/lib/aiModels";
 import Link from "next/link";
 
@@ -19,7 +23,7 @@ type Props = {
 };
 
 type FlaggedCard = NonNullable<
-  ReturnType<typeof usePreloadedQuery<typeof api.cardAnnotations.getFlagged>>[number]
+  FunctionReturnType<typeof api.cardAnnotations.getFlagged>[number]
 >;
 
 function isFlaggedCard(card: FlaggedCard | null): card is FlaggedCard {
@@ -31,10 +35,13 @@ export default function FlaggedCardsClient({
   preloadedTtsConfig,
   initialAssistantModels,
 }: Props) {
-  const liveQuery = usePreloadedQuery(preloaded);
+  const liveQuery = useOfflinePreloadedQuery(preloaded);
   const tts = useTtsControls(preloadedTtsConfig);
-  const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
-  const setNoteMutation = useMutation(api.cardAnnotations.setNote);
+  const toggleFlag = useOfflineMutation(api.cardAnnotations.toggleFlag);
+  const setNoteMutation = useOfflineMutation(api.cardAnnotations.setNote);
+  const [localNotes, setLocalNotes] = useState(
+    () => new Map<Id<"flashcards">, string | undefined>(),
+  );
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
   const flaggedCards = liveQuery.filter(isFlaggedCard);
@@ -124,12 +131,21 @@ export default function FlaggedCardsClient({
   };
 
   const handleSetNote = (note: string) => {
+    const trimmed = note.trim();
+    setLocalNotes((previous) => {
+      const next = new Map(previous);
+      next.set(currentCard.cardId, trimmed || undefined);
+      return next;
+    });
     void setNoteMutation({
       cardId: currentCard.cardId,
       setId: currentCard.setId,
       note,
     });
   };
+  const currentNote = localNotes.has(currentCard.cardId)
+    ? localNotes.get(currentCard.cardId)
+    : currentCard.note;
 
   return (
     <StudyLayout
@@ -143,7 +159,7 @@ export default function FlaggedCardsClient({
             cardId: currentCard.cardId,
             setName: currentCard.setName,
             cardFields: currentCard.fields,
-            hasNote: Boolean(currentCard.note?.trim()),
+            hasNote: Boolean(currentNote?.trim()),
           }}
         />
       }
@@ -160,7 +176,7 @@ export default function FlaggedCardsClient({
         ttsRate={tts.speed}
         annotation={{
           flagged: !navigation.hiddenIds.has(currentCard.cardId),
-          note: currentCard.note,
+          note: currentNote,
         }}
         onToggleFlag={handleToggleFlag}
         onSetNote={handleSetNote}

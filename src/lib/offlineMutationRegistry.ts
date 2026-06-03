@@ -8,6 +8,8 @@ import { isCardRating } from "./types";
 const OFFLINE_MUTATIONS = {
   "studySessions:recordResult": api.studySessions.recordResult,
   "srsReviewQueue:recordReview": api.srsReviewQueue.recordReview,
+  "cardAnnotations:toggleFlag": api.cardAnnotations.toggleFlag,
+  "cardAnnotations:setNote": api.cardAnnotations.setNote,
 } as const satisfies Record<string, FunctionReference<"mutation">>;
 
 export type OfflineMutationName = keyof typeof OFFLINE_MUTATIONS;
@@ -66,6 +68,34 @@ function parseRecordReviewArgs(
   return { srsCardId, rating: args.rating };
 }
 
+function parseToggleFlagArgs(
+  args: unknown,
+): FunctionArgs<typeof api.cardAnnotations.toggleFlag> | null {
+  if (!isRecord(args)) return null;
+  const cardId = typeof args.cardId === "string"
+    ? parseId<"flashcards">(args.cardId)
+    : null;
+  const setId = typeof args.setId === "string"
+    ? parseId<"flashcardSets">(args.setId)
+    : null;
+  if (!cardId || !setId) return null;
+  return { cardId, setId };
+}
+
+function parseSetNoteArgs(
+  args: unknown,
+): FunctionArgs<typeof api.cardAnnotations.setNote> | null {
+  if (!isRecord(args) || typeof args.note !== "string") return null;
+  const cardId = typeof args.cardId === "string"
+    ? parseId<"flashcards">(args.cardId)
+    : null;
+  const setId = typeof args.setId === "string"
+    ? parseId<"flashcardSets">(args.setId)
+    : null;
+  if (!cardId || !setId) return null;
+  return { cardId, setId, note: args.note };
+}
+
 export function decodeOutboxEntry(entry: {
   id: number;
   mutationName: string;
@@ -86,6 +116,16 @@ export function decodeOutboxEntry(entry: {
       if (!args) return null;
       return { ...entry, mutationName: entry.mutationName, args };
     }
+    case "cardAnnotations:toggleFlag": {
+      const args = parseToggleFlagArgs(entry.args);
+      if (!args) return null;
+      return { ...entry, mutationName: entry.mutationName, args };
+    }
+    case "cardAnnotations:setNote": {
+      const args = parseSetNoteArgs(entry.args);
+      if (!args) return null;
+      return { ...entry, mutationName: entry.mutationName, args };
+    }
     default:
       return null;
   }
@@ -100,6 +140,10 @@ export function decodeOutboxArgs<Name extends OfflineMutationName>(
       return parseRecordResultArgs(args) as OutboxArgs<Name> | null;
     case "srsReviewQueue:recordReview":
       return parseRecordReviewArgs(args) as OutboxArgs<Name> | null;
+    case "cardAnnotations:toggleFlag":
+      return parseToggleFlagArgs(args) as OutboxArgs<Name> | null;
+    case "cardAnnotations:setNote":
+      return parseSetNoteArgs(args) as OutboxArgs<Name> | null;
   }
 }
 
@@ -118,6 +162,10 @@ export async function runOfflineMutation(
         ...entry.args,
         reviewedAt: entry.createdAt,
       });
+    case "cardAnnotations:toggleFlag":
+      return client.mutation(api.cardAnnotations.toggleFlag, entry.args);
+    case "cardAnnotations:setNote":
+      return client.mutation(api.cardAnnotations.setNote, entry.args);
   }
 }
 

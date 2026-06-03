@@ -171,6 +171,10 @@ describe("duplicate replay", () => {
 
     const entries = await outboxModule.getPendingEntries();
     expect(entries).toHaveLength(1);
+    expect(entries[0]!.mutationName).toBe("srsReviewQueue:recordReview");
+    if (entries[0]!.mutationName !== "srsReviewQueue:recordReview") {
+      throw new Error("Expected SRS review entry");
+    }
     expect(entries[0]!.args.rating).toBe("hard");
   });
 });

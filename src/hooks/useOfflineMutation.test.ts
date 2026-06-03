@@ -12,6 +12,7 @@ function requireTestId<TableName extends TableNames>(raw: string) {
 const sessionId = requireTestId<"studySessions">("abc123def456ghi7");
 const cardId = requireTestId<"flashcards">("abc123def456ghi8");
 const srsCardId = requireTestId<"srsCards">("abc123def456ghi9");
+const setId = requireTestId<"flashcardSets">("abc123def456ghia");
 
 describe("executeOfflineMutation", () => {
   it("queues instead of calling Convex in queue-first mode while online", async () => {
@@ -73,6 +74,24 @@ describe("executeOfflineMutation", () => {
       ok: false,
       error: { _tag: "permanentFailure", message: "QuotaExceededError" },
     });
+  });
+
+  it("queues card annotation mutations while offline", async () => {
+    const queueMutation = vi.fn(async () => ({ ok: true as const, status: "queued" as const, id: 3 }));
+
+    const result = await executeOfflineMutation({
+      strategy: "online-first",
+      isOnline: false,
+      mutationName: "cardAnnotations:setNote",
+      mutationArgs: [{ cardId, setId, note: "Remember this." }],
+      runMutation: vi.fn(async () => ({ ok: true, value: "remote" })),
+      queueMutation,
+    });
+
+    expect(queueMutation).toHaveBeenCalledWith("cardAnnotations:setNote", { cardId, setId, note: "Remember this." }, {
+      queuedWhileOnline: false,
+    });
+    expect(result).toEqual({ ok: true, value: { status: "queued", id: 3 } });
   });
 
   it("keeps online-first behavior unchanged while online", async () => {

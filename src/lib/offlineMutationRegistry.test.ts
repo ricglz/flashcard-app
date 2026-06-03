@@ -15,6 +15,7 @@ function requireTestId<TableName extends TableNames>(
 const srsCardId = requireTestId<"srsCards">("abc123def456ghi7");
 const sessionId = requireTestId<"studySessions">("abc123def456ghi8");
 const cardId = requireTestId<"flashcards">("abc123def456ghi9");
+const setId = requireTestId<"flashcardSets">("abc123def456ghia");
 
 const baseEntry = {
   id: 1,
@@ -46,6 +47,28 @@ describe("decodeOutboxEntry", () => {
     });
   });
 
+  it("decodes registered flag entries", () => {
+    expect(decodeOutboxEntry({
+      ...baseEntry,
+      mutationName: "cardAnnotations:toggleFlag",
+      args: { cardId, setId },
+    })).toMatchObject({
+      mutationName: "cardAnnotations:toggleFlag",
+      args: { cardId, setId },
+    });
+  });
+
+  it("decodes registered note entries", () => {
+    expect(decodeOutboxEntry({
+      ...baseEntry,
+      mutationName: "cardAnnotations:setNote",
+      args: { cardId, setId, note: "Remember tone change." },
+    })).toMatchObject({
+      mutationName: "cardAnnotations:setNote",
+      args: { cardId, setId, note: "Remember tone change." },
+    });
+  });
+
   it("rejects unknown mutation names", () => {
     expect(decodeOutboxEntry({
       ...baseEntry,
@@ -59,6 +82,14 @@ describe("decodeOutboxEntry", () => {
       ...baseEntry,
       mutationName: "srsReviewQueue:recordReview",
       args: { srsCardId: "not an id", rating: "good" },
+    })).toBeNull();
+  });
+
+  it("rejects malformed note payloads", () => {
+    expect(decodeOutboxEntry({
+      ...baseEntry,
+      mutationName: "cardAnnotations:setNote",
+      args: { cardId, setId, note: 123 },
     })).toBeNull();
   });
 });
