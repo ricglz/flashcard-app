@@ -2,6 +2,12 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import GearIcon from "./GearIcon";
 
+const SRS_NAV_START_KEY = "srs-nav-start";
+
+function markSrsNavigationStart() {
+  window.sessionStorage.setItem(SRS_NAV_START_KEY, String(performance.now()));
+}
+
 export default function SrsQueueActive({
   remaining,
   reviewedToday,
@@ -37,6 +43,7 @@ export default function SrsQueueActive({
           </button>
           <Link
             href="/srs"
+            onClick={markSrsNavigationStart}
             className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm font-medium transition-colors"
           >
             Start Review

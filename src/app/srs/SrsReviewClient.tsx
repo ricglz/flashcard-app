@@ -1,9 +1,10 @@
 "use client";
 
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import * as Sentry from "@sentry/nextjs";
 import type { Preloaded } from "convex/react";
-import { usePreloadedQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useRouter } from "next/navigation";
 import type { CardRating } from "@/lib/types";
@@ -13,33 +14,63 @@ import SrsReviewComplete from "./SrsReviewComplete";
 import SrsReviewActive from "./SrsReviewActive";
 import AssistantPanel from "@/components/AssistantPanel";
 import { useTtsControls } from "@/hooks/useTtsControls";
-import { useCardAnnotationsAllPreloaded } from "@/hooks/useCardAnnotations";
 import InlineError from "@/components/InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
-import type { LlmModel } from "@/lib/aiModels";
+
+const SRS_NAV_START_KEY = "srs-nav-start";
+const SRS_NAV_SLOW_THRESHOLD_MS = 1500;
+
+function isPwaStandalone() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+function reportSlowSrsNavigation() {
+  const rawStart = window.sessionStorage.getItem(SRS_NAV_START_KEY);
+  if (rawStart === null) return;
+  window.sessionStorage.removeItem(SRS_NAV_START_KEY);
+
+  const start = Number(rawStart);
+  if (!Number.isFinite(start)) return;
+
+  const elapsedMs = performance.now() - start;
+  if (elapsedMs <= SRS_NAV_SLOW_THRESHOLD_MS) return;
+
+  Sentry.captureMessage("Slow SRS navigation", {
+    level: "warning",
+    tags: {
+      surface: "srs",
+      source: "home_start_review",
+    },
+    extra: {
+      elapsedMs: Math.round(elapsedMs),
+      pwaStandalone: isPwaStandalone(),
+    },
+  });
+}
 
 type Props = {
-  preloadedQueue: Preloaded<typeof api.srsReviewQueue.getHydratedQueue>;
-  preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
+  preloadedSession: Preloaded<typeof api.srsReviewQueue.getReviewSession>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
-  preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getAll>;
-  initialAssistantModels?: readonly LlmModel[];
 };
 
 export default function SrsReviewClient({
-  preloadedQueue,
-  preloadedStats,
+  preloadedSession,
   preloadedTtsConfig,
-  preloadedAnnotations,
-  initialAssistantModels,
 }: Props) {
   const router = useRouter();
-  const queue = usePreloadedQuery(preloadedQueue);
+  const session = useOfflinePreloadedQuery(preloadedSession);
+  const queue = session.queue;
+  const stats = session.stats;
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview, {
     strategy: "queue-first",
   });
+  const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
+  const setNote = useMutation(api.cardAnnotations.setNote);
   const {
     handleLoadMore,
     isLoadingMore,
@@ -47,10 +78,12 @@ export default function SrsReviewClient({
     error: refreshError,
     clearError: clearRefreshError,
   } = useForceRefreshQueue();
-  const stats = useOfflinePreloadedQuery(preloadedStats);
   const tts = useTtsControls(preloadedTtsConfig);
-  const { annotationMap, toggleFlag, setNote } = useCardAnnotationsAllPreloaded(preloadedAnnotations);
   const { revealed, reveal, resetReveal } = useReviewCardState();
+
+  useEffect(() => {
+    reportSlowSrsNavigation();
+  }, []);
 
   const stableQueue = useRef(queue);
   if (queue.length > 0) stableQueue.current = queue;
@@ -68,9 +101,7 @@ export default function SrsReviewClient({
   const displayError = error ?? refreshError;
   const initialQueueSize = useRef(effectiveQueue.length);
   const initialReviewedToday = useRef<number | null>(null);
-  if (initialReviewedToday.current === null && stats) {
-    initialReviewedToday.current = stats.reviewedToday;
-  }
+  initialReviewedToday.current ??= stats.reviewedToday;
 
   const navigation = useCardNavigation({
     orderedIds: effectiveQueue.map((item) => item._id),
@@ -83,8 +114,8 @@ export default function SrsReviewClient({
     ? (effectiveQueue.find((item) => item._id === navigation.currentId) ?? null)
     : null;
   const reviewedToday = Math.max(
-    stats?.reviewedToday ?? 0,
-    (initialReviewedToday.current ?? stats?.reviewedToday ?? 0) + reviewedCount,
+    stats.reviewedToday,
+    initialReviewedToday.current + reviewedCount,
   );
 
   const isSessionComplete =
@@ -144,7 +175,7 @@ export default function SrsReviewClient({
     );
   }
 
-  const currentAnnotation = annotationMap.get(currentItem.card._id);
+  const currentAnnotation = currentItem.annotation;
 
   return (
     <>
@@ -172,7 +203,6 @@ export default function SrsReviewClient({
         }}
         assistant={
           <AssistantPanel
-            initialModels={initialAssistantModels}
             context={{
               setId: currentItem.setId,
               cardId: currentItem.card._id,
