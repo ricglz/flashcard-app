@@ -13,6 +13,131 @@ import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import type { Doc } from "./_generated/dataModel";
 import { normalizeClientTimestamp } from "./lib/clientTimestamp";
+import type { QueryCtx } from "./_generated/server";
+
+const REVIEW_SESSION_DEFAULT_BATCH_SIZE = 50;
+const REVIEW_SESSION_MIN_BATCH_SIZE = 1;
+const REVIEW_SESSION_MAX_BATCH_SIZE = 100;
+const QUEUE_STATS_LIMIT = 500;
+
+function clampReviewSessionBatchSize(batchSize: number | undefined) {
+  if (batchSize === undefined || !Number.isFinite(batchSize)) {
+    return REVIEW_SESSION_DEFAULT_BATCH_SIZE;
+  }
+  return Math.min(
+    REVIEW_SESSION_MAX_BATCH_SIZE,
+    Math.max(REVIEW_SESSION_MIN_BATCH_SIZE, Math.floor(batchSize)),
+  );
+}
+
+async function getSrsDayStatsForUser(ctx: QueryCtx, userId: string) {
+  const userSettings = await ctx.db
+    .query("userSettings")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .first();
+  const dayResetUtcHour = userSettings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
+  const todayMs = computeDayStartMs(dayResetUtcHour);
+
+  const todayReviews = await ctx.db
+    .query("srsReviews")
+    .withIndex("by_userId_and_timestamp", (q) =>
+      q.eq("userId", userId).gte("timestamp", todayMs)
+    )
+    .take(QUEUE_STATS_LIMIT);
+
+  return { reviewedToday: todayReviews.length, dayResetUtcHour };
+}
+
+async function hydrateQueueItems(
+  ctx: QueryCtx,
+  userId: string,
+  queueItems: Doc<"reviewQueue">[],
+  includeAnnotations: boolean,
+) {
+  if (queueItems.length === 0) return [];
+
+  const uniqueSetIds = [...new Set(queueItems.map((qi) => qi.setId))];
+  const uniqueCardIds = [...new Set(queueItems.map((qi) => qi.cardId))];
+  const cardMap = new Map<string, Doc<"flashcards">>();
+  await Promise.all(
+    uniqueCardIds.map(async (cardId) => {
+      const card = await ctx.db.get(cardId);
+      if (card) cardMap.set(cardId, card);
+    })
+  );
+
+  const perSetData = await Promise.all(
+    uniqueSetIds.map(async (setId) => {
+      const [set, userSet] = await Promise.all([
+        ctx.db.get(setId),
+        ctx.db
+          .query("userSets")
+          .withIndex("by_userId_and_setId", (q) =>
+            q.eq("userId", userId).eq("setId", setId)
+          )
+          .first(),
+      ]);
+      return { setId, set, userSet };
+    })
+  );
+
+  const annotationMap = new Map<string, { flagged: boolean; note?: string }>();
+  if (includeAnnotations) {
+    await Promise.all(
+      uniqueCardIds.map(async (cardId) => {
+        const annotation = await ctx.db
+          .query("cardAnnotations")
+          .withIndex("by_userId_and_cardId", (q) =>
+            q.eq("userId", userId).eq("cardId", cardId)
+          )
+          .first();
+        if (!annotation) return;
+        annotationMap.set(
+          cardId,
+          annotation.note === undefined
+            ? { flagged: annotation.flagged }
+            : { flagged: annotation.flagged, note: annotation.note },
+        );
+      }),
+    );
+  }
+
+  const setMap = new Map<string, { name: string; fieldDefinitions: FieldDefinition[] }>();
+  const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
+
+  for (const { setId, set, userSet } of perSetData) {
+    if (!set || !userSet || !userSet.srsEnabled) continue;
+    setMap.set(setId, { name: set.name, fieldDefinitions: getFieldDefinitions(set) });
+    userSetMap.set(setId, {
+      defaultFrontFields: userSet.defaultFrontFields,
+      defaultBackFields: userSet.defaultBackFields,
+      defaultTtsOnlyFields: userSet.defaultTtsOnlyFields,
+    });
+  }
+
+  const hydrated = [];
+  for (const item of queueItems) {
+    const card = cardMap.get(item.cardId);
+    const setData = setMap.get(item.setId);
+    const userSetData = userSetMap.get(item.setId);
+    if (!card || !setData || !userSetData) continue;
+    hydrated.push({
+      _id: item._id,
+      srsCardId: item.srsCardId,
+      setId: item.setId,
+      setName: setData.name,
+      card,
+      fieldDefinitions: setData.fieldDefinitions,
+      frontFields: userSetData.defaultFrontFields,
+      backFields: userSetData.defaultBackFields,
+      ttsOnlyFields: userSetData.defaultTtsOnlyFields,
+      ...(includeAnnotations
+        ? { annotation: annotationMap.get(item.cardId) ?? null }
+        : {}),
+    });
+  }
+  return hydrated;
+}
 
 export const getQueueStats = query({
   args: {},
@@ -20,26 +145,16 @@ export const getQueueStats = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
 
-    const remaining = await ctx.db
-      .query("reviewQueue")
-      .withIndex("by_userId_and_order", (q) => q.eq("userId", identity.tokenIdentifier))
-      .take(500);
+    const userId = identity.tokenIdentifier;
+    const [remaining, dayStats] = await Promise.all([
+      ctx.db
+        .query("reviewQueue")
+        .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
+        .take(QUEUE_STATS_LIMIT),
+      getSrsDayStatsForUser(ctx, userId),
+    ]);
 
-    const userSettings = await ctx.db
-      .query("userSettings")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .first();
-    const dayResetUtcHour = userSettings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
-    const todayMs = computeDayStartMs(dayResetUtcHour);
-
-    const todayReviews = await ctx.db
-      .query("srsReviews")
-      .withIndex("by_userId_and_timestamp", (q) =>
-        q.eq("userId", identity.tokenIdentifier).gte("timestamp", todayMs)
-      )
-      .take(500);
-
-    return { remaining: remaining.length, reviewedToday: todayReviews.length, dayResetUtcHour };
+    return { remaining: remaining.length, ...dayStats };
   },
 });
 
@@ -53,65 +168,46 @@ export const getHydratedQueue = query({
       .query("reviewQueue")
       .withIndex("by_userId_and_order", (q) => q.eq("userId", identity.tokenIdentifier))
       .take(200);
-    if (queueItems.length === 0) return [];
+    return await hydrateQueueItems(ctx, identity.tokenIdentifier, queueItems, false);
+  },
+});
 
-    const uniqueSetIds = [...new Set(queueItems.map((qi) => qi.setId))];
-    const uniqueCardIds = [...new Set(queueItems.map((qi) => qi.cardId))];
-    const cardMap = new Map<string, Doc<"flashcards">>();
-    await Promise.all(
-      uniqueCardIds.map(async (cardId) => {
-        const card = await ctx.db.get(cardId);
-        if (card) cardMap.set(cardId, card);
-      })
-    );
-
-    const perSetData = await Promise.all(
-      uniqueSetIds.map(async (setId) => {
-        const [set, userSet] = await Promise.all([
-          ctx.db.get(setId),
-          ctx.db
-            .query("userSets")
-            .withIndex("by_userId_and_setId", (q) =>
-              q.eq("userId", identity.tokenIdentifier).eq("setId", setId)
-            )
-            .first(),
-        ]);
-        return { setId, set, userSet };
-      })
-    );
-
-    const setMap = new Map<string, { name: string; fieldDefinitions: FieldDefinition[] }>();
-    const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
-
-    for (const { setId, set, userSet } of perSetData) {
-      if (!set || !userSet || !userSet.srsEnabled) continue;
-      setMap.set(setId, { name: set.name, fieldDefinitions: getFieldDefinitions(set) });
-      userSetMap.set(setId, {
-        defaultFrontFields: userSet.defaultFrontFields,
-        defaultBackFields: userSet.defaultBackFields,
-        defaultTtsOnlyFields: userSet.defaultTtsOnlyFields,
-      });
+export const getReviewSession = query({
+  args: { batchSize: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const batchSize = clampReviewSessionBatchSize(args.batchSize);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return {
+        queue: [],
+        stats: {
+          remaining: 0,
+          reviewedToday: 0,
+          dayResetUtcHour: SRS_DEFAULTS.DAY_RESET_UTC_HOUR,
+          batchSize,
+        },
+      };
     }
 
-    const hydrated = [];
-    for (const item of queueItems) {
-      const card = cardMap.get(item.cardId);
-      const setData = setMap.get(item.setId);
-      const userSetData = userSetMap.get(item.setId);
-      if (!card || !setData || !userSetData) continue;
-      hydrated.push({
-        _id: item._id,
-        srsCardId: item.srsCardId,
-        setId: item.setId,
-        setName: setData.name,
-        card,
-        fieldDefinitions: setData.fieldDefinitions,
-        frontFields: userSetData.defaultFrontFields,
-        backFields: userSetData.defaultBackFields,
-        ttsOnlyFields: userSetData.defaultTtsOnlyFields,
-      });
-    }
-    return hydrated;
+    const userId = identity.tokenIdentifier;
+    const [queueItems, dayStats] = await Promise.all([
+      ctx.db
+        .query("reviewQueue")
+        .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
+        .take(QUEUE_STATS_LIMIT),
+      getSrsDayStatsForUser(ctx, userId),
+    ]);
+    const queue = await hydrateQueueItems(
+      ctx,
+      userId,
+      queueItems.slice(0, batchSize),
+      true,
+    );
+
+    return {
+      queue,
+      stats: { remaining: queueItems.length, ...dayStats, batchSize },
+    };
   },
 });
 

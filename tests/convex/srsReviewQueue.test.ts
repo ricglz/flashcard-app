@@ -177,6 +177,175 @@ describe("recordReview timestamps", () => {
   });
 });
 
+describe("getReviewSession", () => {
+  it("returns stats and hydrated queue items", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+
+    const { cards: cardList, setId } = await createSetWithCards(as, {
+      name: "Review Session Set",
+      cards: [
+        { fields: { Front: "Q0", Back: "A0" }, order: 0 },
+        { fields: { Front: "Q1", Back: "A1" }, order: 1 },
+      ],
+    });
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < cardList.length; i++) {
+        await insertQueuedSrsCardForTest(ctx, {
+          cardId: cardList[i]!._id,
+          setId,
+          order: i,
+        });
+      }
+    });
+
+    const session = await as.query(api.srsReviewQueue.getReviewSession, {});
+
+    expect(session.stats).toMatchObject({
+      remaining: 2,
+      reviewedToday: 0,
+      batchSize: 50,
+    });
+    expect(session.queue).toHaveLength(2);
+    expect(session.queue[0]).toMatchObject({
+      setName: "Review Session Set",
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      annotation: null,
+    });
+    expect(session.queue[0]!.card.fields).toEqual({ Front: "Q0", Back: "A0" });
+  });
+
+  it("limits default hydrated queue to 50 cards", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const { cards: cardList, setId } = await createSetWithCards(as, {
+      cardCount: 60,
+    });
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < cardList.length; i++) {
+        await insertQueuedSrsCardForTest(ctx, {
+          cardId: cardList[i]!._id,
+          setId,
+          order: i,
+        });
+      }
+    });
+
+    const session = await as.query(api.srsReviewQueue.getReviewSession, {});
+
+    expect(session.stats.remaining).toBe(60);
+    expect(session.stats.batchSize).toBe(50);
+    expect(session.queue).toHaveLength(50);
+  });
+
+  it("clamps custom batch size to 100 cards", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const { cards: cardList, setId } = await createSetWithCards(as, {
+      cardCount: 120,
+    });
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < cardList.length; i++) {
+        await insertQueuedSrsCardForTest(ctx, {
+          cardId: cardList[i]!._id,
+          setId,
+          order: i,
+        });
+      }
+    });
+
+    const session = await as.query(api.srsReviewQueue.getReviewSession, {
+      batchSize: 500,
+    });
+
+    expect(session.stats.remaining).toBe(120);
+    expect(session.stats.batchSize).toBe(100);
+    expect(session.queue).toHaveLength(100);
+  });
+
+  it("returns annotations only for hydrated queued cards", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const { cards: cardList, setId } = await createSetWithCards(as, {
+      cards: [
+        { fields: { Front: "Q0", Back: "A0" }, order: 0 },
+        { fields: { Front: "Q1", Back: "A1" }, order: 1 },
+        { fields: { Front: "Q2", Back: "A2" }, order: 2 },
+      ],
+    });
+
+    await t.run(async (ctx) => {
+      await insertQueuedSrsCardForTest(ctx, {
+        cardId: cardList[0]!._id,
+        setId,
+        order: 0,
+      });
+      await insertQueuedSrsCardForTest(ctx, {
+        cardId: cardList[1]!._id,
+        setId,
+        order: 1,
+      });
+      await ctx.db.insert("cardAnnotations", {
+        userId: TEST_USER.tokenIdentifier,
+        cardId: cardList[0]!._id,
+        setId,
+        flagged: true,
+        note: "Hydrated note",
+      });
+      await ctx.db.insert("cardAnnotations", {
+        userId: TEST_USER.tokenIdentifier,
+        cardId: cardList[1]!._id,
+        setId,
+        flagged: true,
+        note: "Queued but not hydrated",
+      });
+      await ctx.db.insert("cardAnnotations", {
+        userId: TEST_USER.tokenIdentifier,
+        cardId: cardList[2]!._id,
+        setId,
+        flagged: true,
+        note: "Unqueued note",
+      });
+    });
+
+    const session = await as.query(api.srsReviewQueue.getReviewSession, {
+      batchSize: 1,
+    });
+
+    expect(session.queue).toHaveLength(1);
+    expect(session.queue[0]!.annotation).toEqual({
+      flagged: true,
+      note: "Hydrated note",
+    });
+    expect(session.queue.map((item) => item.annotation?.note)).not.toContain(
+      "Queued but not hydrated",
+    );
+    expect(session.queue.map((item) => item.annotation?.note)).not.toContain(
+      "Unqueued note",
+    );
+  });
+
+  it("returns an empty safe session when unauthenticated", async () => {
+    const t = createTestDb();
+
+    const session = await t.query(api.srsReviewQueue.getReviewSession, {});
+
+    expect(session).toEqual({
+      queue: [],
+      stats: {
+        remaining: 0,
+        reviewedToday: 0,
+        dayResetUtcHour: 4,
+        batchSize: 50,
+      },
+    });
+  });
+});
+
 describe("getQueueStats", () => {
   afterEach(() => {
     vi.useRealTimers();
