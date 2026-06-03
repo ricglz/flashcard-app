@@ -14,6 +14,7 @@ import { computeOverallScore } from "../src/lib/studyResults";
 import { getFieldDefinitions } from "./lib/typed";
 import type { Doc } from "./_generated/dataModel";
 import { MAX_CARDS_PER_SET } from "./lib/cardCreation";
+import { normalizeClientTimestamp } from "./lib/clientTimestamp";
 
 function isActiveStudySession(
   session: Doc<"studySessions"> | null,
@@ -160,10 +161,16 @@ export const recordResult = mutation({
     sessionId: v.id("studySessions"),
     cardId: v.id("flashcards"),
     rating: ratingValidator,
+    answeredAt: v.optional(v.number()),
   },
   handler: (ctx, args) => toDomainResultAsync(
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
+      const normalizedTimestamp = normalizeClientTimestamp(args.answeredAt);
+      if (!normalizedTimestamp.ok) {
+        return yield* Effect.fail(normalizedTimestamp.error);
+      }
+      const answeredAt = normalizedTimestamp.value;
       const session = yield* requireEntity(ctx.db.get(args.sessionId));
       if (session.userId !== identity.tokenIdentifier) {
         return yield* Effect.fail({
@@ -197,13 +204,13 @@ export const recordResult = mutation({
           sessionId: args.sessionId,
           cardId: args.cardId,
           rating: args.rating,
-          timestamp: Date.now(),
+          timestamp: answeredAt,
         }),
       );
 
       const ratingScore = CARD_RATING_SCORES[args.rating];
       yield* Effect.promise(() =>
-        incrementDailyStats(ctx, identity.tokenIdentifier, "session", ratingScore),
+        incrementDailyStats(ctx, identity.tokenIdentifier, "session", ratingScore, answeredAt),
       );
 
       const nextIndex = session.currentIndex + 1;
@@ -221,7 +228,7 @@ export const recordResult = mutation({
           ctx.db.patch(args.sessionId, {
             currentIndex: nextIndex,
             status: "completed" as const,
-            completedAt: Date.now(),
+            completedAt: answeredAt,
             overallScore,
           }),
         );

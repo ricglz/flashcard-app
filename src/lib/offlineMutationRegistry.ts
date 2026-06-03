@@ -109,9 +109,15 @@ export async function runOfflineMutation(
 ) {
   switch (entry.mutationName) {
     case "studySessions:recordResult":
-      return client.mutation(api.studySessions.recordResult, entry.args);
+      return client.mutation(api.studySessions.recordResult, {
+        ...entry.args,
+        answeredAt: entry.createdAt,
+      });
     case "srsReviewQueue:recordReview":
-      return client.mutation(api.srsReviewQueue.recordReview, entry.args);
+      return client.mutation(api.srsReviewQueue.recordReview, {
+        ...entry.args,
+        reviewedAt: entry.createdAt,
+      });
   }
 }
 

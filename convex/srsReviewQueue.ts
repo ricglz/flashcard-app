@@ -12,6 +12,7 @@ import { validateSrsReviewAction } from "./domain/srsReviewAction";
 import type { FieldDefinition } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import type { Doc } from "./_generated/dataModel";
+import { normalizeClientTimestamp } from "./lib/clientTimestamp";
 
 export const getQueueStats = query({
   args: {},
@@ -118,11 +119,17 @@ export const recordReview = mutation({
   args: {
     srsCardId: v.id("srsCards"),
     rating: ratingValidator,
+    reviewedAt: v.optional(v.number()),
   },
   handler: (ctx, args) => toDomainResultAsync(
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
       const userId = identity.tokenIdentifier;
+      const normalizedTimestamp = normalizeClientTimestamp(args.reviewedAt);
+      if (!normalizedTimestamp.ok) {
+        return yield* Effect.fail(normalizedTimestamp.error);
+      }
+      const reviewedAt = normalizedTimestamp.value;
       const validation = yield* validateSrsReviewAction(ctx, {
         userId,
         srsCardId: args.srsCardId,
@@ -133,7 +140,6 @@ export const recordReview = mutation({
       }
 
       const { srsCard, queueItem } = validation;
-      const now = Date.now();
       const result = computeSM2({
         rating: args.rating,
         easeFactor: srsCard.easeFactor,
@@ -147,8 +153,8 @@ export const recordReview = mutation({
           interval: result.interval,
           repetitions: result.repetitions,
           status: result.status,
-          nextReviewAt: computeNextReviewAt(result.interval, now),
-          lastReviewedAt: now,
+          nextReviewAt: computeNextReviewAt(result.interval, reviewedAt),
+          lastReviewedAt: reviewedAt,
         }),
       );
 
@@ -158,7 +164,7 @@ export const recordReview = mutation({
           cardId: queueItem.cardId,
           srsCardId: args.srsCardId,
           rating: args.rating,
-          timestamp: now,
+          timestamp: reviewedAt,
           newInterval: result.interval,
           newEaseFactor: result.easeFactor,
         }),
@@ -166,7 +172,7 @@ export const recordReview = mutation({
 
       yield* Effect.promise(() => ctx.db.delete(queueItem._id));
       yield* Effect.promise(() =>
-        incrementDailyStats(ctx, userId, "srs", CARD_RATING_SCORES[args.rating]),
+        incrementDailyStats(ctx, userId, "srs", CARD_RATING_SCORES[args.rating], reviewedAt),
       );
 
       return { outcome: "recorded" as const };

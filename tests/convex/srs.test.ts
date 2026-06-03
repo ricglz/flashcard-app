@@ -233,6 +233,15 @@ describe("computeDayStartMs", () => {
       expect(computeDayStartMs(hour)).toBeLessThanOrEqual(Date.now());
     }
   });
+
+  it("uses an explicit reference time when provided", () => {
+    vi.setSystemTime(new Date("2025-06-16T10:30:00Z"));
+    const result = computeDayStartMs(
+      4,
+      new Date("2025-06-15T10:30:00Z").getTime(),
+    );
+    expect(result).toBe(new Date("2025-06-15T04:00:00Z").getTime());
+  });
 });
 
 describe("computeDayKey", () => {
@@ -256,5 +265,10 @@ describe("computeDayKey", () => {
   it("handles reset at exactly the boundary", () => {
     vi.setSystemTime(new Date("2026-05-06T04:00:00Z"));
     expect(computeDayKey(4)).toBe("2026-05-06");
+  });
+
+  it("uses an explicit reference time when provided", () => {
+    vi.setSystemTime(new Date("2026-05-07T10:00:00Z"));
+    expect(computeDayKey(4, new Date("2026-05-06T03:00:00Z").getTime())).toBe("2026-05-05");
   });
 });

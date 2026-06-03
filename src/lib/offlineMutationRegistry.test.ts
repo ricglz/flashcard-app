@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { ConvexReactClient } from "convex/react";
 import type { TableNames } from "../../convex/_generated/dataModel";
 import { parseId } from "./convexHelpers";
-import { decodeOutboxEntry } from "./offlineMutationRegistry";
+import { decodeOutboxEntry, runOfflineMutation } from "./offlineMutationRegistry";
 
 function requireTestId<TableName extends TableNames>(
   raw: string,
@@ -59,5 +60,51 @@ describe("decodeOutboxEntry", () => {
       mutationName: "srsReviewQueue:recordReview",
       args: { srsCardId: "not an id", rating: "good" },
     })).toBeNull();
+  });
+});
+
+describe("runOfflineMutation", () => {
+  it("replays study results with outbox creation time", async () => {
+    const calls: unknown[] = [];
+    const client = {
+      mutation: async (_mutation: unknown, args: unknown) => {
+        calls.push(args);
+        return { ok: true, value: null };
+      },
+    } as ConvexReactClient;
+
+    const entry = decodeOutboxEntry({
+      ...baseEntry,
+      createdAt: 456,
+      mutationName: "studySessions:recordResult",
+      args: { sessionId, cardId, rating: "hard" },
+    });
+    if (!entry) throw new Error("Expected decoded entry");
+
+    await runOfflineMutation(client, entry);
+
+    expect(calls).toEqual([{ sessionId, cardId, rating: "hard", answeredAt: 456 }]);
+  });
+
+  it("replays SRS reviews with outbox creation time", async () => {
+    const calls: unknown[] = [];
+    const client = {
+      mutation: async (_mutation: unknown, args: unknown) => {
+        calls.push(args);
+        return { ok: true, value: null };
+      },
+    } as ConvexReactClient;
+
+    const entry = decodeOutboxEntry({
+      ...baseEntry,
+      createdAt: 789,
+      mutationName: "srsReviewQueue:recordReview",
+      args: { srsCardId, rating: "good" },
+    });
+    if (!entry) throw new Error("Expected decoded entry");
+
+    await runOfflineMutation(client, entry);
+
+    expect(calls).toEqual([{ srsCardId, rating: "good", reviewedAt: 789 }]);
   });
 });

@@ -108,17 +108,23 @@ export function computeNextReviewAt(interval: number, now: number): number {
   return now + interval * MS_PER_DAY;
 }
 
-export function computeDayStartMs(dayResetUtcHour: number): number {
-  const now = new Date();
+export function computeDayStartMs(
+  dayResetUtcHour: number,
+  referenceMs = Date.now(),
+): number {
+  const now = new Date(referenceMs);
   now.setUTCHours(dayResetUtcHour, 0, 0, 0);
-  if (now.getTime() > Date.now()) {
+  if (now.getTime() > referenceMs) {
     now.setUTCDate(now.getUTCDate() - 1);
   }
   return now.getTime();
 }
 
-export function computeDayKey(dayResetUtcHour: number): string {
-  const ms = computeDayStartMs(dayResetUtcHour);
+export function computeDayKey(
+  dayResetUtcHour: number,
+  referenceMs = Date.now(),
+): string {
+  const ms = computeDayStartMs(dayResetUtcHour, referenceMs);
   return new Date(ms).toISOString().slice(0, 10);
 }
 

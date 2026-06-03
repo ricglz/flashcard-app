@@ -109,6 +109,74 @@ describe("getHydratedQueue", () => {
   });
 });
 
+describe("recordReview timestamps", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("records replayed reviews using the supplied review timestamp", async () => {
+    vi.setSystemTime(new Date("2025-06-16T10:00:00Z"));
+    const t = createTestDb();
+    const { as, srsCardId } = await setupQueuedReview(t);
+    const reviewedAt = new Date("2025-06-15T10:00:00Z").getTime();
+
+    const result = await as.mutation(api.srsReviewQueue.recordReview, {
+      srsCardId,
+      rating: "good",
+      reviewedAt,
+    });
+
+    expect(result).toEqual({ ok: true, value: { outcome: "recorded" } });
+    const srsCard = await t.run(async (ctx) => await ctx.db.get(srsCardId));
+    expect(srsCard?.lastReviewedAt).toBe(reviewedAt);
+    expect(srsCard?.nextReviewAt).toBe(new Date("2025-06-21T10:00:00Z").getTime());
+    expect(await getReviewRows(t)).toMatchObject([{ timestamp: reviewedAt }]);
+    expect(await getDailyStatsRows(t)).toMatchObject([
+      {
+        dayKey: "2025-06-15",
+        dayStartMs: new Date("2025-06-15T04:00:00Z").getTime(),
+        srsReviewCount: 1,
+      },
+    ]);
+  });
+
+  it("clamps future review timestamps to server receipt time", async () => {
+    vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
+    const t = createTestDb();
+    const { as, srsCardId } = await setupQueuedReview(t);
+    const serverNow = Date.now();
+
+    const result = await as.mutation(api.srsReviewQueue.recordReview, {
+      srsCardId,
+      rating: "good",
+      reviewedAt: new Date("2025-06-16T10:00:00Z").getTime(),
+    });
+
+    expect(result).toEqual({ ok: true, value: { outcome: "recorded" } });
+    const srsCard = await t.run(async (ctx) => await ctx.db.get(srsCardId));
+    expect(srsCard?.lastReviewedAt).toBe(serverNow);
+    expect(await getReviewRows(t)).toMatchObject([{ timestamp: serverNow }]);
+  });
+
+  it("rejects invalid review timestamps", async () => {
+    vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
+    const t = createTestDb();
+    const { as, srsCardId } = await setupQueuedReview(t);
+
+    const result = await as.mutation(api.srsReviewQueue.recordReview, {
+      srsCardId,
+      rating: "good",
+      reviewedAt: -1,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput" },
+    });
+    expect(await getReviewRows(t)).toEqual([]);
+  });
+});
+
 describe("getQueueStats", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -226,6 +294,14 @@ async function getQueueRows(t: TestDb, userId = TEST_USER.tokenIdentifier) {
   return await t.run(async (ctx) => {
     return await ctx.db.query("reviewQueue").withIndex("by_userId_and_order", (q) =>
       q.eq("userId", userId)
+    ).take(500);
+  });
+}
+
+async function getDailyStatsRows(t: TestDb) {
+  return await t.run(async (ctx) => {
+    return await ctx.db.query("dailyStats").withIndex("by_userId_and_dayStartMs", (q) =>
+      q.eq("userId", TEST_USER.tokenIdentifier)
     ).take(500);
   });
 }

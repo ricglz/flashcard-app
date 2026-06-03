@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { api } from "../../convex/_generated/api";
 import { computeOverallScore } from "../../src/lib/studyResults";
 import { CARD_RATING_SCORES } from "../../src/lib/types";
@@ -37,6 +37,17 @@ async function getCardResults(t: TestDb, sessionId: Id<"studySessions">) {
       .query("cardResults")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
       .take(1000);
+  });
+}
+
+async function getDailyStatsRows(t: TestDb) {
+  return await t.run(async (ctx) => {
+    return await ctx.db
+      .query("dailyStats")
+      .withIndex("by_userId_and_dayStartMs", (q) =>
+        q.eq("userId", TEST_USER.tokenIdentifier)
+      )
+      .take(500);
   });
 }
 
@@ -399,6 +410,10 @@ describe("studySessions.start", () => {
 });
 
 describe("studySessions.recordResult", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("advances currentIndex", async () => {
     const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
@@ -566,6 +581,109 @@ describe("studySessions.recordResult", () => {
       cardId: session!.cardOrder[0]!,
       rating: "good",
     })).toMatchObject({ ok: true, value: { outcome: "alreadyComplete" } });
+  });
+});
+
+describe("studySessions.recordResult timestamps", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("records replayed results using the supplied answer timestamp", async () => {
+    vi.setSystemTime(new Date("2025-06-16T10:00:00Z"));
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const answeredAt = new Date("2025-06-15T10:00:00Z").getTime();
+
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    const session = await getStudySession(as, sessionId);
+
+    const result = await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session.cardOrder[0]!,
+      rating: "easy",
+      answeredAt,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { isComplete: true, outcome: "recorded" },
+    });
+    expect(await getCardResults(t, sessionId)).toMatchObject([{ timestamp: answeredAt }]);
+    const completed = await getStudySession(as, sessionId);
+    expect(completed.completedAt).toBe(answeredAt);
+    expect(await getDailyStatsRows(t)).toMatchObject([
+      {
+        dayKey: "2025-06-15",
+        dayStartMs: new Date("2025-06-15T04:00:00Z").getTime(),
+        sessionCardCount: 1,
+      },
+    ]);
+  });
+
+  it("clamps future answer timestamps to server receipt time", async () => {
+    vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+    const serverNow = Date.now();
+
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    const session = await getStudySession(as, sessionId);
+
+    const result = await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session.cardOrder[0]!,
+      rating: "good",
+      answeredAt: new Date("2025-06-16T10:00:00Z").getTime(),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { isComplete: true, outcome: "recorded" },
+    });
+    expect(await getCardResults(t, sessionId)).toMatchObject([{ timestamp: serverNow }]);
+    const completed = await getStudySession(as, sessionId);
+    expect(completed.completedAt).toBe(serverNow);
+  });
+
+  it("rejects invalid answer timestamps", async () => {
+    vi.setSystemTime(new Date("2025-06-15T10:00:00Z"));
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSetWithCards(as, 1);
+
+    const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
+      setId,
+      frontFields: ["Front"],
+      backFields: ["Back"],
+      shuffle: false,
+    }));
+    const session = await getStudySession(as, sessionId);
+
+    const result = await as.mutation(api.studySessions.recordResult, {
+      sessionId,
+      cardId: session.cardOrder[0]!,
+      rating: "good",
+      answeredAt: -1,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { _tag: "InvalidInput" },
+    });
+    expect(await getCardResults(t, sessionId)).toEqual([]);
   });
 });
 

@@ -41,7 +41,8 @@ export async function incrementDailyStats(
   ctx: MutationCtx,
   userId: string,
   source: "srs" | "session",
-  ratingScore: number
+  ratingScore: number,
+  occurredAtMs = Date.now(),
 ) {
   const settings = await ctx.db
     .query("userSettings")
@@ -49,8 +50,8 @@ export async function incrementDailyStats(
     .first();
   const dayResetUtcHour =
     settings?.dayResetUtcHour ?? SRS_DEFAULTS.DAY_RESET_UTC_HOUR;
-  const dayStartMs = computeDayStartMs(dayResetUtcHour);
-  const dayKey = computeDayKey(dayResetUtcHour);
+  const dayStartMs = computeDayStartMs(dayResetUtcHour, occurredAtMs);
+  const dayKey = computeDayKey(dayResetUtcHour, occurredAtMs);
 
   const existing = await ctx.db
     .query("dailyStats")
