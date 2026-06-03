@@ -1,5 +1,7 @@
 /// <reference lib="webworker" />
 
+import { getServiceWorkerRequestStrategy } from "./lib/swRouting";
+
 export type {};
 
 declare const self: ServiceWorkerGlobalScope & {
@@ -42,20 +44,25 @@ self.addEventListener("activate", (event: ExtendableEvent) => {
 
 self.addEventListener("fetch", (event: FetchEvent) => {
   const { request } = event;
-  if (request.method !== "GET") return;
+  const strategy = getServiceWorkerRequestStrategy(
+    request,
+    self.location.origin,
+  );
 
-  const url = new URL(request.url);
-
-  if (!url.protocol.startsWith("http")) return;
-
-  if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  if (url.origin === self.location.origin) {
-    event.respondWith(networkFirst(request));
-    return;
+  switch (strategy) {
+    case "cache-first":
+      event.respondWith(cacheFirst(request));
+      return;
+    case "network-first":
+      event.respondWith(
+        networkFirst(request, (promise) => event.waitUntil(promise)),
+      );
+      return;
+    case "network-only":
+      event.respondWith(fetch(request));
+      return;
+    case "ignore":
+      return;
   }
 });
 
@@ -70,12 +77,19 @@ async function cacheFirst(request: Request): Promise<Response> {
   return response;
 }
 
-async function networkFirst(request: Request): Promise<Response> {
+async function putRuntimeCache(request: Request, response: Response) {
+  const cache = await caches.open(RUNTIME_NAME);
+  await cache.put(request, response);
+}
+
+async function networkFirst(
+  request: Request,
+  waitUntil: (promise: Promise<unknown>) => void,
+): Promise<Response> {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(RUNTIME_NAME);
-      cache.put(request, response.clone());
+      waitUntil(putRuntimeCache(request, response.clone()));
     }
     return response;
   } catch {
