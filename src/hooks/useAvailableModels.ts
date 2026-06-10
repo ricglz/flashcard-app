@@ -25,12 +25,6 @@ export function useAvailableModels(
   }, [getModels]);
 
   useEffect(() => {
-    if (initialModels === undefined) return;
-    hasFetched.current = true;
-    setModels([...initialModels]);
-  }, [initialModels]);
-
-  useEffect(() => {
     if (!enabled || hasFetched.current) return;
     hasFetched.current = true;
     void fetchModels();

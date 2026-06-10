@@ -65,6 +65,14 @@ async function flushEntries(client: ConvexReactClient): Promise<boolean> {
   return allSucceeded;
 }
 
+async function readPendingCounts() {
+  const [pending, visiblePending] = await Promise.all([
+    getPendingCount(),
+    getVisiblePendingCount(),
+  ]);
+  return { pending, visiblePending };
+}
+
 export default function SyncProvider({ children }: { children: ReactNode }) {
   const client = useConvex();
   const isOnline = useOnlineStatus();
@@ -74,10 +82,7 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   const isSyncingRef = useRef(false);
 
   const refreshCount = useCallback(async () => {
-    const [pending, visiblePending] = await Promise.all([
-      getPendingCount(),
-      getVisiblePendingCount(),
-    ]);
+    const { pending, visiblePending } = await readPendingCounts();
     setPendingCount(pending);
     setVisiblePendingCount(visiblePending);
   }, []);
@@ -126,8 +131,16 @@ export default function SyncProvider({ children }: { children: ReactNode }) {
   }, [refreshCount, drainOutbox]);
 
   useEffect(() => {
-    void refreshCount();
-  }, [refreshCount]);
+    let cancelled = false;
+    void readPendingCounts().then(({ pending, visiblePending }) => {
+      if (cancelled) return;
+      setPendingCount(pending);
+      setVisiblePendingCount(visiblePending);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     void drainOutbox();

@@ -86,7 +86,10 @@ export default function SrsReviewClient({
   }, []);
 
   const stableQueue = useRef(queue);
+  // Keep the last non-empty offline queue visible across transient reconnect empties.
+  // eslint-disable-next-line react-hooks/refs
   if (queue.length > 0) stableQueue.current = queue;
+  // eslint-disable-next-line react-hooks/refs
   const effectiveQueue = queue.length > 0 ? queue : stableQueue.current;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,9 +102,8 @@ export default function SrsReviewClient({
   });
   const [error, setError] = useState<string | null>(null);
   const displayError = error ?? refreshError;
-  const initialQueueSize = useRef(effectiveQueue.length);
-  const initialReviewedToday = useRef<number | null>(null);
-  initialReviewedToday.current ??= stats.reviewedToday;
+  const [initialQueueSize] = useState(effectiveQueue.length);
+  const [initialReviewedToday] = useState(stats.reviewedToday);
 
   const navigation = useCardNavigation({
     orderedIds: effectiveQueue.map((item) => item._id),
@@ -115,11 +117,11 @@ export default function SrsReviewClient({
     : null;
   const reviewedToday = Math.max(
     stats.reviewedToday,
-    initialReviewedToday.current + reviewedCount,
+    initialReviewedToday + reviewedCount,
   );
 
   const isSessionComplete =
-    navigation.activeIds.length === 0 && reviewedCount >= initialQueueSize.current;
+    navigation.activeIds.length === 0 && reviewedCount >= initialQueueSize;
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
