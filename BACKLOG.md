@@ -88,6 +88,15 @@
 ### Study Assistant Tool Expansion
 - [ ] Expand tool set beyond the current `list_sets`, `get_weak_cards`, and `add_note_to_current_card` tools if usage shows demand (e.g., study stats, mastery levels, richer annotation workflows)
 
+### Study Assistant UI Polish
+- [ ] Improve chat rendering with richer markdown/code support and better streaming UX.
+  - Use `react-markdown` + `remark-gfm` + `remark-math` + `rehype-raw` for rich message rendering.
+  - Add `react-syntax-highlighter` with Prism for code blocks with copy/download toolbar.
+  - Add streaming cursor animation (`▍` with CSS pulse) during generation.
+  - Smarter auto-scroll: MutationObserver on message container + pause when user scrolls up.
+  - Feedback buttons (copy, regenerate) on assistant messages.
+  - Reference: CopilotKit's `react-ui` package uses these same libraries — patterns worth borrowing, but forking the package isn't viable due to deep coupling to their runtime stack.
+
 ## Code Quality — Error Handling
 
 ### Query Result Contracts
