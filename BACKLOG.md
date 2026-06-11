@@ -144,12 +144,6 @@
   - Start with SRS settings clamping/reset behavior and AI settings provider/key prompt save gating.
   - Prefer pure helpers for value normalization when multiple settings forms need the same behavior.
 
-### Vitest Warning Noise
-- [ ] Investigate the Vitest `DEP0205 module.register()` warning.
-  - It appears on `pnpm test` runs.
-  - Identify whether it comes from Vitest, `tsx`, `convex-test`, or Node version drift.
-  - Prefer dependency/config cleanup over suppressing the warning.
-
 ## E2E Testing
 
 ### Infrastructure
