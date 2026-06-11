@@ -140,9 +140,6 @@
 ## Testing Tooling
 
 ### High-Impact Component Unit Coverage
-- [ ] Add component coverage for field definition editing.
-  - Cover add/edit/remove, role changes, TTS toggle, language editing, read-only names, and disabled add/remove mode.
-  - Keep field-definition mutation logic in the existing pure draft helpers; component tests should verify user wiring.
 - [ ] Add coverage for AI draft preview/refinement components.
   - Cover card include/exclude toggles, field edits, disabled/refining states, scope counts, model selection, trimmed instructions, and clearing instructions only after applied refinements.
   - Keep generation/append action behavior outside component tests unless the UI state machine is extracted into a feature-local module.
