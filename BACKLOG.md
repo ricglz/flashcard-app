@@ -128,10 +128,6 @@
 ## Testing Tooling
 
 ### High-Impact Component Unit Coverage
-- [ ] Add focused unit coverage for the SRS review workflow.
-  - Prefer a feature-local reducer or state module for review transitions before adding broad DOM tests.
-  - Cover rating success/failure, reviewed/rating counts, completion state, reconnect-empty queue fallback, and "load more" completion actions.
-  - Keep Convex/router/TTS mocks at the component boundary; do not move workflow logic into shared generic utilities.
 - [ ] Add component coverage for CSV import.
   - Cover valid file preview, invalid file/drop errors, warning display, confirm, cancel, and hidden file input behavior through the visible drop zone.
   - Keep parser expectations in `csvParser` tests; component tests should focus on file/drop UI state and import callbacks.
