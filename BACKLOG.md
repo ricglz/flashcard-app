@@ -15,11 +15,6 @@
   - Exempt React component props, real binary domain fields, result tags, and UI state props such as `disabled`, `loading`, `selected`, and `flagged`.
   - Prefer a small custom ESLint rule only if it can avoid noisy false positives.
 
-### Schema Requiredness Audit
-- [ ] Audit optional schema fields that should become required, starting with `flashcards.origin`.
-  - Use widen-migrate-narrow for Convex schema tightening when existing data may violate the new shape.
-  - For `flashcards.origin`, add/keep the full origin union including `forked`, check for existing rows missing `origin`, default missing existing rows to `manual` unless reliable set-level evidence says otherwise, then make the field required.
-
 ### SRS Queue / Scheduling
 - [ ] Centralize review queue row creation if more queue writers are added, so denormalized `reviewQueue.cardId` / `setId` fields stay consistent with their `srsCardId`.
 

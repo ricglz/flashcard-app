@@ -98,7 +98,7 @@ export default defineSchema({
     setId: v.id("flashcardSets"),
     fields: v.record(v.string(), v.string()),
     order: v.number(),
-    origin: v.optional(literalUnion(FLASHCARD_ORIGINS)),
+    origin: literalUnion(FLASHCARD_ORIGINS),
     archivedAt: v.optional(v.number()),
   })
     .index("by_setId", ["setId"]),
