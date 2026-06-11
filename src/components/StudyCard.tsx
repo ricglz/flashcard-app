@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import type { FieldDefinition } from "@/lib/types";
-import { getTtsConfig } from "@/lib/types";
 import type { TtsEvent } from "@/lib/tts";
 import { speakSequence } from "@/lib/tts";
 import { isTtsProblem, useTtsInteraction } from "@/hooks/useTtsInteraction";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
+import { getRevealTtsItems } from "./studyCardTts";
 
 type Props = {
   card: { fields: Record<string, string> };
@@ -59,15 +59,12 @@ export default function StudyCard({
     onRevealed?.();
 
     if (autoPlayTts) {
-      const items: { text: string; lang: string }[] = [];
-      for (const fieldName of [...backFields, ...ttsOnlyFields]) {
-        const fd = fieldDefsMap.get(fieldName);
-        const value = card.fields[fieldName];
-        const ttsConfig = fd ? getTtsConfig(fd) : null;
-        if (ttsConfig && value) {
-          items.push({ text: value, lang: ttsConfig.lang });
-        }
-      }
+      const items = getRevealTtsItems({
+        cardFields: card.fields,
+        fieldDefinitions,
+        backFields,
+        ttsOnlyFields,
+      });
       if (items.length > 0) {
         void speakSequence(items, {
           rate: ttsRate,

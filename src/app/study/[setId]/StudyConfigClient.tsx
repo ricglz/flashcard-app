@@ -17,6 +17,13 @@ import ResumeSessionBanner from "./ResumeSessionBanner";
 import FieldSelectionList from "./FieldSelectionList";
 import CardLimitSelector from "./CardLimitSelector";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
+import {
+  buildBrowseSearchParams,
+  buildStartSessionArgs,
+  buildStudyModeHref,
+  canSubmitStudyConfig,
+  hasRequiredStudyFields,
+} from "./studyConfigState";
 
 type Props = {
   flashcardSetId: Id<"flashcardSets">;
@@ -29,19 +36,6 @@ type Props = {
   initialSet: FlashcardSetWithViewer;
   userSet: Doc<"userSets">;
 };
-
-function updateModeInUrl(
-  mode: "study" | "browse",
-  replace: (href: string) => void,
-) {
-  const url = new URL(window.location.href);
-  if (mode === "browse") {
-    url.searchParams.set("mode", "browse");
-  } else {
-    url.searchParams.delete("mode");
-  }
-  replace(url.pathname + url.search);
-}
 
 export default function StudyConfigClient({
   flashcardSetId,
@@ -87,7 +81,7 @@ export default function StudyConfigClient({
   };
 
   const handleStart = async () => {
-    if (frontFields.length === 0 || backFields.length === 0) return;
+    if (!hasRequiredStudyFields({ frontFields, backFields })) return;
     if (!convexAuth.isAuthenticated) {
       setError("Please sign in to continue.");
       return;
@@ -95,14 +89,14 @@ export default function StudyConfigClient({
     setError(null);
     setIsNavigating(true);
     try {
-      const result = await startSession({
+      const result = await startSession(buildStartSessionArgs({
         setId: flashcardSetId,
         frontFields,
         backFields,
         ttsOnlyFields,
         shuffle,
-        ...(cardLimit !== null && { cardLimit }),
-      });
+        cardLimit,
+      }));
       if (!result.ok) {
         setIsNavigating(false);
         setError(result.error.message);
@@ -116,13 +110,13 @@ export default function StudyConfigClient({
   };
 
   const handleBrowse = () => {
-    if (frontFields.length === 0 || backFields.length === 0) return;
-    const params = new URLSearchParams({
-      frontFields: frontFields.join(","),
-      backFields: backFields.join(","),
-      shuffle: String(shuffle),
-      ...(ttsOnlyFields.length > 0 && { ttsOnlyFields: ttsOnlyFields.join(",") }),
-      ...(cardLimit !== null && { cardLimit: String(cardLimit) }),
+    if (!hasRequiredStudyFields({ frontFields, backFields })) return;
+    const params = buildBrowseSearchParams({
+      frontFields,
+      backFields,
+      ttsOnlyFields,
+      shuffle,
+      cardLimit,
     });
     router.push(`/study/${setId}/browse?${params}`);
   };
@@ -154,7 +148,7 @@ export default function StudyConfigClient({
               key={m}
               onClick={() => {
                 setMode(m);
-                updateModeInUrl(m, (href) => router.replace(href));
+                router.replace(buildStudyModeHref(window.location.href, m));
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 mode === m
@@ -198,12 +192,13 @@ export default function StudyConfigClient({
         <div className="space-y-2">
           <button
             onClick={mode === "study" ? handleStart : handleBrowse}
-            disabled={
-              frontFields.length === 0 ||
-              backFields.length === 0 ||
-              cards.length === 0 ||
-              (mode === "study" && !convexAuth.isAuthenticated)
-            }
+            disabled={!canSubmitStudyConfig({
+              mode,
+              frontFields,
+              backFields,
+              cardCount: cards.length,
+              isAuthenticated: convexAuth.isAuthenticated,
+            })}
             className="w-full py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 font-medium transition-colors"
           >
             {mode === "study" ? "Start New Session" : "Start Browsing"}
