@@ -36,6 +36,8 @@
   - Compare against a small local async-action hook before adopting another provider and dependency.
   - Treat offline support as a prototype target, not a blocker: TanStack Query has persisted cache and paused-mutation examples, but this app still needs validation against Convex live queries, Next route preloading, Clerk auth, and the existing IndexedDB outbox.
   - Keep standard Convex React hooks where live subscription or preloaded-query behavior is materially simpler.
+- [ ] Consider a feature-local mutation result normalizer if SRS review keeps handling rejected mutation promises in multiple handlers.
+  - Keep it local before generalizing; the goal is to reduce duplicated `catch`/fallback-message plumbing without introducing Effect or a broad async abstraction for simple UI event handlers.
 - [ ] Stabilize local async-action helpers if `useSaveHandler` keeps spreading.
   - Keep the local helper for one-shot Convex mutations that only need button loading, inline errors, and success callbacks.
   - Revisit TanStack Query instead of adding more local abstraction when multiple features need shared mutation/query state, retry/backoff policy, cancellation/deduping, cache invalidation/refetch orchestration, or optimistic updates beyond the offline outbox.
@@ -43,6 +45,16 @@
 - [ ] Make SRS settings save transactional if partial saves become a practical issue.
   - Keep explicit SRS intent, but consider a backend command with `{ defaults, srsAction: "unchanged" | "enable" | "disable" }` so field defaults and SRS enable/disable are applied in one mutation.
   - Preserve the current explicit `enableSrs` / `disableSrs` commands for call sites that only need enrollment state changes.
+
+### SRS Review Client Structure
+- [ ] Consider extracting an SRS review controller hook if `SrsReviewClient` keeps accumulating orchestration logic.
+  - A feature-local `useSrsReviewWorkflowController` could own queue stabilization, workflow dispatch, mutation normalization, card navigation, and handlers, while the client stays focused on preloaded data and rendering.
+- [ ] Consider a small `useLastNonEmptyQueue` hook for the SRS reconnect fallback.
+  - Name and test the current "keep the last non-empty queue visible" behavior if more offline/reconnect edge cases are added.
+- [ ] Revisit `useForceRefreshQueue` after the SRS review load-more union settles.
+  - Dashboard queue status still uses boolean load-more state, while SRS review uses a typed union. Share a state shape only if another caller benefits without forcing a generic abstraction too early.
+- [ ] Consider moving SRS review screen implementation files under a small subdirectory if the flat `src/app/srs/` list becomes noisy.
+  - Keep the one-component-per-file lint rule; organize by feature surface instead of re-combining tiny components.
 
 ## Code Quality — Convex Performance
 
