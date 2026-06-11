@@ -3,7 +3,8 @@ import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
 import StudyLayout from "@/components/StudyLayout";
 import type { useTtsControls } from "@/hooks/useTtsControls";
-import type { CardRating, FieldDefinition } from "@/lib/types";
+import type { CardRating } from "@/lib/types";
+import type { SrsReviewItem } from "./srsReviewTypes";
 import { SRS_RATING_LABELS } from "@/lib/types";
 
 export default function SrsReviewActive({
@@ -21,16 +22,7 @@ export default function SrsReviewActive({
   onSetNote,
   assistant,
 }: {
-  currentItem: {
-    _id: string;
-    srsCardId: string;
-    setId: string;
-    card: { _id: string; fields: Record<string, string> };
-    fieldDefinitions: FieldDefinition[];
-    frontFields: string[];
-    backFields: string[];
-    ttsOnlyFields: string[];
-  };
+  currentItem: SrsReviewItem;
   reviewedCount: number;
   totalCards: number;
   revealed: boolean;

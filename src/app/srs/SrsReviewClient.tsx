@@ -1,23 +1,23 @@
 "use client";
 
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useReducer, useRef } from "react";
 import * as Sentry from "@sentry/nextjs";
 import type { Preloaded } from "convex/react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
 import type { CardRating } from "@/lib/types";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
-import SrsReviewComplete from "./SrsReviewComplete";
-import SrsReviewActive from "./SrsReviewActive";
-import AssistantPanel from "@/components/AssistantPanel";
 import { useTtsControls } from "@/hooks/useTtsControls";
-import InlineError from "@/components/InlineError";
-import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
+import {
+  createSrsReviewWorkflowState,
+  getSrsReviewScreenState,
+  srsReviewWorkflowReducer,
+} from "./srsReviewWorkflow";
+import SrsReviewScreen from "./SrsReviewScreen";
 
 const SRS_NAV_START_KEY = "srs-nav-start";
 const SRS_NAV_SLOW_THRESHOLD_MS = 1500;
@@ -53,6 +53,12 @@ function reportSlowSrsNavigation() {
   });
 }
 
+function mutationErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim().length > 0
+    ? error.message
+    : fallback;
+}
+
 type Props = {
   preloadedSession: Preloaded<typeof api.srsReviewQueue.getReviewSession>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
@@ -62,22 +68,13 @@ export default function SrsReviewClient({
   preloadedSession,
   preloadedTtsConfig,
 }: Props) {
-  const router = useRouter();
   const session = useOfflinePreloadedQuery(preloadedSession);
   const queue = session.queue;
   const stats = session.stats;
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview, {
     strategy: "queue-first",
   });
-  const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
-  const setNote = useMutation(api.cardAnnotations.setNote);
-  const {
-    handleLoadMore,
-    isLoadingMore,
-    noMoreCards,
-    error: refreshError,
-    clearError: clearRefreshError,
-  } = useForceRefreshQueue();
+  const forceRefreshQueue = useMutation(api.srsReviewQueue.forceRefreshQueue);
   const tts = useTtsControls(preloadedTtsConfig);
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
@@ -92,16 +89,10 @@ export default function SrsReviewClient({
   // eslint-disable-next-line react-hooks/refs
   const effectiveQueue = queue.length > 0 ? queue : stableQueue.current;
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reviewedCount, setReviewedCount] = useState(0);
-  const [ratingCounts, setRatingCounts] = useState<Record<CardRating, number>>({
-    wrong: 0,
-    hard: 0,
-    good: 0,
-    easy: 0,
-  });
-  const [error, setError] = useState<string | null>(null);
-  const displayError = error ?? refreshError;
+  const [workflow, dispatchWorkflow] = useReducer(
+    srsReviewWorkflowReducer,
+    createSrsReviewWorkflowState(),
+  );
   const [initialQueueSize] = useState(effectiveQueue.length);
   const [initialReviewedToday] = useState(stats.reviewedToday);
 
@@ -111,110 +102,71 @@ export default function SrsReviewClient({
     mode: { kind: "bounded" },
     onCardChange: resetReveal,
   });
-  const totalCards = navigation.activeIds.length + reviewedCount;
+  const screenState = getSrsReviewScreenState({
+    state: workflow,
+    activeCardCount: navigation.activeIds.length,
+    initialQueueSize,
+    initialReviewedToday,
+    serverReviewedToday: stats.reviewedToday,
+  });
   const currentItem = navigation.currentId
     ? (effectiveQueue.find((item) => item._id === navigation.currentId) ?? null)
     : null;
-  const reviewedToday = Math.max(
-    stats.reviewedToday,
-    initialReviewedToday + reviewedCount,
-  );
-
-  const isSessionComplete =
-    navigation.activeIds.length === 0 && reviewedCount >= initialQueueSize;
 
   const handleRate = useCallback(
     async (rating: CardRating) => {
-      if (isSubmitting || !currentItem) return;
-      setIsSubmitting(true);
-      setError(null);
-      clearRefreshError();
+      if (workflow.ratingRequest.status === "submitting" || !currentItem) return;
+      dispatchWorkflow({ type: "ratingStarted" });
 
-      try {
-        const result = await recordReview({
-          srsCardId: currentItem.srsCardId,
-          rating,
-        });
-        if (!result.ok) {
-          setError(result.error.message);
-          return;
-        }
-        setReviewedCount((c) => c + 1);
-        setRatingCounts((prev) => ({
-          ...prev,
-          [rating]: prev[rating] + 1,
-        }));
-        navigation.hideCurrent();
-      } finally {
-        setIsSubmitting(false);
+      const result = await recordReview({
+        srsCardId: currentItem.srsCardId,
+        rating,
+      }).catch((error: unknown) => ({
+        ok: false as const,
+        error: {
+          message: mutationErrorMessage(
+            error,
+            "Could not record review. Try again.",
+          ),
+        },
+      }));
+      if (!result.ok) {
+        dispatchWorkflow({ type: "ratingFailed", message: result.error.message });
+        return;
       }
+      dispatchWorkflow({ type: "ratingSucceeded", rating });
+      navigation.hideCurrent();
     },
-    [clearRefreshError, currentItem, isSubmitting, navigation, recordReview],
+    [currentItem, navigation, recordReview, workflow.ratingRequest.status],
   );
 
-  if (isSessionComplete) {
-    return (
-      <>
-        <InlineError message={displayError} />
-        <SrsReviewComplete
-          reviewedCount={reviewedCount}
-          ratingCounts={ratingCounts}
-          reviewedToday={reviewedToday}
-          onLoadMore={handleLoadMore}
-          isLoadingMore={isLoadingMore}
-          noMoreCards={noMoreCards}
-        />
-      </>
-    );
-  }
-
-  if (!currentItem) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <InlineError message={displayError} />
-        <p className="text-muted">Reconnecting...</p>
-      </div>
-    );
-  }
-
-  const currentAnnotation = currentItem.annotation;
+  const handleLoadMore = useCallback(async () => {
+    dispatchWorkflow({ type: "loadMoreStarted" });
+    const result = await forceRefreshQueue().catch((error: unknown) => ({
+      ok: false as const,
+      error: {
+        message: mutationErrorMessage(
+          error,
+          "Could not load more cards. Try again.",
+        ),
+      },
+    }));
+    if (!result.ok) {
+      dispatchWorkflow({ type: "loadMoreFailed", message: result.error.message });
+      return;
+    }
+    dispatchWorkflow({ type: "loadMoreSucceeded", added: result.value.added });
+  }, [forceRefreshQueue]);
 
   return (
-    <>
-      <InlineError message={displayError} />
-      <SrsReviewActive
-        currentItem={currentItem}
-        reviewedCount={reviewedCount}
-        totalCards={totalCards}
-        revealed={revealed}
-        isSubmitting={isSubmitting}
-        tts={tts}
-        onReveal={reveal}
-        onRate={handleRate}
-        annotation={currentAnnotation ? { flagged: currentAnnotation.flagged, note: currentAnnotation.note } : undefined}
-        onToggleFlag={() => {
-          void toggleFlag({ cardId: currentItem.card._id, setId: currentItem.setId });
-        }}
-        onSetNote={(note: string) => {
-          void setNote({ cardId: currentItem.card._id, setId: currentItem.setId, note });
-        }}
-        onEndSession={() => {
-          if (confirm("End review session? Your progress is saved.")) {
-            router.push("/");
-          }
-        }}
-        assistant={
-          <AssistantPanel
-            context={{
-              setId: currentItem.setId,
-              cardId: currentItem.card._id,
-              setName: currentItem.setName,
-              cardFields: currentItem.card.fields,
-              hasNote: Boolean(currentAnnotation?.note?.trim()),
-            }}
-          />
-        }
-      />
-    </>
+    <SrsReviewScreen
+      screenState={screenState}
+      currentItem={currentItem}
+      revealed={revealed}
+      tts={tts}
+      onReveal={reveal}
+      onRate={handleRate}
+      onLoadMore={handleLoadMore}
+    />
   );
 }

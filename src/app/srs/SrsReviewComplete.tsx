@@ -1,26 +1,25 @@
 import Link from "next/link";
-import type {
-  CardRating} from "@/lib/types";
+import type { CardRating } from "@/lib/types";
 import {
   CARD_RATINGS,
   SRS_RATING_LABELS,
   CARD_RATING_SCORES,
 } from "@/lib/types";
+import type { SrsReviewLoadMoreState } from "./srsReviewWorkflow";
+import SrsReviewLoadMoreControls from "./SrsReviewLoadMoreControls";
 
 export default function SrsReviewComplete({
   reviewedCount,
   ratingCounts,
   reviewedToday,
   onLoadMore,
-  isLoadingMore,
-  noMoreCards,
+  loadMore,
 }: {
   reviewedCount: number;
   ratingCounts: Record<CardRating, number>;
   reviewedToday: number;
   onLoadMore: () => void;
-  isLoadingMore: boolean;
-  noMoreCards: boolean;
+  loadMore: SrsReviewLoadMoreState;
 }) {
   const totalScore =
     reviewedCount > 0
@@ -83,18 +82,10 @@ export default function SrsReviewComplete({
             >
               Back to Dashboard
             </Link>
-            <button
-              onClick={onLoadMore}
-              disabled={isLoadingMore}
-              className="px-6 py-3 text-sm font-medium border border-edge text-foreground rounded-lg hover:bg-raised transition-colors disabled:opacity-50"
-            >
-              {isLoadingMore ? "Loading..." : "Load more cards"}
-            </button>
-            {noMoreCards && (
-              <p className="text-xs text-muted">
-                No new cards available — you&apos;ve seen them all!
-              </p>
-            )}
+            <SrsReviewLoadMoreControls
+              loadMore={loadMore}
+              onLoadMore={onLoadMore}
+            />
           </div>
         </div>
       </main>
