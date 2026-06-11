@@ -140,9 +140,6 @@
 ## Testing Tooling
 
 ### High-Impact Component Unit Coverage
-- [ ] Add coverage for AI draft preview/refinement components.
-  - Cover card include/exclude toggles, field edits, disabled/refining states, scope counts, model selection, trimmed instructions, and clearing instructions only after applied refinements.
-  - Keep generation/append action behavior outside component tests unless the UI state machine is extracted into a feature-local module.
 - [ ] Add coverage for settings form components with non-trivial save behavior.
   - Start with SRS settings clamping/reset behavior and AI settings provider/key prompt save gating.
   - Prefer pure helpers for value normalization when multiple settings forms need the same behavior.
