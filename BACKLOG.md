@@ -140,9 +140,6 @@
 ## Testing Tooling
 
 ### High-Impact Component Unit Coverage
-- [ ] Add component coverage for CSV import.
-  - Cover valid file preview, invalid file/drop errors, warning display, confirm, cancel, and hidden file input behavior through the visible drop zone.
-  - Keep parser expectations in `csvParser` tests; component tests should focus on file/drop UI state and import callbacks.
 - [ ] Add component coverage for field definition editing.
   - Cover add/edit/remove, role changes, TTS toggle, language editing, read-only names, and disabled add/remove mode.
   - Keep field-definition mutation logic in the existing pure draft helpers; component tests should verify user wiring.
