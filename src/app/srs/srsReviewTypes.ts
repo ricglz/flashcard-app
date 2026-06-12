@@ -5,7 +5,9 @@ type SrsReviewSession = FunctionReturnType<
   typeof api.srsReviewQueue.getReviewSession
 >;
 
-export type SrsReviewItem = Extract<
+export type ActiveSrsReviewSession = Extract<
   SrsReviewSession,
   { ok: true }
->["value"]["queue"][number];
+>["value"];
+
+export type SrsReviewItem = ActiveSrsReviewSession["queue"][number];

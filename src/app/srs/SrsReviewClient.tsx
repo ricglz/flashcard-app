@@ -3,7 +3,7 @@
 import type { Preloaded } from "convex/react";
 import type { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
-import SrsReviewClientInner from "./SrsReviewClientInner";
+import SrsReviewScreen from "./SrsReviewScreen";
 
 type Props = {
   preloadedSession: Preloaded<typeof api.srsReviewQueue.getReviewSession>;
@@ -17,7 +17,7 @@ export default function SrsReviewClient({
   const sessionResult = useOfflinePreloadedQuery(preloadedSession);
   if (!sessionResult.ok) return null;
   return (
-    <SrsReviewClientInner
+    <SrsReviewScreen
       session={sessionResult.value}
       preloadedTtsConfig={preloadedTtsConfig}
     />

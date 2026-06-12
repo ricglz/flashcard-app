@@ -1,39 +1,32 @@
 import type { ReactNode } from "react";
 import StudyCard from "@/components/StudyCard";
-import CardRatingButtons from "@/components/CardRatingButtons";
 import StudyLayout from "@/components/StudyLayout";
 import type { useTtsControls } from "@/hooks/useTtsControls";
-import type { CardRating } from "@/lib/types";
 import type { SrsReviewItem } from "./srsReviewTypes";
-import { SRS_RATING_LABELS } from "@/lib/types";
 
 export default function SrsReviewActive({
   currentItem,
   reviewedCount,
   totalCards,
-  revealed,
-  isSubmitting,
   tts,
   onReveal,
-  onRate,
   onEndSession,
   annotation,
   onToggleFlag,
   onSetNote,
+  reviewControls,
   assistant,
 }: {
   currentItem: SrsReviewItem;
   reviewedCount: number;
   totalCards: number;
-  revealed: boolean;
-  isSubmitting: boolean;
   tts: ReturnType<typeof useTtsControls>;
   onReveal: () => void;
-  onRate: (rating: CardRating) => void;
   onEndSession: () => void;
   annotation?: { flagged: boolean; note?: string };
   onToggleFlag?: () => void;
   onSetNote?: (note: string) => void;
+  reviewControls?: ReactNode;
   assistant?: ReactNode;
 }) {
   return (
@@ -58,18 +51,7 @@ export default function SrsReviewActive({
         onSetNote={onSetNote}
       />
 
-      {revealed && (
-        <div className="mt-8">
-          <p className="text-center text-sm text-muted mb-3">
-            How well did you recall this?
-          </p>
-          <CardRatingButtons
-            onRate={onRate}
-            disabled={isSubmitting}
-            labels={SRS_RATING_LABELS}
-          />
-        </div>
-      )}
+      {reviewControls}
     </StudyLayout>
   );
 }

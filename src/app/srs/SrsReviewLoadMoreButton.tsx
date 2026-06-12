@@ -3,13 +3,15 @@ export default function SrsReviewLoadMoreButton({
   label,
   disabled = false,
 }: {
-  onLoadMore: () => void;
+  onLoadMore: () => void | Promise<void>;
   label: string;
   disabled?: boolean;
 }) {
   return (
     <button
-      onClick={onLoadMore}
+      onClick={() => {
+        void onLoadMore();
+      }}
       disabled={disabled}
       className="px-6 py-3 text-sm font-medium border border-edge text-foreground rounded-lg hover:bg-raised transition-colors disabled:opacity-50"
     >

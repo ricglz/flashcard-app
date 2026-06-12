@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { CardRating } from "@/lib/types";
 import {
@@ -5,21 +6,17 @@ import {
   SRS_RATING_LABELS,
   CARD_RATING_SCORES,
 } from "@/lib/types";
-import type { SrsReviewLoadMoreState } from "./srsReviewWorkflow";
-import SrsReviewLoadMoreControls from "./SrsReviewLoadMoreControls";
 
 export default function SrsReviewComplete({
   reviewedCount,
   ratingCounts,
   reviewedToday,
-  onLoadMore,
-  loadMore,
+  actions,
 }: {
   reviewedCount: number;
   ratingCounts: Record<CardRating, number>;
   reviewedToday: number;
-  onLoadMore: () => void;
-  loadMore: SrsReviewLoadMoreState;
+  actions?: ReactNode;
 }) {
   const totalScore =
     reviewedCount > 0
@@ -82,10 +79,7 @@ export default function SrsReviewComplete({
             >
               Back to Dashboard
             </Link>
-            <SrsReviewLoadMoreControls
-              loadMore={loadMore}
-              onLoadMore={onLoadMore}
-            />
+            {actions}
           </div>
         </div>
       </main>

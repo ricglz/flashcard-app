@@ -6,7 +6,7 @@ export default function SrsReviewLoadMoreControls({
   onLoadMore,
 }: {
   loadMore: SrsReviewLoadMoreState;
-  onLoadMore: () => void;
+  onLoadMore: () => void | Promise<void>;
 }) {
   switch (loadMore.status) {
     case "idle":

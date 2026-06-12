@@ -4,7 +4,7 @@ import type { CardRating} from "@/lib/types";
 import { CARD_RATINGS, CARD_RATING_LABELS } from "@/lib/types";
 
 type Props = {
-  onRate: (rating: CardRating) => void;
+  onRate: (rating: CardRating) => void | Promise<void>;
   disabled?: boolean;
   labels?: Record<CardRating, string>;
 };
@@ -23,7 +23,9 @@ export default function CardRatingButtons({ onRate, disabled, labels }: Props) {
       {CARD_RATINGS.map((rating) => (
         <button
           key={rating}
-          onClick={() => onRate(rating)}
+          onClick={() => {
+            void onRate(rating);
+          }}
           disabled={disabled}
           className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${RATING_COLORS[rating]}`}
         >
