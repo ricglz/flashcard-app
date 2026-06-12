@@ -18,6 +18,9 @@ import PageHeader from "@/components/PageHeader";
 import type { Id } from "../../../convex/_generated/dataModel";
 import WeakCardsList from "./WeakCardsList";
 
+const dateInputClassName =
+  "h-10 w-full min-w-0 px-2.5 py-1.5 border border-edge rounded-lg bg-transparent text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-accent";
+
 export default function WeakSpotsClient({
   preloadedSets,
   preloadedHasLlmKey,
@@ -114,8 +117,8 @@ export default function WeakSpotsClient({
       <PageHeader title="Weak Spots" onBack={() => router.back()} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
-        <div className="grid gap-3 mb-6 sm:grid-cols-2 md:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_minmax(0,8.5rem)_minmax(0,8.5rem)]">
-          <label className="block min-w-0">
+        <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-2 md:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_minmax(0,8.5rem)_minmax(0,8.5rem)]">
+          <label className="block min-w-0 col-span-2 sm:col-span-1">
             <span className="block text-xs text-muted mb-1">Methodology</span>
             <Select
               value={methodology}
@@ -125,7 +128,7 @@ export default function WeakSpotsClient({
               className="w-full min-w-0"
             />
           </label>
-          <label className="block min-w-0">
+          <label className="block min-w-0 col-span-2 sm:col-span-1">
             <span className="block text-xs text-muted mb-1">Set</span>
             <Select
               value={selectedSetId ?? ""}
@@ -145,7 +148,7 @@ export default function WeakSpotsClient({
               type="date"
               value={dateRange.from}
               onChange={(event) => updateDateParam("from", event.target.value)}
-              className="w-full min-w-0 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              className={dateInputClassName}
             />
           </label>
           <label className="block min-w-0">
@@ -154,7 +157,7 @@ export default function WeakSpotsClient({
               type="date"
               value={dateRange.to}
               onChange={(event) => updateDateParam("to", event.target.value)}
-              className="w-full min-w-0 px-3 py-2 border border-edge rounded-lg bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              className={dateInputClassName}
             />
           </label>
           {ai.available && totalWeakCards > 0 && (
@@ -162,7 +165,7 @@ export default function WeakSpotsClient({
               href={generateHref}
               size="sm"
               fullWidth
-              className="whitespace-nowrap sm:col-span-2 md:col-span-4"
+              className="whitespace-nowrap col-span-2 md:col-span-4"
             >
               Generate Remedial Cards
             </LinkButton>
