@@ -17,7 +17,7 @@ export default async function SrsReviewPage() {
     ]);
 
   const session = preloadedQueryResult(preloadedSession);
-  if (session.queue.length === 0) {
+  if (!session.ok || session.value.queue.length === 0) {
     redirect("/");
   }
 

@@ -10,7 +10,7 @@ export default function SrsSettingsSection({
 }: {
   preloaded: Preloaded<typeof api.userSettings.get>;
 }) {
-  const settings = useOfflinePreloadedQuery(preloaded);
-  if (!settings) return null;
-  return <SrsSettingsSectionInner settings={settings} />;
+  const settingsResult = useOfflinePreloadedQuery(preloaded);
+  if (!settingsResult.ok) return null;
+  return <SrsSettingsSectionInner settings={settingsResult.value} />;
 }

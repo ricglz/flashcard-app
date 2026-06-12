@@ -10,15 +10,15 @@ export const getForSet = query({
   args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
     const userId = identity.tokenIdentifier;
 
-    return ctx.db
+    return ok(await ctx.db
       .query("cardAnnotations")
       .withIndex("by_userId_and_setId", (q) =>
         q.eq("userId", userId).eq("setId", args.setId)
       )
-      .collect();
+      .collect());
   },
 });
 
@@ -26,13 +26,13 @@ export const getAll = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
     const userId = identity.tokenIdentifier;
 
-    return ctx.db
+    return ok(await ctx.db
       .query("cardAnnotations")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .collect();
+      .collect());
   },
 });
 
@@ -40,7 +40,7 @@ export const getFlagged = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
     const userId = identity.tokenIdentifier;
 
     const flagged = await ctx.db
@@ -83,7 +83,7 @@ export const getFlagged = query({
     const cards = await Promise.all(cardIds.map((id) => ctx.db.get(id)));
     const cardMap = new Map(cards.filter((c): c is NonNullable<typeof c> => c !== null).map((c) => [c._id, c]));
 
-    return flagged
+    return ok(flagged
       .map((a) => {
         const card = cardMap.get(a.cardId);
         const setData = setMap.get(a.setId);
@@ -102,7 +102,7 @@ export const getFlagged = query({
           ttsOnlyFields: userSetData.defaultTtsOnlyFields,
         };
       })
-      .filter(Boolean);
+      .filter(Boolean));
   },
 });
 

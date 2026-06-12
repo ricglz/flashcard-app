@@ -50,7 +50,8 @@ export default function StudyConfigClient({
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
-  const activeSession = usePreloadedQuery(preloadedActiveSession);
+  const activeSessionResult = usePreloadedQuery(preloadedActiveSession);
+  const activeSession = activeSessionResult.ok ? activeSessionResult.value : null;
   const startSession = useMutation(api.studySessions.start);
   const convexAuth = useConvexAuth();
   const router = useRouter();

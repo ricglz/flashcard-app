@@ -23,7 +23,10 @@ type Props = {
 };
 
 type FlaggedCard = NonNullable<
-  FunctionReturnType<typeof api.cardAnnotations.getFlagged>[number]
+  Extract<
+    FunctionReturnType<typeof api.cardAnnotations.getFlagged>,
+    { ok: true }
+  >["value"][number]
 >;
 
 function isFlaggedCard(card: FlaggedCard | null): card is FlaggedCard {
@@ -35,7 +38,7 @@ export default function FlaggedCardsClient({
   preloadedTtsConfig,
   initialAssistantModels,
 }: Props) {
-  const liveQuery = useOfflinePreloadedQuery(preloaded);
+  const flaggedResult = useOfflinePreloadedQuery(preloaded);
   const tts = useTtsControls(preloadedTtsConfig);
   const toggleFlag = useOfflineMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useOfflineMutation(api.cardAnnotations.setNote);
@@ -44,6 +47,7 @@ export default function FlaggedCardsClient({
   );
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
+  const liveQuery = flaggedResult.ok ? flaggedResult.value : [];
   const flaggedCards = liveQuery.filter(isFlaggedCard);
   const navigation = useCardNavigation({
     orderedIds: flaggedCards.map((card) => card.cardId),

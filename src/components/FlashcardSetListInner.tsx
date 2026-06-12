@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 
-type SetList = NonNullable<FunctionReturnType<typeof api.flashcardSets.list>>;
+type SetList = Extract<
+  FunctionReturnType<typeof api.flashcardSets.list>,
+  { ok: true }
+>["value"];
 
 export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
   const removeSet = useMutation(api.flashcardSets.remove);

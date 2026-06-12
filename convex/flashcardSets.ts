@@ -52,7 +52,7 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
     const links = await ctx.db
       .query("userSets")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
@@ -64,7 +64,7 @@ export const list = query({
         return { ...set, userSet: link };
       })
     );
-    return sets.filter((s) => s !== null);
+    return ok(sets.filter((s) => s !== null));
   },
 });
 
@@ -238,20 +238,30 @@ export const getForkSyncStatus = query({
   args: { setId: v.id("flashcardSets") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const set = await ctx.db.get(args.setId);
-    const origin = set?.origin;
-    if (!set || origin?.kind !== "forked") return null;
+    if (!set) return fail(notFound("Set not found"));
+    const link = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId_and_setId", (q) =>
+        q.eq("userId", identity.tokenIdentifier).eq("setId", args.setId),
+      )
+      .first();
+    if (!link && set.visibility === "private") {
+      return fail(forbidden("You do not have access to this set."));
+    }
+    const origin = set.origin;
+    if (origin.kind !== "forked") return ok(null);
     const { sourceSetId, forkedAt } = origin;
     const source = await ctx.db.get(sourceSetId);
-    if (!source) return { sourceDeleted: true, sourceUpdated: false };
+    if (!source) return ok({ sourceDeleted: true, sourceUpdated: false });
     const sourceUpdatedAt = source.updatedAt;
-    return {
+    return ok({
       sourceDeleted: false,
       sourceUpdated: sourceUpdatedAt > forkedAt,
       sourceCardCount: source.cardCount,
       forkedAt,
-    };
+    });
   },
 });
 

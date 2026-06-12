@@ -32,14 +32,14 @@ export default function WeakSpotsClient({
   const searchParams = useSearchParams();
 
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
-  const userSets = useOfflinePreloadedQuery(preloadedSets);
+  const userSetsResult = useOfflinePreloadedQuery(preloadedSets);
   const dateRange = useMemo(
     () => parseWeakCardsDateRangeParams(searchParams.get("from"), searchParams.get("to")),
     [searchParams],
   );
   const srsEnabledSets = useMemo(
-    () => userSets.filter((s) => s.userSet.srsEnabled),
-    [userSets]
+    () => (userSetsResult.ok ? userSetsResult.value : []).filter((s) => s.userSet.srsEnabled),
+    [userSetsResult],
   );
   const setFilterOptions = useMemo(
     () => ["", ...srsEnabledSets.map((set) => set._id)],

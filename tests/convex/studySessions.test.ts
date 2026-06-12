@@ -358,9 +358,9 @@ describe("studySessions.start", () => {
 
     expect(secondSessionId).toBe(firstSessionId);
 
-    const active = await as.query(api.studySessions.getActiveSession, {
+    const active = await unwrap(await as.query(api.studySessions.getActiveSession, {
       setId,
-    });
+    }));
     expect(active?._id).toBe(firstSessionId);
     expect(active?.frontFields).toEqual(["Front"]);
     expect(active?.backFields).toEqual(["Back"]);
@@ -752,11 +752,11 @@ describe("studySessions.getActiveSession", () => {
       shuffle: false,
     }));
 
-    const active = await as.query(api.studySessions.getActiveSession, {
+    const active = await unwrap(await as.query(api.studySessions.getActiveSession, {
       setId,
-    });
+    }));
     expect(active).not.toBeNull();
-    expect(active!._id).toBe(activeId);
+    expect(active?._id).toBe(activeId);
   });
 
   it("returns null when no active sessions", async () => {
@@ -764,9 +764,9 @@ describe("studySessions.getActiveSession", () => {
     const as = t.withIdentity(TEST_USER);
     const setId = await createSetWithCards(as, 1);
 
-    const active = await as.query(api.studySessions.getActiveSession, {
+    const active = await unwrap(await as.query(api.studySessions.getActiveSession, {
       setId,
-    });
+    }));
     expect(active).toBeNull();
   });
 
@@ -792,12 +792,12 @@ describe("studySessions.getActiveSession", () => {
       shuffle: false,
     }));
 
-    const active = await as.query(api.studySessions.getActiveSession, {
+    const active = await unwrap(await as.query(api.studySessions.getActiveSession, {
       setId,
-    });
+    }));
     expect(active).not.toBeNull();
-    expect(active!._id).toBe(activeId);
-    expect(active!.status).toBe("in_progress");
+    expect(active?._id).toBe(activeId);
+    expect(active?.status).toBe("in_progress");
   });
 });
 
@@ -814,13 +814,13 @@ describe("studySessions.getActiveById", () => {
       shuffle: false,
     }));
 
-    const active = await as.query(api.studySessions.getActiveById, { id: sessionId });
+    const active = await unwrap(await as.query(api.studySessions.getActiveById, { id: sessionId }));
     expect(active).not.toBeNull();
-    expect(active!.status).toBe("in_progress");
+    expect(active?.status).toBe("in_progress");
 
     await as.mutation(api.studySessions.abandon, { sessionId });
 
-    const abandoned = await as.query(api.studySessions.getActiveById, { id: sessionId });
+    const abandoned = await unwrap(await as.query(api.studySessions.getActiveById, { id: sessionId }));
     expect(abandoned).toBeNull();
   });
 });

@@ -87,13 +87,15 @@ function useCardAnnotationsInternal(annotations: Annotation[] | undefined) {
 export function useCardAnnotationsForSetPreloaded(
   preloaded: Preloaded<typeof api.cardAnnotations.getForSet>,
 ) {
-  const annotations = useOfflinePreloadedQuery(preloaded);
+  const annotationsResult = useOfflinePreloadedQuery(preloaded);
+  const annotations = annotationsResult.ok ? annotationsResult.value : undefined;
   return useCardAnnotationsInternal(annotations);
 }
 
 export function useCardAnnotationsAllPreloaded(
   preloaded: Preloaded<typeof api.cardAnnotations.getAll>,
 ) {
-  const annotations = useOfflinePreloadedQuery(preloaded);
+  const annotationsResult = useOfflinePreloadedQuery(preloaded);
+  const annotations = annotationsResult.ok ? annotationsResult.value : undefined;
   return useCardAnnotationsInternal(annotations);
 }

@@ -50,7 +50,7 @@ export default function AiSettingsSection({
 }: {
   preloaded: Preloaded<typeof api.userSettings.get>;
 }) {
-  const settings = useOfflinePreloadedQuery(preloaded);
+  const settingsResult = useOfflinePreloadedQuery(preloaded);
   const updateAiConfig = useMutation(api.userSettings.updateAiConfig);
 
   const [llmProvider, setLlmProvider] = useState<LlmProvider | null>(null);
@@ -64,11 +64,14 @@ export default function AiSettingsSection({
     },
   });
 
-  const savedProvider = isLlmProvider(settings?.llmProvider)
+  if (!settingsResult.ok) return null;
+  const settings = settingsResult.value;
+
+  const savedProvider = isLlmProvider(settings.llmProvider)
     ? settings.llmProvider
     : "";
   const effectiveProvider = llmProvider ?? savedProvider;
-  const savedChatPrompt = settings?.customChatPrompt ?? "";
+  const savedChatPrompt = settings.customChatPrompt ?? "";
   const chatPrompt = chatPromptDraft ?? savedChatPrompt;
 
   return (
@@ -100,13 +103,13 @@ export default function AiSettingsSection({
         {effectiveProvider && (
           <div>
             <label htmlFor="llm-key" className="block text-sm font-medium mb-1">API Key</label>
-            {settings?.llmKeyHint && !llmApiKey && (
+            {settings.llmKeyHint && !llmApiKey && (
               <p className="text-xs text-muted mb-1 font-mono">{settings.llmKeyHint}</p>
             )}
             <TextInput
               id="llm-key"
               type="password"
-              placeholder={settings?.hasLlmKey ? "Enter new key to replace" : "Enter your API key"}
+              placeholder={settings.hasLlmKey ? "Enter new key to replace" : "Enter your API key"}
               value={llmApiKey}
               onChange={(e) => { setLlmApiKey(e.target.value); setLlmSaved(false); }}
             />
@@ -130,7 +133,7 @@ export default function AiSettingsSection({
               if (!provider) {
                 return;
               }
-              if (!llmApiKey && !settings?.hasLlmKey) {
+              if (!llmApiKey && !settings.hasLlmKey) {
                 return;
               }
               void saveConfig(() =>
@@ -141,13 +144,13 @@ export default function AiSettingsSection({
                 })
               );
             }}
-            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === savedChatPrompt) || !((llmProvider ?? settings?.llmProvider) && (llmApiKey || settings?.hasLlmKey))}
+            disabled={llmSaving || (!llmProvider && !llmApiKey && chatPrompt === savedChatPrompt) || !((llmProvider ?? settings.llmProvider) && (llmApiKey || settings.hasLlmKey))}
             loading={llmSaving}
           >
             Save
           </Button>
           {llmSaved && <span className="text-sm text-success">Saved</span>}
-          {settings?.hasLlmKey && (
+          {settings.hasLlmKey && (
             <span className="text-xs text-muted">
               Provider: {settings.llmProvider ?? "not set"}
             </span>

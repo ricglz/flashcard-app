@@ -6,7 +6,14 @@ import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from
 import { populateQueue } from "./srsEngine";
 import { CARD_RATING_SCORES } from "../src/lib/types";
 import { incrementDailyStats } from "./progress";
-import { conflict } from "./domain/result";
+import {
+  conflict,
+  fail,
+  ok,
+  unauthenticated,
+  type CommonFailure,
+  type DomainResult,
+} from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import { validateSrsReviewAction } from "./domain/srsReviewAction";
 import type { FieldDefinition } from "../src/lib/types";
@@ -139,11 +146,23 @@ async function hydrateQueueItems(
   return hydrated;
 }
 
+type HydratedReviewQueue = Awaited<ReturnType<typeof hydrateQueueItems>>;
+
+type ReviewSession = {
+  queue: HydratedReviewQueue;
+  stats: {
+    remaining: number;
+    reviewedToday: number;
+    dayResetUtcHour: number;
+    batchSize: number;
+  };
+};
+
 export const getQueueStats = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
 
     const userId = identity.tokenIdentifier;
     const [remaining, dayStats] = await Promise.all([
@@ -154,7 +173,7 @@ export const getQueueStats = query({
       getSrsDayStatsForUser(ctx, userId),
     ]);
 
-    return { remaining: remaining.length, ...dayStats };
+    return ok({ remaining: remaining.length, ...dayStats });
   },
 });
 
@@ -162,32 +181,25 @@ export const getHydratedQueue = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
 
     const queueItems = await ctx.db
       .query("reviewQueue")
       .withIndex("by_userId_and_order", (q) => q.eq("userId", identity.tokenIdentifier))
       .take(200);
-    return await hydrateQueueItems(ctx, identity.tokenIdentifier, queueItems, false);
+    return ok(await hydrateQueueItems(ctx, identity.tokenIdentifier, queueItems, false));
   },
 });
 
 export const getReviewSession = query({
   args: { batchSize: v.optional(v.number()) },
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<DomainResult<ReviewSession, CommonFailure>> => {
     const batchSize = clampReviewSessionBatchSize(args.batchSize);
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return {
-        queue: [],
-        stats: {
-          remaining: 0,
-          reviewedToday: 0,
-          dayResetUtcHour: SRS_DEFAULTS.DAY_RESET_UTC_HOUR,
-          batchSize,
-        },
-      };
-    }
+    if (!identity) return fail(unauthenticated());
 
     const userId = identity.tokenIdentifier;
     const [queueItems, dayStats] = await Promise.all([
@@ -204,10 +216,10 @@ export const getReviewSession = query({
       true,
     );
 
-    return {
+    return ok({
       queue,
       stats: { remaining: queueItems.length, ...dayStats, batchSize },
-    };
+    });
   },
 });
 

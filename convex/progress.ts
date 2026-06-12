@@ -7,6 +7,7 @@ import {
   fail,
   invalidInput,
   ok,
+  unauthenticated,
   type CommonFailure,
   type DomainResult,
 } from "./domain/result";
@@ -27,6 +28,11 @@ type SetMastery = {
   learning: number;
   review: number;
   avgEase: number;
+};
+
+type SrsProgressSummary = {
+  breakdown: CardStatusBreakdown;
+  mastery: SetMastery[];
 };
 
 export type DailyHistoryEntry = {
@@ -88,7 +94,7 @@ export const getStreakStats = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
 
     const settings = await ctx.db
       .query("userSettings")
@@ -109,7 +115,7 @@ export const getStreakStats = query({
       .take(365);
 
     if (rows.length === 0) {
-      return { currentStreak: 0, longestStreak: 0 };
+      return ok({ currentStreak: 0, longestStreak: 0 });
     }
 
     let currentStreak = 0;
@@ -164,7 +170,7 @@ export const getStreakStats = query({
     }
     longestStreak = Math.max(longestStreak, run);
 
-    return { currentStreak, longestStreak };
+    return ok({ currentStreak, longestStreak });
   },
 });
 
@@ -172,7 +178,7 @@ export const getDailyGoalProgress = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
 
     const settings = await ctx.db
       .query("userSettings")
@@ -197,11 +203,11 @@ export const getDailyGoalProgress = query({
       (todayStats?.sessionCardCount ?? 0);
     const goal = settings?.dailyGoal ?? null;
 
-    return {
+    return ok({
       goal,
       reviewed,
       percentage: goal && goal > 0 ? Math.min(1, reviewed / goal) : null,
-    };
+    });
   },
 });
 
@@ -212,7 +218,7 @@ export const getDailyHistory = query({
     args
   ): Promise<DomainResult<DailyHistoryEntry[], CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return ok([]);
+    if (!identity) return fail(unauthenticated());
     if (!Number.isInteger(args.days) || args.days < 1 || args.days > 365) {
       return fail(
         invalidInput("days must be an integer between 1 and 365", "days")
@@ -254,16 +260,15 @@ export const getDailyHistory = query({
 
 export const getSrsProgressSummary = query({
   args: {},
-  handler: async (ctx): Promise<{
-    breakdown: CardStatusBreakdown;
-    mastery: SetMastery[];
-  }> => {
+  handler: async (
+    ctx,
+  ): Promise<DomainResult<SrsProgressSummary, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
     const empty = {
       breakdown: { new: 0, learning: 0, review: 0 },
       mastery: [],
     };
-    if (!identity) return empty;
+    if (!identity) return fail(unauthenticated());
 
     const userSets = await ctx.db
       .query("userSets")
@@ -273,7 +278,7 @@ export const getSrsProgressSummary = query({
       .take(100);
 
     const enabledSets = userSets.filter((us) => us.srsEnabled);
-    if (enabledSets.length === 0) return empty;
+    if (enabledSets.length === 0) return ok(empty);
 
     const setIds = enabledSets.map((us) => us.setId);
     const [sets, cardsBySet] = await Promise.all([
@@ -349,7 +354,7 @@ export const getSrsProgressSummary = query({
       });
     }
 
-    return { breakdown, mastery };
+    return ok({ breakdown, mastery });
   },
 });
 
@@ -357,7 +362,7 @@ export const getCardStatusBreakdown = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
 
     const userSets = await ctx.db
       .query("userSets")
@@ -368,7 +373,7 @@ export const getCardStatusBreakdown = query({
 
     const enabledSets = userSets.filter((us) => us.srsEnabled);
     if (enabledSets.length === 0)
-      return { new: 0, learning: 0, review: 0 };
+      return ok({ new: 0, learning: 0, review: 0 });
 
     let newCount = 0;
     let learningCount = 0;
@@ -393,7 +398,7 @@ export const getCardStatusBreakdown = query({
       }
     }
 
-    return { new: newCount, learning: learningCount, review: reviewCount };
+    return ok({ new: newCount, learning: learningCount, review: reviewCount });
   },
 });
 
@@ -401,7 +406,7 @@ export const getPerSetMastery = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
 
     const userSets = await ctx.db
       .query("userSets")
@@ -411,7 +416,7 @@ export const getPerSetMastery = query({
       .take(100);
 
     const enabledSets = userSets.filter((us) => us.srsEnabled);
-    if (enabledSets.length === 0) return [];
+    if (enabledSets.length === 0) return ok([]);
 
     const setIds = enabledSets.map((us) => us.setId);
     const [sets, cardsBySet] = await Promise.all([
@@ -466,6 +471,6 @@ export const getPerSetMastery = query({
       });
     }
 
-    return results;
+    return ok(results);
   },
 });

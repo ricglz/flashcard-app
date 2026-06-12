@@ -8,7 +8,10 @@ import { deriveAiAvailability } from "@/lib/aiAvailability";
 import type { AiAvailability } from "@/lib/aiAvailability";
 
 export function useAiAvailableFrom(
-  queryResult: { hasLlmKey: boolean } | null | undefined,
+  queryResult:
+    | { ok: true; value: { hasLlmKey: boolean } }
+    | { ok: false; error: unknown }
+    | undefined,
 ): AiAvailability {
   const isOnline = useOnlineStatus();
   return deriveAiAvailability(isOnline, queryResult);

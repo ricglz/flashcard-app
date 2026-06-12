@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
-import { TEST_USER } from "./helpers";
+import { TEST_USER, unwrap } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -10,7 +10,7 @@ describe("userSettings.get", () => {
   it("returns defaults when no settings exist", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
-    const settings = await as.query(api.userSettings.get);
+    const settings = await unwrap(await as.query(api.userSettings.get));
     expect(settings).toMatchObject({
       maxNewCardsPerDay: 20,
       dayResetUtcHour: 4,
@@ -18,10 +18,10 @@ describe("userSettings.get", () => {
     });
   });
 
-  it("returns null for unauthenticated users", async () => {
+  it("returns an unauthenticated failure for unauthenticated users", async () => {
     const t = convexTest(schema, modules);
     const settings = await t.query(api.userSettings.get);
-    expect(settings).toBeNull();
+    expect(settings).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
 });
 
@@ -36,9 +36,9 @@ describe("userSettings.updateSrsSettings", () => {
       dailyGoal: 0,
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.maxNewCardsPerDay).toBe(10);
-    expect(settings?.dayResetUtcHour).toBe(4);
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.maxNewCardsPerDay).toBe(10);
+    expect(settings.dayResetUtcHour).toBe(4);
   });
 
   it("rounds maxNewCardsPerDay to nearest integer", async () => {
@@ -51,8 +51,8 @@ describe("userSettings.updateSrsSettings", () => {
       dailyGoal: 0,
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.maxNewCardsPerDay).toBe(11);
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.maxNewCardsPerDay).toBe(11);
   });
 
   it("rejects maxNewCardsPerDay outside the allowed range", async () => {
@@ -82,8 +82,8 @@ describe("userSettings.updateSrsSettings", () => {
       dailyGoal: 0,
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.dayResetUtcHour).toBe(8);
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.dayResetUtcHour).toBe(8);
   });
 
   it("rejects hour > 23", async () => {
@@ -118,8 +118,8 @@ describe("userSettings.updateSrsSettings", () => {
       dailyGoal: 0,
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.dayResetUtcHour).toBe(5);
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.dayResetUtcHour).toBe(5);
   });
 
   it("rejects unauthenticated users", async () => {
@@ -146,10 +146,10 @@ describe("userSettings.updateSrsSettings", () => {
       dailyGoal: 0,
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.maxNewCardsPerDay).toBe(15);
-    expect(settings?.hasLlmKey).toBe(true);
-    expect(settings?.llmProvider).toBe("openai");
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.maxNewCardsPerDay).toBe(15);
+    expect(settings.hasLlmKey).toBe(true);
+    expect(settings.llmProvider).toBe("openai");
   });
 });
 
@@ -160,8 +160,8 @@ describe("userSettings.updateTtsPlaybackSpeed", () => {
 
     await as.mutation(api.userSettings.updateTtsPlaybackSpeed, { ttsPlaybackSpeed: 1.5 });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.ttsPlaybackSpeed).toBe(1.5);
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.ttsPlaybackSpeed).toBe(1.5);
   });
 
   it("rejects ttsPlaybackSpeed below 0.25", async () => {
@@ -195,9 +195,9 @@ describe("userSettings.updateAiConfig", () => {
       apiKey: "sk-test-key",
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.hasLlmKey).toBe(true);
-    expect(settings?.llmProvider).toBe("openai");
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.hasLlmKey).toBe(true);
+    expect(settings.llmProvider).toBe("openai");
   });
 
   it("keeps existing key when apiKey is empty string", async () => {
@@ -214,10 +214,10 @@ describe("userSettings.updateAiConfig", () => {
       customChatPrompt: "New prompt",
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.llmProvider).toBe("anthropic");
-    expect(settings?.hasLlmKey).toBe(true);
-    expect(settings?.customChatPrompt).toBe("New prompt");
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.llmProvider).toBe("anthropic");
+    expect(settings.hasLlmKey).toBe(true);
+    expect(settings.customChatPrompt).toBe("New prompt");
   });
 
   it("does not overwrite SRS fields", async () => {
@@ -234,10 +234,10 @@ describe("userSettings.updateAiConfig", () => {
       apiKey: "sk-test",
     });
 
-    const settings = await as.query(api.userSettings.get);
-    expect(settings?.maxNewCardsPerDay).toBe(15);
-    expect(settings?.dayResetUtcHour).toBe(8);
-    expect(settings?.hasLlmKey).toBe(true);
+    const settings = await unwrap(await as.query(api.userSettings.get));
+    expect(settings.maxNewCardsPerDay).toBe(15);
+    expect(settings.dayResetUtcHour).toBe(8);
+    expect(settings.hasLlmKey).toBe(true);
   });
 
   it("rejects unauthenticated users", async () => {

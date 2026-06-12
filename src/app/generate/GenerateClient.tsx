@@ -26,7 +26,11 @@ export default function GenerateClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userSets = useOfflinePreloadedQuery(preloadedSets);
+  const userSetsResult = useOfflinePreloadedQuery(preloadedSets);
+  const userSets = useMemo(
+    () => (userSetsResult.ok ? userSetsResult.value : []),
+    [userSetsResult],
+  );
   const generateCards = useAction(api.ai.generateRemedialCards);
   const confirmSet = useAction(api.ai.confirmGeneratedSet);
 

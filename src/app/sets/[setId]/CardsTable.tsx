@@ -10,7 +10,7 @@ type Props = {
   cards: Doc<"flashcards">[];
   sortedFieldDefs: FieldDefinition[];
   isOwner: boolean;
-  ttsPlaybackSpeed: number | undefined;
+  ttsPlaybackSpeed: number;
 };
 
 export default function CardsTable({

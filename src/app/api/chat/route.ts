@@ -43,6 +43,10 @@ function sseEvent(data: unknown): string {
 const noToolsCache = new Map<string, boolean>();
 
 type ChatRequestBody = typeof ChatRequestSchema.Type;
+type AiConfigFailure = Extract<
+  FunctionReturnType<typeof api.userSettings.getAiConfigForServer>,
+  { ok: false }
+>["error"];
 
 function getCacheKey(provider: string, modelName: string): string {
   return `${provider}:${modelName}`;
@@ -50,6 +54,21 @@ function getCacheKey(provider: string, modelName: string): string {
 
 function normalizeGenerationError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
+}
+
+function aiConfigFailureResponse(error: AiConfigFailure) {
+  switch (error._tag) {
+    case "Unauthenticated":
+      return { status: 401, message: "Please sign in to continue." };
+    case "Forbidden":
+      return { status: 403, message: "You do not have access to chat configuration." };
+    case "NotFound":
+      return { status: 404, message: "Chat configuration was not found." };
+    case "InvalidInput":
+      return { status: 400, message: "Chat configuration is invalid." };
+    case "Conflict":
+      return { status: 409, message: "Chat configuration is temporarily unavailable." };
+  }
 }
 
 async function generateWithPlugins(
@@ -294,17 +313,25 @@ export async function POST(request: Request) {
   }
   const body = decoded.right;
 
-  const aiConfig = await fetchQuery(
+  const aiConfigResult = await fetchQuery(
     api.userSettings.getAiConfigForServer,
     {},
     { token },
   );
-  if (!aiConfig) {
+  if (!aiConfigResult.ok) {
+    const response = aiConfigFailureResponse(aiConfigResult.error);
+    return Response.json(
+      { error: response.message },
+      { status: response.status },
+    );
+  }
+  if (aiConfigResult.value === null) {
     return Response.json(
       { error: "No API key configured. Add one in Settings." },
       { status: 400 },
     );
   }
+  const aiConfig = aiConfigResult.value;
   if (request.signal.aborted) return new Response(null, { status: 499 });
 
   const customChatPrompt = aiConfig.customChatPrompt?.trim();

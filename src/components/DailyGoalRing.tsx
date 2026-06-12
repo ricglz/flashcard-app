@@ -10,7 +10,7 @@ export default function DailyGoalRing({
 }: {
   preloaded: Preloaded<typeof api.progress.getDailyGoalProgress>;
 }) {
-  const progress = useOfflinePreloadedQuery(preloaded);
-  if (!progress) return null;
-  return <DailyGoalRingInner progress={progress} />;
+  const progressResult = useOfflinePreloadedQuery(preloaded);
+  if (!progressResult.ok) return null;
+  return <DailyGoalRingInner progress={progressResult.value} />;
 }

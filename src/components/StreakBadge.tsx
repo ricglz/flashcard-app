@@ -10,7 +10,7 @@ export default function StreakBadge({
 }: {
   preloaded: Preloaded<typeof api.progress.getStreakStats>;
 }) {
-  const stats = useOfflinePreloadedQuery(preloaded);
-  if (!stats) return null;
-  return <StreakBadgeInner stats={stats} />;
+  const statsResult = useOfflinePreloadedQuery(preloaded);
+  if (!statsResult.ok) return null;
+  return <StreakBadgeInner stats={statsResult.value} />;
 }

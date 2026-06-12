@@ -25,7 +25,7 @@ describe("cardAnnotations.addAiNoteToCurrentCard", () => {
     });
 
     expect(result).toMatchObject({ ok: true, value: { note: "A concise takeaway." } });
-    const annotations = await as.query(api.cardAnnotations.getForSet, { setId });
+    const annotations = await unwrap(await as.query(api.cardAnnotations.getForSet, { setId }));
     expect(annotations).toMatchObject([
       { cardId: card._id, setId, flagged: false, note: "A concise takeaway." },
     ]);
@@ -44,7 +44,7 @@ describe("cardAnnotations.addAiNoteToCurrentCard", () => {
       note: "Review this distinction.",
     }));
 
-    const annotations = await as.query(api.cardAnnotations.getForSet, { setId });
+    const annotations = await unwrap(await as.query(api.cardAnnotations.getForSet, { setId }));
     expect(annotations).toMatchObject([
       { cardId: card._id, flagged: true, note: "Review this distinction." },
     ]);

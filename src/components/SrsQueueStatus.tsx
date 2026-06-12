@@ -12,8 +12,13 @@ export default function SrsQueueStatus({
   preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
   preloadedSettings: Preloaded<typeof api.userSettings.get>;
 }) {
-  const stats = useOfflinePreloadedQuery(preloadedStats);
-  const settings = useOfflinePreloadedQuery(preloadedSettings);
-  if (!stats) return null;
-  return <SrsQueueStatusInner stats={stats} settings={settings} />;
+  const statsResult = useOfflinePreloadedQuery(preloadedStats);
+  const settingsResult = useOfflinePreloadedQuery(preloadedSettings);
+  if (!statsResult.ok) return null;
+  return (
+    <SrsQueueStatusInner
+      stats={statsResult.value}
+      settings={settingsResult.ok ? settingsResult.value : null}
+    />
+  );
 }

@@ -10,6 +10,7 @@ export default function FlashcardSetList({
 }: {
   preloaded: Preloaded<typeof api.flashcardSets.list>;
 }) {
-  const sets = useOfflinePreloadedQuery(preloaded);
-  return <FlashcardSetListInner sets={sets} />;
+  const setsResult = useOfflinePreloadedQuery(preloaded);
+  if (!setsResult.ok) return null;
+  return <FlashcardSetListInner sets={setsResult.value} />;
 }

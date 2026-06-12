@@ -112,7 +112,7 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) return fail(unauthenticated());
     const links = await ctx.db
       .query("userSets")
       .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
@@ -124,7 +124,7 @@ export const list = query({
         return { ...set, userSet: link };
       })
     );
-    return sets.filter((s) => s !== null);
+    return ok(sets.filter((s) => s !== null));
   },
 });
 

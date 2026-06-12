@@ -9,12 +9,12 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 export function useTtsControls(
   preloaded: Preloaded<typeof api.userSettings.getTtsConfig>,
 ) {
-  const config = useOfflinePreloadedQuery(preloaded);
+  const configResult = useOfflinePreloadedQuery(preloaded);
   const updateSettings = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [localTtsSpeed, setLocalTtsSpeed] = useState<number | null>(null);
 
-  const speed = localTtsSpeed ?? config?.ttsPlaybackSpeed ?? 0.75;
+  const speed = localTtsSpeed ?? (configResult.ok ? configResult.value.ttsPlaybackSpeed : 0.75);
 
   const onSpeedChange = useCallback(
     (s: number) => {

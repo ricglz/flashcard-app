@@ -3,7 +3,13 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { cliScopeValidator } from "./schema";
-import { unauthenticated, forbidden } from "./domain/result";
+import {
+  fail,
+  forbidden,
+  notFound,
+  ok,
+  unauthenticated,
+} from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
 
 const TOKEN_PREFIX = "fcai";
@@ -67,7 +73,7 @@ export const getStatus = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const now = Date.now();
     const tokens = await ctx.db
       .query("cliAccessTokens")
@@ -81,8 +87,8 @@ export const getStatus = query({
           (token.absoluteExpiresAt === undefined || token.absoluteExpiresAt > now)
       )
       .sort((a, b) => b.createdAt - a.createdAt)[0];
-    if (!active) return { enabled: false as const };
-    return {
+    if (!active) return ok({ enabled: false as const });
+    return ok({
       enabled: true as const,
       publicId: active.publicId,
       label: active.label,
@@ -91,7 +97,7 @@ export const getStatus = query({
       lastUsedAt: active.lastUsedAt,
       expiresAt: active.expiresAt,
       absoluteExpiresAt: active.absoluteExpiresAt,
-    };
+    });
   },
 });
 
@@ -213,13 +219,15 @@ export const getByPublicId = query({
   args: { publicId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const row = await ctx.db
       .query("cliAccessTokens")
       .withIndex("by_publicId", (q) => q.eq("publicId", args.publicId))
       .unique();
-    if (!row || row.userId !== identity.tokenIdentifier) return null;
-    return {
+    if (!row || row.userId !== identity.tokenIdentifier) {
+      return fail(notFound("CLI token not found."));
+    }
+    return ok({
       publicId: row.publicId,
       label: row.label,
       scopes: row.scopes,
@@ -228,6 +236,6 @@ export const getByPublicId = query({
       expiresAt: row.expiresAt,
       absoluteExpiresAt: row.absoluteExpiresAt,
       revokedAt: row.revokedAt,
-    };
+    });
   },
 });

@@ -6,6 +6,7 @@ import {
   insertQueuedSrsCardForTest,
   insertSrsReviewForTest,
   TEST_USER,
+  unwrap,
 } from "./helpers";
 import type { TestDb } from "./testTypes";
 
@@ -64,7 +65,7 @@ describe("getHydratedQueue", () => {
       }
     });
 
-    const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
+    const queue = await unwrap(await as.query(api.srsReviewQueue.getHydratedQueue));
     expect(queue).toHaveLength(3);
 
     expect(queue[0]!.card.fields).toEqual({ Front: "Q0", Back: "A0" });
@@ -79,7 +80,7 @@ describe("getHydratedQueue", () => {
     const t = createTestDb();
     const as = t.withIdentity(TEST_USER);
 
-    const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
+    const queue = await unwrap(await as.query(api.srsReviewQueue.getHydratedQueue));
     expect(queue).toEqual([]);
   });
 
@@ -102,7 +103,7 @@ describe("getHydratedQueue", () => {
       });
     });
 
-    const queue = await as.query(api.srsReviewQueue.getHydratedQueue);
+    const queue = await unwrap(await as.query(api.srsReviewQueue.getHydratedQueue));
 
     expect(queue).toHaveLength(1);
     expect(queue[0]!.card.fields).toEqual({ Front: "Queued", Back: "Included" });
@@ -200,7 +201,7 @@ describe("getReviewSession", () => {
       }
     });
 
-    const session = await as.query(api.srsReviewQueue.getReviewSession, {});
+    const session = await unwrap(await as.query(api.srsReviewQueue.getReviewSession, {}));
 
     expect(session.stats).toMatchObject({
       remaining: 2,
@@ -234,7 +235,7 @@ describe("getReviewSession", () => {
       }
     });
 
-    const session = await as.query(api.srsReviewQueue.getReviewSession, {});
+    const session = await unwrap(await as.query(api.srsReviewQueue.getReviewSession, {}));
 
     expect(session.stats.remaining).toBe(60);
     expect(session.stats.batchSize).toBe(50);
@@ -258,9 +259,9 @@ describe("getReviewSession", () => {
       }
     });
 
-    const session = await as.query(api.srsReviewQueue.getReviewSession, {
+    const session = await unwrap(await as.query(api.srsReviewQueue.getReviewSession, {
       batchSize: 500,
-    });
+    }));
 
     expect(session.stats.remaining).toBe(120);
     expect(session.stats.batchSize).toBe(100);
@@ -312,9 +313,9 @@ describe("getReviewSession", () => {
       });
     });
 
-    const session = await as.query(api.srsReviewQueue.getReviewSession, {
+    const session = await unwrap(await as.query(api.srsReviewQueue.getReviewSession, {
       batchSize: 1,
-    });
+    }));
 
     expect(session.queue).toHaveLength(1);
     expect(session.queue[0]!.annotation).toEqual({
@@ -329,20 +330,12 @@ describe("getReviewSession", () => {
     );
   });
 
-  it("returns an empty safe session when unauthenticated", async () => {
+  it("returns an unauthenticated failure when unauthenticated", async () => {
     const t = createTestDb();
 
     const session = await t.query(api.srsReviewQueue.getReviewSession, {});
 
-    expect(session).toEqual({
-      queue: [],
-      stats: {
-        remaining: 0,
-        reviewedToday: 0,
-        dayResetUtcHour: 4,
-        batchSize: 50,
-      },
-    });
+    expect(session).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
   });
 });
 
@@ -368,9 +361,9 @@ describe("getQueueStats", () => {
     ]);
 
     const as = t.withIdentity(TEST_USER);
-    const stats = await as.query(api.srsReviewQueue.getQueueStats);
+    const stats = await unwrap(await as.query(api.srsReviewQueue.getQueueStats));
 
-    expect(stats?.reviewedToday).toBe(2);
+    expect(stats.reviewedToday).toBe(2);
   });
 
   it("counts reviewedToday after more than 500 older reviews", async () => {
@@ -390,9 +383,9 @@ describe("getQueueStats", () => {
     ]);
 
     const as = t.withIdentity(TEST_USER);
-    const stats = await as.query(api.srsReviewQueue.getQueueStats);
+    const stats = await unwrap(await as.query(api.srsReviewQueue.getQueueStats));
 
-    expect(stats?.reviewedToday).toBe(2);
+    expect(stats.reviewedToday).toBe(2);
   });
 
   it("counts reviewedToday using custom day boundary", async () => {
@@ -409,9 +402,9 @@ describe("getQueueStats", () => {
 
     await setupSetWithSrsReviews(t, [beforeBoundary, afterBoundary]);
 
-    const stats = await as.query(api.srsReviewQueue.getQueueStats);
+    const stats = await unwrap(await as.query(api.srsReviewQueue.getQueueStats));
 
-    expect(stats?.reviewedToday).toBe(1);
+    expect(stats.reviewedToday).toBe(1);
   });
 
   it("returns dayResetUtcHour in response", async () => {
@@ -421,8 +414,8 @@ describe("getQueueStats", () => {
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 12, dailyGoal: 0 });
 
-    const stats = await as.query(api.srsReviewQueue.getQueueStats);
-    expect(stats?.dayResetUtcHour).toBe(12);
+    const stats = await unwrap(await as.query(api.srsReviewQueue.getQueueStats));
+    expect(stats.dayResetUtcHour).toBe(12);
   });
 });
 

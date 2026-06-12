@@ -6,7 +6,14 @@ import { assertMemberEffect } from "./userSets";
 import { incrementDailyStats } from "./progress";
 import { shuffleArray } from "../src/lib/shuffle";
 import { validateStudySessionSetupEffect, type StudySessionSetupFailure } from "./domain/studySessionSetup";
-import { fail, notFound, ok, unauthenticated, type CommonFailure } from "./domain/result";
+import {
+  fail,
+  notFound,
+  ok,
+  unauthenticated,
+  type CommonFailure,
+  type DomainResult,
+} from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import type { ActiveStudySession } from "../src/lib/types";
 import { CARD_RATING_SCORES } from "../src/lib/types";
@@ -25,9 +32,12 @@ function isActiveStudySession(
 
 export const getActiveSession = query({
   args: { setId: v.id("flashcardSets") },
-  handler: async (ctx, args): Promise<ActiveStudySession | null> => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<DomainResult<ActiveStudySession | null, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const session = await ctx.db
       .query("studySessions")
       .withIndex("by_setId_and_userId_and_status", (q) =>
@@ -37,17 +47,20 @@ export const getActiveSession = query({
           .eq("status", "in_progress")
       )
       .first();
-    return isActiveStudySession(session, identity.tokenIdentifier) ? session : null;
+    return ok(isActiveStudySession(session, identity.tokenIdentifier) ? session : null);
   },
 });
 
 export const getActiveById = query({
   args: { id: v.id("studySessions") },
-  handler: async (ctx, args): Promise<ActiveStudySession | null> => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<DomainResult<ActiveStudySession | null, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const session = await ctx.db.get(args.id);
-    return isActiveStudySession(session, identity.tokenIdentifier) ? session : null;
+    return ok(isActiveStudySession(session, identity.tokenIdentifier) ? session : null);
   },
 });
 

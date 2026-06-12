@@ -31,9 +31,11 @@ export default function ProgressClient({
   const historyState = classifyProgressHistoryResult(historyResult);
   const history =
     historyState.status === "ready" ? historyState.history : undefined;
-  const srsSummary = useOfflinePreloadedQuery(preloadedSrsSummary);
-  const breakdown = srsSummary.breakdown;
-  const mastery = srsSummary.mastery;
+  const srsSummaryResult = useOfflinePreloadedQuery(preloadedSrsSummary);
+  const breakdown = srsSummaryResult.ok
+    ? srsSummaryResult.value.breakdown
+    : { new: 0, learning: 0, review: 0 };
+  const mastery = srsSummaryResult.ok ? srsSummaryResult.value.mastery : [];
   const historyCacheKey = buildCacheKey(api.progress.getDailyHistory, { days });
 
   useEffect(() => {
@@ -66,6 +68,12 @@ export default function ProgressClient({
         <StreakBadge preloaded={preloadedStreak} />
         <DailyGoalRing preloaded={preloadedGoal} />
       </div>
+
+      {!srsSummaryResult.ok && (
+        <div className="h-24 flex items-center justify-center text-sm text-muted">
+          {srsSummaryResult.error.message}
+        </div>
+      )}
 
       {historyState.status === "loading" ? (
         <div className="h-40 flex items-center justify-center">

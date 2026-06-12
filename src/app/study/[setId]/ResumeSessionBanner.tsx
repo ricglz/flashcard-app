@@ -4,7 +4,12 @@ import type { api } from "../../../../convex/_generated/api";
 
 type Props = {
   setId: string;
-  activeSession: NonNullable<FunctionReturnType<typeof api.studySessions.getActiveSession>>;
+  activeSession: NonNullable<
+    Extract<
+      FunctionReturnType<typeof api.studySessions.getActiveSession>,
+      { ok: true }
+    >["value"]
+  >;
 };
 
 export default function ResumeSessionBanner({ setId, activeSession }: Props) {

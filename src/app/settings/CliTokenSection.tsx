@@ -19,7 +19,7 @@ export default function CliTokenSection({
 }: {
   preloaded: Preloaded<typeof api.cliTokens.getStatus>;
 }) {
-  const status = usePreloadedQuery(preloaded);
+  const statusResult = usePreloadedQuery(preloaded);
   const createToken = useMutation(api.cliTokens.create);
   const revokeToken = useMutation(api.cliTokens.revoke);
   const [newToken, setNewToken] = useState<string | null>(null);
@@ -75,9 +75,9 @@ export default function CliTokenSection({
         </p>
       </div>
 
-      {status === null ? (
+      {!statusResult.ok ? (
         <p className="text-sm text-muted">Unable to load status.</p>
-      ) : status.enabled ? (
+      ) : statusResult.value.enabled ? (
         <div className="space-y-3 text-sm">
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="p-3 bg-raised rounded-lg">
@@ -86,15 +86,15 @@ export default function CliTokenSection({
             </div>
             <div className="p-3 bg-raised rounded-lg">
               <p className="text-xs text-muted">Token</p>
-              <p className="font-mono text-xs">fcai_{status.publicId}_••••••••</p>
+              <p className="font-mono text-xs">fcai_{statusResult.value.publicId}_••••••••</p>
             </div>
             <div className="p-3 bg-raised rounded-lg">
               <p className="text-xs text-muted">Last used</p>
-              <p>{formatDate(status.lastUsedAt)}</p>
+              <p>{formatDate(statusResult.value.lastUsedAt)}</p>
             </div>
             <div className="p-3 bg-raised rounded-lg">
               <p className="text-xs text-muted">Expires if unused</p>
-              <p>{formatDate(status.expiresAt)}</p>
+              <p>{formatDate(statusResult.value.expiresAt)}</p>
             </div>
           </div>
           <div className="flex gap-2">

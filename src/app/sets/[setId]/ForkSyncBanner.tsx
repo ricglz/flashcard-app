@@ -10,8 +10,9 @@ export default function ForkSyncBanner({
 }: {
   preloaded: Preloaded<typeof api.flashcardSets.getForkSyncStatus>;
 }) {
-  const status = usePreloadedQuery(preloaded);
-  if (!status) return null;
+  const statusResult = usePreloadedQuery(preloaded);
+  if (!statusResult.ok || statusResult.value === null) return null;
+  const status = statusResult.value;
 
   if (status.sourceDeleted) {
     return (

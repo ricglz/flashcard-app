@@ -8,7 +8,10 @@ import type { SrsConfig } from "@/components/SrsSettingsPanel";
 import SrsSettingsPanel from "@/components/SrsSettingsPanel";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 
-type Settings = NonNullable<FunctionReturnType<typeof api.userSettings.get>>;
+type Settings = Extract<
+  FunctionReturnType<typeof api.userSettings.get>,
+  { ok: true }
+>["value"];
 
 export default function SrsSettingsSectionInner({ settings }: { settings: Settings }) {
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);

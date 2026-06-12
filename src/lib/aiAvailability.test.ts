@@ -3,7 +3,7 @@ import { deriveAiAvailability } from "./aiAvailability";
 
 describe("deriveAiAvailability", () => {
   it("returns offline when browser is offline, even if hasLlmKey is true", () => {
-    expect(deriveAiAvailability(false, { hasLlmKey: true })).toEqual({
+    expect(deriveAiAvailability(false, { ok: true, value: { hasLlmKey: true } })).toEqual({
       available: false,
       reason: "offline",
     });
@@ -23,22 +23,25 @@ describe("deriveAiAvailability", () => {
     });
   });
 
-  it("returns no-key when queryResult is null (unauthenticated)", () => {
-    expect(deriveAiAvailability(true, null)).toEqual({
+  it("returns no-key when the query returns an auth failure", () => {
+    expect(deriveAiAvailability(true, {
+      ok: false,
+      error: { _tag: "Unauthenticated", message: "Please sign in to continue." },
+    })).toEqual({
       available: false,
       reason: "no-key",
     });
   });
 
   it("returns no-key when hasLlmKey is false", () => {
-    expect(deriveAiAvailability(true, { hasLlmKey: false })).toEqual({
+    expect(deriveAiAvailability(true, { ok: true, value: { hasLlmKey: false } })).toEqual({
       available: false,
       reason: "no-key",
     });
   });
 
   it("returns available when online and hasLlmKey is true", () => {
-    expect(deriveAiAvailability(true, { hasLlmKey: true })).toEqual({
+    expect(deriveAiAvailability(true, { ok: true, value: { hasLlmKey: true } })).toEqual({
       available: true,
       hasLlmKey: true,
     });

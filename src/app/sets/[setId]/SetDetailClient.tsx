@@ -27,6 +27,8 @@ import VisitorActions from "./VisitorActions";
 import AiAppendFlow from "./AiAppendFlow";
 import ForkSyncBanner from "./ForkSyncBanner";
 
+const DEFAULT_TTS_PLAYBACK_SPEED = 0.75;
+
 type Props = {
   setId: string;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
@@ -50,7 +52,7 @@ export default function SetDetailClient({
   const cardsResult = usePreloadedQuery(preloadedCards);
   const cards = cardsResult.ok ? cardsResult.value : [];
   const router = useRouter();
-  const ttsConfig = useOfflinePreloadedQuery(preloadedTtsConfig);
+  const ttsConfigResult = useOfflinePreloadedQuery(preloadedTtsConfig);
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
@@ -209,7 +211,11 @@ export default function SetDetailClient({
           cards={cards}
           sortedFieldDefs={sortedFieldDefs}
           isOwner={isOwner}
-          ttsPlaybackSpeed={ttsConfig?.ttsPlaybackSpeed}
+          ttsPlaybackSpeed={
+            ttsConfigResult.ok
+              ? ttsConfigResult.value.ttsPlaybackSpeed
+              : DEFAULT_TTS_PLAYBACK_SPEED
+          }
         />
       </main>
     </div>

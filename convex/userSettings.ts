@@ -4,7 +4,13 @@ import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { SRS_DEFAULTS } from "./srs";
-import { type CommonFailure } from "./domain/result";
+import {
+  fail,
+  ok,
+  unauthenticated,
+  type CommonFailure,
+  type DomainResult,
+} from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
 import {
   validateMaxNewCardsPerDayEffect,
@@ -58,16 +64,16 @@ export const get = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
     const { llmApiKey: _stripped, ...safe } = settings ?? {};
     const key = settings?.llmApiKey;
-    return {
+    return ok({
       ...DEFAULTS,
       ...safe,
       hasLlmKey: !!key,
       llmKeyHint: key ? `${"•".repeat(Math.min(key.length - 4, 20))}${key.slice(-4)}` : null,
-    };
+    });
   },
 });
 
@@ -75,9 +81,9 @@ export const getTtsConfig = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
-    return { ttsPlaybackSpeed: settings?.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed };
+    return ok({ ttsPlaybackSpeed: settings?.ttsPlaybackSpeed ?? DEFAULTS.ttsPlaybackSpeed });
   },
 });
 
@@ -85,9 +91,9 @@ export const hasLlmKey = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
-    return { hasLlmKey: !!settings?.llmApiKey };
+    return ok({ hasLlmKey: !!settings?.llmApiKey });
   },
 });
 
@@ -179,15 +185,21 @@ export type UserSettingsFailure = CommonFailure | SrsSettingsFailure;
 
 export const getAiConfigForServer = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (
+    ctx,
+  ): Promise<DomainResult<{
+    provider: string;
+    apiKey: string;
+    customChatPrompt?: string;
+  } | null, CommonFailure>> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    if (!identity) return fail(unauthenticated());
     const settings = await getSettingsByUserId(ctx, identity.tokenIdentifier);
-    if (!settings?.llmApiKey || !settings.llmProvider) return null;
-    return {
+    if (!settings?.llmApiKey || !settings.llmProvider) return ok(null);
+    return ok({
       provider: settings.llmProvider,
       apiKey: settings.llmApiKey,
       customChatPrompt: settings.customChatPrompt,
-    };
+    });
   },
 });

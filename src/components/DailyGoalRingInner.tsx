@@ -6,7 +6,10 @@ import type { api } from "../../convex/_generated/api";
 const RADIUS = 36;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-type DailyGoalProgress = NonNullable<FunctionReturnType<typeof api.progress.getDailyGoalProgress>>;
+type DailyGoalProgress = Extract<
+  FunctionReturnType<typeof api.progress.getDailyGoalProgress>,
+  { ok: true }
+>["value"];
 
 export default function DailyGoalRingInner({ progress }: { progress: DailyGoalProgress }) {
   if (progress.goal === null) {

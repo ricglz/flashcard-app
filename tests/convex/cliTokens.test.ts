@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { api } from "../../convex/_generated/api";
 import { parseCliToken } from "../../convex/cliTokens";
 import schema from "../../convex/schema";
-import { TEST_USER } from "./helpers";
+import { TEST_USER, unwrap } from "./helpers";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
 
@@ -48,7 +48,7 @@ describe("cliTokens", () => {
     const created = await as.mutation(api.cliTokens.create, {});
     if (!created.ok) throw new Error("Expected ok result");
 
-    const status = await as.query(api.cliTokens.getStatus, {});
+    const status = await unwrap(await as.query(api.cliTokens.getStatus, {}));
     expect(status).toMatchObject({
       enabled: true,
       publicId: created.value.publicId,

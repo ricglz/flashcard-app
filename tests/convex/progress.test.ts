@@ -46,9 +46,8 @@ describe("incrementDailyStats via recordResult", () => {
       rating: "good",
     });
 
-    const goalProgress = await as.query(api.progress.getDailyGoalProgress, {});
-    expect(goalProgress).not.toBeNull();
-    expect(goalProgress!.reviewed).toBe(1);
+    const goalProgress = await unwrap(await as.query(api.progress.getDailyGoalProgress, {}));
+    expect(goalProgress.reviewed).toBe(1);
   });
 
   it("increments dailyStats on subsequent reviews", async () => {
@@ -75,8 +74,8 @@ describe("incrementDailyStats via recordResult", () => {
       rating: "easy",
     });
 
-    const goalProgress = await as.query(api.progress.getDailyGoalProgress, {});
-    expect(goalProgress!.reviewed).toBe(2);
+    const goalProgress = await unwrap(await as.query(api.progress.getDailyGoalProgress, {}));
+    expect(goalProgress.reviewed).toBe(2);
   });
 });
 
@@ -85,11 +84,10 @@ describe("getDailyGoalProgress", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    const progress = await as.query(api.progress.getDailyGoalProgress, {});
-    expect(progress).not.toBeNull();
-    expect(progress!.goal).toBeNull();
-    expect(progress!.percentage).toBeNull();
-    expect(progress!.reviewed).toBe(0);
+    const progress = await unwrap(await as.query(api.progress.getDailyGoalProgress, {}));
+    expect(progress.goal).toBeNull();
+    expect(progress.percentage).toBeNull();
+    expect(progress.reviewed).toBe(0);
   });
 
   it("returns correct percentage when goal is set", async () => {
@@ -98,8 +96,8 @@ describe("getDailyGoalProgress", () => {
 
     await as.mutation(api.userSettings.updateSrsSettings, { maxNewCardsPerDay: 20, dayResetUtcHour: 4, dailyGoal: 10 });
 
-    const settings = await as.query(api.userSettings.get, {});
-    expect(settings?.dailyGoal).toBe(10);
+    const settings = await unwrap(await as.query(api.userSettings.get, {}));
+    expect(settings.dailyGoal).toBe(10);
 
     const setId = await createSetWithCards(as, 5);
     const sessionId = await unwrap(await as.mutation(api.studySessions.start, {
@@ -115,10 +113,10 @@ describe("getDailyGoalProgress", () => {
       rating: "good",
     });
 
-    const progress = await as.query(api.progress.getDailyGoalProgress, {});
-    expect(progress!.goal).toBe(10);
-    expect(progress!.reviewed).toBe(1);
-    expect(progress!.percentage).toBeCloseTo(0.1);
+    const progress = await unwrap(await as.query(api.progress.getDailyGoalProgress, {}));
+    expect(progress.goal).toBe(10);
+    expect(progress.reviewed).toBe(1);
+    expect(progress.percentage).toBeCloseTo(0.1);
   });
 });
 
@@ -127,10 +125,9 @@ describe("getStreakStats", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    const stats = await as.query(api.progress.getStreakStats, {});
-    expect(stats).not.toBeNull();
-    expect(stats!.currentStreak).toBe(0);
-    expect(stats!.longestStreak).toBe(0);
+    const stats = await unwrap(await as.query(api.progress.getStreakStats, {}));
+    expect(stats.currentStreak).toBe(0);
+    expect(stats.longestStreak).toBe(0);
   });
 
   it("returns streak of 1 after activity today", async () => {
@@ -151,9 +148,9 @@ describe("getStreakStats", () => {
       rating: "good",
     });
 
-    const stats = await as.query(api.progress.getStreakStats, {});
-    expect(stats!.currentStreak).toBe(1);
-    expect(stats!.longestStreak).toBe(1);
+    const stats = await unwrap(await as.query(api.progress.getStreakStats, {}));
+    expect(stats.currentStreak).toBe(1);
+    expect(stats.longestStreak).toBe(1);
   });
 });
 
@@ -239,7 +236,7 @@ describe("getPerSetMastery", () => {
       });
     });
 
-    const mastery = await as.query(api.progress.getPerSetMastery, {});
+    const mastery = await unwrap(await as.query(api.progress.getPerSetMastery, {}));
     expect(mastery).toHaveLength(1);
     expect(mastery[0]!.setName).toBe("Test");
     expect(mastery[0]!.total).toBe(3);
@@ -253,7 +250,7 @@ describe("getPerSetMastery", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    const mastery = await as.query(api.progress.getPerSetMastery, {});
+    const mastery = await unwrap(await as.query(api.progress.getPerSetMastery, {}));
     expect(mastery).toEqual([]);
   });
 });
@@ -269,14 +266,13 @@ describe("getCardStatusBreakdown", () => {
       setId,
     });
 
-    const breakdown = await as.query(
+    const breakdown = await unwrap(await as.query(
       api.progress.getCardStatusBreakdown,
       {}
-    );
-    expect(breakdown).not.toBeNull();
-    expect(breakdown!.new).toBe(3);
-    expect(breakdown!.learning).toBe(0);
-    expect(breakdown!.review).toBe(0);
+    ));
+    expect(breakdown.new).toBe(3);
+    expect(breakdown.learning).toBe(0);
+    expect(breakdown.review).toBe(0);
   });
 });
 
@@ -306,11 +302,9 @@ describe("getSrsProgressSummary", () => {
       });
     });
 
-    const [summary, breakdown, mastery] = await Promise.all([
-      as.query(api.progress.getSrsProgressSummary, {}),
-      as.query(api.progress.getCardStatusBreakdown, {}),
-      as.query(api.progress.getPerSetMastery, {}),
-    ]);
+    const summary = await unwrap(await as.query(api.progress.getSrsProgressSummary, {}));
+    const breakdown = await unwrap(await as.query(api.progress.getCardStatusBreakdown, {}));
+    const mastery = await unwrap(await as.query(api.progress.getPerSetMastery, {}));
 
     expect(summary.breakdown).toEqual(breakdown);
     expect(summary.mastery).toEqual(mastery);
@@ -320,7 +314,7 @@ describe("getSrsProgressSummary", () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
 
-    const summary = await as.query(api.progress.getSrsProgressSummary, {});
+    const summary = await unwrap(await as.query(api.progress.getSrsProgressSummary, {}));
 
     expect(summary).toEqual({
       breakdown: { new: 0, learning: 0, review: 0 },

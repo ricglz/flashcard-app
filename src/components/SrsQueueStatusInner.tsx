@@ -14,8 +14,16 @@ import InlineError from "./InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 
-type QueueStats = NonNullable<FunctionReturnType<typeof api.srsReviewQueue.getQueueStats>>;
-type Settings = FunctionReturnType<typeof api.userSettings.get>;
+type QueueStats = Extract<
+  FunctionReturnType<typeof api.srsReviewQueue.getQueueStats>,
+  { ok: true }
+>["value"];
+type Settings =
+  | Extract<
+      FunctionReturnType<typeof api.userSettings.get>,
+      { ok: true }
+    >["value"]
+  | null;
 
 function formatResetTime(dayResetUtcHour: number): string {
   const d = new Date();

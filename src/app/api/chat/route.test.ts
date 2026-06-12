@@ -191,7 +191,7 @@ describe("/api/chat route tool retries", () => {
         };
       }
 
-      return { provider: "groq", apiKey: "key" };
+      return { ok: true, value: { provider: "groq", apiKey: "key" } };
     });
     convex.fetchMutation.mockResolvedValue({
       ok: true,
@@ -219,6 +219,36 @@ describe("/api/chat route tool retries", () => {
     const tools = await plugin.getTools();
     expect(tools.map((tool) => tool.name)).toContain("add_note_to_current_card");
     expect(plugin.handlesTool("add_note_to_current_card")).toBe(true);
+  });
+
+  it("maps AI config domain failures to public HTTP responses", async () => {
+    convex.fetchQuery.mockResolvedValueOnce({
+      ok: false,
+      error: {
+        _tag: "Forbidden",
+        message: "Internal authorization details.",
+      },
+    });
+    const { POST } = await loadRoute();
+
+    const response = await POST(makeChatRequest(chatBody()));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      error: "You do not have access to chat configuration.",
+    });
+  });
+
+  it("keeps missing AI config as a setup error", async () => {
+    convex.fetchQuery.mockResolvedValueOnce({ ok: true, value: null });
+    const { POST } = await loadRoute();
+
+    const response = await POST(makeChatRequest(chatBody()));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "No API key configured. Add one in Settings.",
+    });
   });
 
   it("saves a note through fallback when tool validation fails for a note request", async () => {

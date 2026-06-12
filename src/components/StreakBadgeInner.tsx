@@ -3,7 +3,10 @@
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "../../convex/_generated/api";
 
-type StreakStats = NonNullable<FunctionReturnType<typeof api.progress.getStreakStats>>;
+type StreakStats = Extract<
+  FunctionReturnType<typeof api.progress.getStreakStats>,
+  { ok: true }
+>["value"];
 
 export default function StreakBadgeInner({ stats }: { stats: StreakStats }) {
   return (
