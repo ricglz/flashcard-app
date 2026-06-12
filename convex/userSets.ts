@@ -5,7 +5,6 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { UserIdentity } from "convex/server";
 import * as Effect from "effect/Effect";
 import { userSetRoleValidator } from "./schema";
-import { insertDefaultSrsCard } from "./srs";
 import { fail, ok, unauthenticated, notFound, forbidden, conflict, type CommonFailure } from "./domain/result";
 import {
   fromAsyncDomainResult,
@@ -16,6 +15,9 @@ import {
 import { validateStudySessionSetupEffect } from "./domain/studySessionSetup";
 import { getFieldDefinitions } from "./lib/typed";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
+import {
+  enrollExistingCardsForUser,
+} from "./lib/srsEnrollment";
 
 export async function assertMember(
   ctx: QueryCtx | MutationCtx,
@@ -182,7 +184,11 @@ export const add = mutation({
 
       if (srsEnabled) {
         yield* Effect.promise(() =>
-          enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId),
+          enrollExistingCardsForUser(ctx, {
+            userId: identity.tokenIdentifier,
+            setId: args.setId,
+            srsEnabled,
+          }),
         );
       }
 
@@ -249,7 +255,7 @@ export const enableSrs = mutation({
       if (!link.srsEnabled) {
         yield* Effect.promise(() => ctx.db.patch(link._id, { srsEnabled: true }));
         yield* Effect.promise(() =>
-          enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId),
+          enrollExistingCardsForUser(ctx, { ...link, srsEnabled: true }),
         );
       }
       return null;
@@ -312,70 +318,18 @@ export const remove = mutation({
   },
 });
 
-export async function enrollCardsForSetHelper(
-  ctx: MutationCtx,
-  userId: string,
-  setId: Id<"flashcardSets">
-) {
-  const cards = await ctx.db
-    .query("flashcards")
-    .withIndex("by_setId", (q) => q.eq("setId", setId))
-    .take(1000);
-
-  const existingSrsCards = await ctx.db
-    .query("srsCards")
-    .withIndex("by_userId_and_setId", (q) => q.eq("userId", userId).eq("setId", setId))
-    .take(1000);
-  const existingCardIds = new Set(existingSrsCards.map((sc) => sc.cardId));
-
-  for (const card of cards) {
-    if (!existingCardIds.has(card._id)) await ensureSrsCardForCard(ctx, { userId, cardId: card._id, setId });
-  }
-}
-
-export async function ensureSrsCardForCard(
-  ctx: MutationCtx,
-  {
-    userId,
-    cardId,
-    setId,
-  }: {
-    userId: string;
-    cardId: Id<"flashcards">;
-    setId: Id<"flashcardSets">;
-  },
-) {
-  const existing = await ctx.db
-    .query("srsCards")
-    .withIndex("by_cardId_and_userId", (q) => q.eq("cardId", cardId).eq("userId", userId))
-    .first();
-  if (existing) return existing._id;
-  return await insertDefaultSrsCard(ctx, { userId, cardId, setId });
-}
-
-export async function enrollNewCardForSrsUsers(
-  ctx: MutationCtx,
-  setId: Id<"flashcardSets">,
-  cardId: Id<"flashcards">,
-) {
-  const links = await ctx.db
-    .query("userSets")
-    .withIndex("by_setId", (q) => q.eq("setId", setId))
-    .take(500);
-
-  for (const link of links) {
-    if (link.srsEnabled) {
-      await ensureSrsCardForCard(ctx, { userId: link.userId, cardId, setId });
-    }
-  }
-}
-
 export const enrollCardsForSet = internalMutation({
   args: {
     userId: v.string(),
     setId: v.id("flashcardSets"),
   },
   handler: async (ctx, args) => {
-    await enrollCardsForSetHelper(ctx, args.userId, args.setId);
+    const userSet = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId_and_setId", (q) =>
+        q.eq("userId", args.userId).eq("setId", args.setId)
+      )
+      .first();
+    if (userSet) await enrollExistingCardsForUser(ctx, userSet);
   },
 });

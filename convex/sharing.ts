@@ -1,11 +1,11 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import * as Effect from "effect/Effect";
-import { enrollCardsForSetHelper } from "./userSets";
 import { forbidden, conflict } from "./domain/result";
 import { requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
+import { enrollExistingCardsForUser } from "./lib/srsEnrollment";
 
 export const addToLibrary = mutation({
   args: { setId: v.id("flashcardSets") },
@@ -41,7 +41,11 @@ export const addToLibrary = mutation({
         }),
       );
       yield* Effect.promise(() =>
-        enrollCardsForSetHelper(ctx, identity.tokenIdentifier, args.setId),
+        enrollExistingCardsForUser(ctx, {
+          userId: identity.tokenIdentifier,
+          setId: args.setId,
+          srsEnabled: true,
+        }),
       );
       return userSetId;
     }),

@@ -1,8 +1,12 @@
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { validateCardFields } from "../domain/cardFields";
 import { invalidInput, type CommonFailure, type DomainResult } from "../domain/result";
 import type { FlashcardOrigin } from "../../src/lib/types";
+import {
+  enrollCardsForEnabledSetUsers,
+  ensureSrsCardForCard,
+} from "./srsEnrollment";
 
 export const MAX_CARDS_PER_SET = 1000;
 export const MAX_CARDS_PER_BATCH = 200;
@@ -10,6 +14,22 @@ export const MAX_CARDS_PER_BATCH = 200;
 export type CardInsertInput = {
   fields: Record<string, string>;
   order: number;
+};
+
+export type CardCreationSet = Pick<
+  Doc<"flashcardSets">,
+  "_id" | "cardCount" | "fieldDefinitions"
+>;
+
+export type CardCreationSrsEnrollment =
+  | { kind: "none" }
+  | { kind: "enabledUsersForSet" }
+  | { kind: "specificUser"; userId: string };
+
+export type CreatedCards = {
+  cardIds: Id<"flashcards">[];
+  cardCount: number;
+  updatedAt: number;
 };
 
 export function validateCardBatchSize(
@@ -24,7 +44,7 @@ export function validateCardBatchSize(
   return { ok: true, value: undefined };
 }
 
-export function validateCardSetLimit(
+function validateCardSetLimit(
   currentCardCount: number,
   addedCardCount: number,
 ): DomainResult<void, CommonFailure> {
@@ -37,7 +57,39 @@ export function validateCardSetLimit(
   return { ok: true, value: undefined };
 }
 
-export async function insertCards(
+async function enrollCreatedCards(
+  ctx: MutationCtx,
+  {
+    setId,
+    cardIds,
+    srsEnrollment,
+  }: {
+    setId: Id<"flashcardSets">;
+    cardIds: readonly Id<"flashcards">[];
+    srsEnrollment: CardCreationSrsEnrollment;
+  },
+) {
+  if (cardIds.length === 0) return;
+
+  switch (srsEnrollment.kind) {
+    case "none":
+      return;
+    case "enabledUsersForSet":
+      await enrollCardsForEnabledSetUsers(ctx, { setId, cardIds });
+      return;
+    case "specificUser":
+      for (const cardId of cardIds) {
+        await ensureSrsCardForCard(ctx, {
+          userId: srsEnrollment.userId,
+          setId,
+          cardId,
+        });
+      }
+      return;
+  }
+}
+
+async function insertCards(
   ctx: MutationCtx,
   {
     setId,
@@ -63,4 +115,129 @@ export async function insertCards(
     ids.push(await ctx.db.insert("flashcards", { setId, ...card, origin }));
   }
   return { ok: true, value: ids };
+}
+
+export async function appendCardsToSet(
+  ctx: MutationCtx,
+  {
+    set,
+    cards,
+    origin,
+    srsEnrollment,
+  }: {
+    set: CardCreationSet;
+    cards: readonly CardInsertInput[];
+    origin: FlashcardOrigin;
+    srsEnrollment: CardCreationSrsEnrollment;
+  },
+): Promise<DomainResult<CreatedCards, CommonFailure>> {
+  const limitCheck = validateCardSetLimit(set.cardCount, cards.length);
+  if (!limitCheck.ok) return limitCheck;
+
+  const inserted = await insertCards(ctx, {
+    setId: set._id,
+    fieldNames: set.fieldDefinitions.map((field) => field.name),
+    cards,
+    origin,
+  });
+  if (!inserted.ok) return inserted;
+
+  const nextCardCount = set.cardCount + inserted.value.length;
+  const updatedAt = Date.now();
+  await ctx.db.patch(set._id, {
+    cardCount: nextCardCount,
+    updatedAt,
+  });
+  await enrollCreatedCards(ctx, {
+    setId: set._id,
+    cardIds: inserted.value,
+    srsEnrollment,
+  });
+
+  return {
+    ok: true,
+    value: {
+      cardIds: inserted.value,
+      cardCount: nextCardCount,
+      updatedAt,
+    },
+  };
+}
+
+export async function appendGeneratedCardsToSet(
+  ctx: MutationCtx,
+  {
+    set,
+    cards,
+    srsEnrollment,
+  }: {
+    set: CardCreationSet & Pick<Doc<"flashcardSets">, "origin">;
+    cards: readonly CardInsertInput[];
+    srsEnrollment: CardCreationSrsEnrollment;
+  },
+): Promise<DomainResult<CreatedCards, CommonFailure>> {
+  const appended = await appendCardsToSet(ctx, {
+    set,
+    cards,
+    origin: "ai_generated",
+    srsEnrollment,
+  });
+  if (!appended.ok) return appended;
+
+  if (set.origin.kind !== "ai_generated") {
+    await ctx.db.patch(set._id, {
+      origin: { kind: "mixed" },
+      updatedAt: appended.value.updatedAt,
+    });
+  }
+
+  return appended;
+}
+
+export async function createInitialCardsForSet(
+  ctx: MutationCtx,
+  {
+    set,
+    cards,
+    origin,
+    srsEnrollment,
+  }: {
+    set: CardCreationSet & Pick<Doc<"flashcardSets">, "updatedAt">;
+    cards: readonly CardInsertInput[];
+    origin: FlashcardOrigin;
+    srsEnrollment: CardCreationSrsEnrollment;
+  },
+): Promise<DomainResult<CreatedCards, CommonFailure>> {
+  const limitCheck = validateCardSetLimit(0, cards.length);
+  if (!limitCheck.ok) return limitCheck;
+
+  if (set.cardCount !== cards.length) {
+    return {
+      ok: false,
+      error: invalidInput("Initial card count must match the cards being created."),
+    };
+  }
+
+  const inserted = await insertCards(ctx, {
+    setId: set._id,
+    fieldNames: set.fieldDefinitions.map((field) => field.name),
+    cards,
+    origin,
+  });
+  if (!inserted.ok) return inserted;
+
+  await enrollCreatedCards(ctx, {
+    setId: set._id,
+    cardIds: inserted.value,
+    srsEnrollment,
+  });
+
+  return {
+    ok: true,
+    value: {
+      cardIds: inserted.value,
+      cardCount: set.cardCount,
+      updatedAt: set.updatedAt,
+    },
+  };
 }

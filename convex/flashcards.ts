@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as Effect from "effect/Effect";
-import { assertOwnerEffect, enrollNewCardForSrsUsers, requireSetContentAccessEffect } from "./userSets";
+import { assertOwnerEffect, requireSetContentAccessEffect } from "./userSets";
 import { validateCardFieldsEffect, type CardFieldsValidationFailure } from "./domain/cardFields";
 import { invalidInput, type CommonFailure } from "./domain/result";
 import { fromDomainResult, requireAuth, requireEntity, toDomainResultAsync } from "./domain/effect";
@@ -9,10 +9,9 @@ import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 import {
-  insertCards,
+  appendCardsToSet,
   MAX_CARDS_PER_SET,
   validateCardBatchSize,
-  validateCardSetLimit,
 } from "./lib/cardCreation";
 
 function validateAgainstSetEffect(
@@ -62,23 +61,18 @@ export const create = mutation({
       const identity = yield* requireAuth(ctx);
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.setId);
       const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
-      yield* fromDomainResult(validateCardSetLimit(set.cardCount, 1));
-      const ids = yield* fromDomainResult(
+      const result = yield* fromDomainResult(
         yield* Effect.promise(() =>
-          insertCards(ctx, {
-            setId: args.setId,
-            fieldNames: set.fieldDefinitions.map((field) => field.name),
+          appendCardsToSet(ctx, {
+            set,
             cards: [{ fields: args.fields, order: args.order }],
             origin: "manual",
+            srsEnrollment: { kind: "enabledUsersForSet" },
           }),
         ),
       );
-      const id = ids[0];
+      const id = result.cardIds[0];
       if (id === undefined) return yield* Effect.fail(invalidInput("No card was created."));
-      yield* Effect.promise(() => enrollNewCardForSrsUsers(ctx, args.setId, id));
-      yield* Effect.promise(() =>
-        ctx.db.patch(args.setId, { cardCount: set.cardCount + 1, updatedAt: Date.now() }),
-      );
       return id;
     }),
   ),
@@ -100,27 +94,17 @@ export const batchCreate = mutation({
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.setId);
       const set = yield* requireEntity(ctx.db.get(args.setId), "Set not found");
       yield* fromDomainResult(validateCardBatchSize(args.cards.length));
-      yield* fromDomainResult(validateCardSetLimit(set.cardCount, args.cards.length));
-      const ids = yield* fromDomainResult(
+      const result = yield* fromDomainResult(
         yield* Effect.promise(() =>
-          insertCards(ctx, {
-            setId: args.setId,
-            fieldNames: set.fieldDefinitions.map((field) => field.name),
+          appendCardsToSet(ctx, {
+            set,
             cards: args.cards,
             origin: "manual",
+            srsEnrollment: { kind: "enabledUsersForSet" },
           }),
         ),
       );
-      for (const id of ids) {
-        yield* Effect.promise(() => enrollNewCardForSrsUsers(ctx, args.setId, id));
-      }
-      yield* Effect.promise(() =>
-        ctx.db.patch(args.setId, {
-          cardCount: set.cardCount + ids.length,
-          updatedAt: Date.now(),
-        }),
-      );
-      return ids;
+      return result.cardIds;
     }),
   ),
 });

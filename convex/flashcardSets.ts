@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import * as Effect from "effect/Effect";
 import { fieldDefinitionValidator } from "./schema";
-import { assertOwnerEffect, enrollCardsForSetHelper } from "./userSets";
+import { assertOwnerEffect } from "./userSets";
 import type { Doc } from "./_generated/dataModel";
 import {
   fail,
@@ -30,7 +30,7 @@ import { isPublicFlashcardSet } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
-import { insertCards, MAX_CARDS_PER_SET, validateCardSetLimit } from "./lib/cardCreation";
+import { createInitialCardsForSet, MAX_CARDS_PER_SET } from "./lib/cardCreation";
 
 export type SetWithViewer = Doc<"flashcardSets"> & {
   viewer:
@@ -393,7 +393,6 @@ export const fork = mutation({
           .take(MAX_CARDS_PER_SET),
       );
       const activeSourceCards = sourceCards.filter((card) => card.archivedAt === undefined);
-      yield* fromDomainResult(validateCardSetLimit(0, activeSourceCards.length));
 
       const newSetId = yield* Effect.promise(() =>
         ctx.db.insert("flashcardSets", {
@@ -413,20 +412,6 @@ export const fork = mutation({
         }),
       );
 
-      yield* fromDomainResult(
-        yield* Effect.promise(() =>
-          insertCards(ctx, {
-            setId: newSetId,
-            fieldNames: sourceSet.fieldDefinitions.map((field) => field.name),
-            cards: activeSourceCards.map((card) => ({
-              fields: card.fields,
-              order: card.order,
-            })),
-            origin: "forked",
-          }),
-        ),
-      );
-
       const fieldDefs = getFieldDefinitions(sourceSet);
       const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefs);
       yield* Effect.promise(() =>
@@ -442,8 +427,26 @@ export const fork = mutation({
         }),
       );
 
-      yield* Effect.promise(() =>
-        enrollCardsForSetHelper(ctx, identity.tokenIdentifier, newSetId),
+      yield* fromDomainResult(
+        yield* Effect.promise(() =>
+          createInitialCardsForSet(ctx, {
+            set: {
+              _id: newSetId,
+              cardCount: activeSourceCards.length,
+              fieldDefinitions: sourceSet.fieldDefinitions,
+              updatedAt: now,
+            },
+            cards: activeSourceCards.map((card) => ({
+              fields: card.fields,
+              order: card.order,
+            })),
+            origin: "forked",
+            srsEnrollment: {
+              kind: "specificUser",
+              userId: identity.tokenIdentifier,
+            },
+          }),
+        ),
       );
 
       return newSetId;

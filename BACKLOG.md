@@ -54,8 +54,6 @@
 ## Code Quality — Convex Performance
 
 ### SRS Queue Population
-- [ ] Centralize Convex card creation paths so manual, AI/tooling, fork, and append flows share one backend helper for flashcard inserts, card counts, origin metadata, and SRS enrollment hooks.
-  - Consider moving the pure validation portion of `convex/lib/cardCreation.ts` to Effect only if card creation grows into a larger typed-failure pipeline or needs cleaner composition inside `Effect.gen` callers. Keep ordinary Convex DB insert failures as defects unless there is a concrete recovery path.
 - [ ] Batch SRS enrollment for large shared sets if public/marketplace sets start accumulating many users.
   - Current bounded per-card enrollment is acceptable for side-project scale.
   - Move to scheduled batches if a single card creation needs to enroll more users than fits comfortably in one Convex mutation.

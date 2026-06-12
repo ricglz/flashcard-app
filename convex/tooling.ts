@@ -20,9 +20,12 @@ import {
   type DomainResult,
 } from "./domain/result";
 import { getFieldDefinitions } from "./lib/typed";
-import { enrollCardsForSetHelper } from "./userSets";
 import { getDefaultFieldLayout } from "../src/lib/types";
-import { insertCards, MAX_CARDS_PER_SET, validateCardSetLimit } from "./lib/cardCreation";
+import {
+  appendGeneratedCardsToSet,
+  createInitialCardsForSet,
+  MAX_CARDS_PER_SET,
+} from "./lib/cardCreation";
 import { schemaFingerprint } from "../src/lib/aiToolingSchemas";
 import type {
   GeneratedSetPayload,
@@ -520,17 +523,6 @@ export const createGeneratedSetForTool = internalMutation({
       createdAt: now,
     });
 
-    const inserted = await insertCards(ctx, {
-      setId,
-      fieldNames: fieldDefinitions.map((field) => field.name),
-      cards: normalized.cards.map((card, index) => ({
-        fields: card.fields,
-        order: index,
-      })),
-      origin: "ai_generated",
-    });
-    if (!inserted.ok) return inserted;
-
     const { defaultFrontFields, defaultBackFields } = getDefaultFieldLayout(fieldDefinitions);
     await ctx.db.insert("userSets", {
       userId: args.userId,
@@ -543,11 +535,20 @@ export const createGeneratedSetForTool = internalMutation({
       createdAt: now,
     });
 
-    if (normalized.addToSrs) {
-      await enrollCardsForSetHelper(ctx, args.userId, setId);
-    }
+    const inserted = await createInitialCardsForSet(ctx, {
+      set: { _id: setId, cardCount: normalized.cards.length, fieldDefinitions, updatedAt: now },
+      cards: normalized.cards.map((card, index) => ({
+        fields: card.fields,
+        order: index,
+      })),
+      origin: "ai_generated",
+      srsEnrollment: normalized.addToSrs
+        ? { kind: "specificUser", userId: args.userId }
+        : { kind: "none" },
+    });
+    if (!inserted.ok) return inserted;
 
-    return ok({ setId, cardCount: normalized.cards.length, srsEnabled: normalized.addToSrs });
+    return ok({ setId, cardCount: inserted.value.cardCount, srsEnabled: normalized.addToSrs });
   },
 });
 
@@ -586,42 +587,25 @@ export const appendGeneratedCardsForTool = internalMutation({
     if (args.cards.length > 100) {
       return fail(invalidInput("Appending is limited to 100 cards at a time."));
     }
-    const limitCheck = validateCardSetLimit(targetSet.cardCount, args.cards.length);
-    if (!limitCheck.ok) return limitCheck;
-
     const existingCards = await ctx.db
       .query("flashcards")
       .withIndex("by_setId", (q) => q.eq("setId", args.targetSetId))
       .take(10000);
     const maxOrder = existingCards.reduce((max, c) => Math.max(max, c.order), -1);
 
-    const inserted = await insertCards(ctx, {
-      setId: args.targetSetId,
-      fieldNames: args.fieldDefinitions.map((field) => field.name),
+    const inserted = await appendGeneratedCardsToSet(ctx, {
+      set: targetSet,
       cards: args.cards.map((card, index) => ({
         fields: card.fields,
         order: maxOrder + 1 + index,
       })),
-      origin: "ai_generated",
+      srsEnrollment: { kind: "enabledUsersForSet" },
     });
     if (!inserted.ok) return inserted;
 
-    const patchData: Record<string, unknown> = {
-      cardCount: targetSet.cardCount + inserted.value.length,
-      updatedAt: Date.now(),
-    };
-    if (targetSet.origin.kind !== "ai_generated") {
-      patchData.origin = { kind: "mixed" };
-    }
-    await ctx.db.patch(args.targetSetId, patchData);
-
-    if (ownerLink.srsEnabled) {
-      await enrollCardsForSetHelper(ctx, args.userId, args.targetSetId);
-    }
-
     return ok({
       setId: args.targetSetId,
-      cardCount: args.cards.length,
+      cardCount: inserted.value.cardIds.length,
       srsEnabled: ownerLink.srsEnabled,
     });
   },
