@@ -106,14 +106,22 @@
 
 ## Code Quality — Error Handling
 
-### Query Result Contracts
-- [ ] Continue replacing ambiguous access-control `null` query returns with domain results where clients need to distinguish unauthenticated, forbidden, not found, and invalid input states.
-- [ ] Create a nullable query contract decision map before the broader migration:
-  - classify each `null` return as valid optional domain state, access-control failure, missing entity, or intentionally hidden signed-out state,
-  - migrate only route/client contracts that are ready to change together.
-  - Include a broad Convex nullable-to-domain-result migration once the route/client contracts are ready to change together.
-  - Auth-gated dashboard/query surfaces such as `srsReviewQueue.getQueueStats` and progress queries should either return a domain result or be documented as intentionally empty/hidden when signed out.
-  - Keep valid optional-state queries nullable where `null` is the useful domain value, such as “no active study session” or “no fork sync status”.
+### Client Query Failure Handling
+- [ ] Define per-surface UI behavior for non-ok `DomainResult` query states instead of relying on empty fallbacks or `null` renders.
+  - Cover auth-gated client surfaces that now branch locally: flagged cards, AI generation, progress, weak spots, study config, dashboard SRS status, settings, card annotations, and TTS config.
+  - Decide case-by-case whether failure should redirect, show an inline error, show an access-denied state, or trigger auth recovery.
+  - Keep each client aware of its concrete query result shape; do not add a shared result-unwrapping helper.
+- [ ] Revisit preloaded/offline query ownership for auth-gated surfaces.
+  - Consider moving result checks into server wrappers or small inner components where that clarifies hook order and avoids rendering controllers with placeholder data.
+  - Candidate surfaces: `SrsQueueStatus`, SRS review, settings sections, AI generation, weak spots, and flagged cards.
+- [ ] Revisit query-backed hooks that currently hide non-ok query results behind default local state.
+  - Candidate hooks: `useCardAnnotationsForSetPreloaded`, `useCardAnnotationsAllPreloaded`, and `useTtsControls`.
+  - Prefer returning enough result state for consuming screens to decide fallback behavior explicitly.
+
+### Fork Sync State Shape
+- [ ] Consider a discriminated fork-sync status if more fork states are added.
+  - Current deleted-source and updated-source banner states are mutually exclusive because a missing source cannot also be compared for updates.
+  - Keep the current simple banner unless sync actions or more source states are introduced.
 
 ### Effect Boundary Cleanup
 - [ ] Define an Effect usage policy: use Effect for domain validation and external/HTTP/AI boundaries; avoid Services/Layers until dependency composition becomes real.
