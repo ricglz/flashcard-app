@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { unwrap, TEST_USER, fieldDefs } from "./helpers";
+import type { Id } from "../../convex/_generated/dataModel";
 import type { TestDb } from "./testTypes";
 
 const modules = import.meta.glob("../../convex/**/*.ts");
@@ -42,7 +43,34 @@ function makeCards(count: number) {
   }));
 }
 
-describe("appendGeneratedCardsForTool", () => {
+async function getSrsCardsForSet(
+  t: TestDb,
+  userId: string,
+  setId: Id<"flashcardSets">,
+) {
+  return await t.run(async (ctx) => {
+    return await ctx.db
+      .query("srsCards")
+      .withIndex("by_userId_and_setId", (q) =>
+        q.eq("userId", userId).eq("setId", setId)
+      )
+      .take(10);
+  });
+}
+
+async function getSrsCardsForCard(
+  t: TestDb,
+  cardId: Id<"flashcards">,
+) {
+  return await t.run(async (ctx) => {
+    return await ctx.db
+      .query("srsCards")
+      .withIndex("by_cardId", (q) => q.eq("cardId", cardId))
+      .take(10);
+  });
+}
+
+describe("createGeneratedSetForTool", () => {
   it("creates generated-set cards with origin ai_generated", async () => {
     const t = convexTest(schema, modules);
 
@@ -56,6 +84,7 @@ describe("appendGeneratedCardsForTool", () => {
       addToSrs: false,
     });
     const created = await unwrap(result);
+    expect(created.cardCount).toBe(2);
 
     const cards = await unwrap(
       await t.withIdentity(TEST_USER).query(api.flashcards.list, {
@@ -66,8 +95,43 @@ describe("appendGeneratedCardsForTool", () => {
       "ai_generated",
       "ai_generated",
     ]);
+
+    const set = await unwrap(
+      await t.withIdentity(TEST_USER).query(api.flashcardSets.get, {
+        id: created.setId,
+      }),
+    );
+    expect(set.cardCount).toBe(2);
   });
 
+  it("honors addToSrs when creating generated sets", async () => {
+    const t = convexTest(schema, modules);
+
+    const disabled = await unwrap(await t.mutation(internal.tooling.createGeneratedSetForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      name: "Generated without SRS",
+      sourceSetIds: [],
+      sourceScope: "custom",
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(2),
+      addToSrs: false,
+    }));
+    const enabled = await unwrap(await t.mutation(internal.tooling.createGeneratedSetForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      name: "Generated with SRS",
+      sourceSetIds: [],
+      sourceScope: "custom",
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(2),
+      addToSrs: true,
+    }));
+
+    expect(await getSrsCardsForSet(t, TEST_USER.tokenIdentifier, disabled.setId)).toHaveLength(0);
+    expect(await getSrsCardsForSet(t, TEST_USER.tokenIdentifier, enabled.setId)).toHaveLength(2);
+  });
+});
+
+describe("appendGeneratedCardsForTool", () => {
   it("appends cards with correct order starting after existing max", async () => {
     const t = convexTest(schema, modules);
     const { setId } = await createSetWithCards(t, { cardCount: 3 });
@@ -192,6 +256,43 @@ describe("appendGeneratedCardsForTool", () => {
     expect(cards).toHaveLength(3);
   });
 
+  it("enrolls appended cards for all SRS-enabled set users", async () => {
+    const t = convexTest(schema, modules);
+    const { setId, as } = await createSetWithCards(t, { cardCount: 1 });
+    const member = t.withIdentity(OTHER_USER);
+
+    await unwrap(
+      await as.mutation(api.flashcardSets.updateVisibility, {
+        id: setId,
+        visibility: "unlisted",
+      }),
+    );
+    await unwrap(await member.mutation(api.sharing.addToLibrary, { setId }));
+
+    await unwrap(
+      await t.mutation(internal.tooling.appendGeneratedCardsForTool, {
+        userId: TEST_USER.tokenIdentifier,
+        targetSetId: setId,
+        fieldDefinitions: fieldDefs,
+        cards: makeCards(1),
+      }),
+    );
+
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    const appendedCard = cards[cards.length - 1]!;
+    const srsCards = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("srsCards")
+        .withIndex("by_cardId", (q) => q.eq("cardId", appendedCard._id))
+        .take(10);
+    });
+
+    expect(srsCards.map((card) => card.userId).sort()).toEqual([
+      TEST_USER.tokenIdentifier,
+      OTHER_USER.tokenIdentifier,
+    ]);
+  });
+
   it("rejects empty cards array", async () => {
     const t = convexTest(schema, modules);
     const { setId } = await createSetWithCards(t);
@@ -207,5 +308,79 @@ describe("appendGeneratedCardsForTool", () => {
       ok: false,
       error: { message: "At least one card is required." },
     });
+  });
+});
+
+describe("appendGeneratedCardsForTool metadata", () => {
+  it("updates updatedAt when generated cards are appended", async () => {
+    const t = convexTest(schema, modules);
+    const { setId, as } = await createSetWithCards(t);
+
+    await t.run(async (ctx) => {
+      await ctx.db.patch(setId, { updatedAt: 1 });
+    });
+
+    await unwrap(await t.mutation(internal.tooling.appendGeneratedCardsForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      targetSetId: setId,
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(1),
+    }));
+
+    const set = await unwrap(await as.query(api.flashcardSets.get, { id: setId }));
+    expect(set.updatedAt).toBeGreaterThan(1);
+  });
+
+  it("keeps generated set origin when appending generated cards", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const created = await unwrap(await t.mutation(internal.tooling.createGeneratedSetForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      name: "Generated",
+      sourceSetIds: [],
+      sourceScope: "custom",
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(1),
+      addToSrs: false,
+    }));
+
+    await unwrap(await t.mutation(internal.tooling.appendGeneratedCardsForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      targetSetId: created.setId,
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(1),
+    }));
+
+    const set = await unwrap(await as.query(api.flashcardSets.get, { id: created.setId }));
+    expect(set.origin.kind).toBe("ai_generated");
+  });
+});
+
+describe("appendGeneratedCardsForTool SRS enrollment", () => {
+  it("skips members with SRS disabled when appending generated cards", async () => {
+    const t = convexTest(schema, modules);
+    const { setId, as } = await createSetWithCards(t, { cardCount: 1 });
+    const member = t.withIdentity(OTHER_USER);
+
+    await unwrap(await as.mutation(api.flashcardSets.updateVisibility, {
+      id: setId,
+      visibility: "unlisted",
+    }));
+    await unwrap(await member.mutation(api.sharing.addToLibrary, { setId }));
+    await unwrap(await member.mutation(api.userSets.disableSrs, { setId }));
+
+    await unwrap(await t.mutation(internal.tooling.appendGeneratedCardsForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      targetSetId: setId,
+      fieldDefinitions: fieldDefs,
+      cards: makeCards(1),
+    }));
+
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    const appendedCard = cards[cards.length - 1]!;
+    const userIds = (await getSrsCardsForCard(t, appendedCard._id))
+      .map((card) => card.userId)
+      .sort();
+    expect(userIds).toEqual([TEST_USER.tokenIdentifier]);
   });
 });
