@@ -1,12 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import GearIcon from "./GearIcon";
-
-const SRS_NAV_START_KEY = "srs-nav-start";
-
-function markSrsNavigationStart() {
-  window.sessionStorage.setItem(SRS_NAV_START_KEY, String(performance.now()));
-}
+import { markSrsNavigationStart } from "@/lib/srsNavigationTiming";
 
 export default function SrsQueueActive({
   remaining,
