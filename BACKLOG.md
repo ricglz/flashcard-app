@@ -42,10 +42,6 @@
   - Preserve the current explicit `enableSrs` / `disableSrs` commands for call sites that only need enrollment state changes.
 
 ### SRS Review Client Structure
-- [ ] Consider extracting an SRS review controller hook if `SrsReviewClient` keeps accumulating orchestration logic.
-  - A feature-local `useSrsReviewWorkflowController` could own queue stabilization, workflow dispatch, mutation normalization, card navigation, and handlers, while the client stays focused on preloaded data and rendering.
-- [ ] Consider a small `useLastNonEmptyQueue` hook for the SRS reconnect fallback.
-  - Name and test the current "keep the last non-empty queue visible" behavior if more offline/reconnect edge cases are added.
 - [ ] Revisit `useForceRefreshQueue` after the SRS review load-more union settles.
   - Dashboard queue status still uses boolean load-more state, while SRS review uses a typed union. Share a state shape only if another caller benefits without forcing a generic abstraction too early.
 - [ ] Consider moving SRS review screen implementation files under a small subdirectory if the flat `src/app/srs/` list becomes noisy.
