@@ -5,9 +5,9 @@ import type { Methodology } from "@/lib/types";
 import { METHODOLOGIES, METHODOLOGY_LABELS } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import AiGenerationConfig, {
-  type AiGenerationConfigValue,
-} from "@/components/AiGenerationConfig";
+import { AiInstructionsField } from "@/components/ai-generation/AiInstructionsField";
+import { AiModelField } from "@/components/ai-generation/AiModelField";
+import { AiTargetCountField } from "@/components/ai-generation/AiTargetCountField";
 
 type SrsSet = {
   _id: string;
@@ -46,12 +46,6 @@ export default function GenerateConfigForm({
     }),
     [srsEnabledSets],
   );
-  const aiConfig: AiGenerationConfigValue = {
-    prompt: "",
-    instructions: value.instructions,
-    targetCount: value.targetCount,
-    model: value.model,
-  };
 
   function update(patch: Partial<GenerateConfig>) {
     onChange({ ...value, ...patch });
@@ -90,19 +84,24 @@ export default function GenerateConfigForm({
           />
         </div>
       </div>
-      <AiGenerationConfig
-        value={aiConfig}
-        onChange={(next) =>
-          update({
-            instructions: next.instructions,
-            targetCount: next.targetCount,
-            model: next.model,
-          })
-        }
-        showPrompt={false}
-        countLabel="Target Card Count"
-        instructionsPlaceholder="Add guidance for the generated remedial cards."
-      />
+      <div className="space-y-3">
+        <AiInstructionsField
+          value={value.instructions}
+          onChange={(instructions) => update({ instructions })}
+          placeholder="Add guidance for the generated remedial cards."
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <AiTargetCountField
+            value={value.targetCount}
+            onChange={(targetCount) => update({ targetCount })}
+            label="Target Card Count"
+          />
+          <AiModelField
+            value={value.model}
+            onChange={(model) => update({ model })}
+          />
+        </div>
+      </div>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

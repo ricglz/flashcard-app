@@ -1,8 +1,9 @@
 "use client";
 
-import AiGenerationConfig, {
-  type AiGenerationConfigValue,
-} from "@/components/AiGenerationConfig";
+import { AiInstructionsField } from "@/components/ai-generation/AiInstructionsField";
+import { AiModelField } from "@/components/ai-generation/AiModelField";
+import { AiPromptField } from "@/components/ai-generation/AiPromptField";
+import { AiTargetCountField } from "@/components/ai-generation/AiTargetCountField";
 
 export type AiAppendConfigValue = {
   prompt: string;
@@ -18,27 +19,36 @@ type Props = {
 };
 
 export default function AiAppendConfig({ value, onChange, onGenerate }: Props) {
-  const config: AiGenerationConfigValue = value;
-
   return (
     <div className="space-y-3">
-      <AiGenerationConfig
-        value={config}
-        onChange={onChange}
-        maxCount={50}
-        modelLabel="Model (optional)"
-        modelDefaultLabel="Default"
+      <AiPromptField
+        value={value.prompt}
+        onChange={(prompt) => onChange({ ...value, prompt })}
       />
+      <AiInstructionsField
+        value={value.instructions}
+        onChange={(instructions) => onChange({ ...value, instructions })}
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AiTargetCountField
+          value={value.targetCount}
+          onChange={(targetCount) => onChange({ ...value, targetCount })}
+        />
+        <AiModelField
+          value={value.model}
+          onChange={(model) => onChange({ ...value, model })}
+        />
+      </div>
       <button
         onClick={() =>
           onGenerate({
-            prompt: config.prompt.trim(),
-            instructions: config.instructions.trim(),
-            targetCount: config.targetCount,
-            model: config.model,
+            prompt: value.prompt.trim(),
+            instructions: value.instructions.trim(),
+            targetCount: value.targetCount,
+            model: value.model,
           })
         }
-        disabled={!config.prompt.trim()}
+        disabled={!value.prompt.trim()}
         className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm disabled:opacity-50"
       >
         Generate

@@ -4,15 +4,23 @@ import { useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import FieldDefinitionEditor from "@/components/FieldDefinitionEditor";
-import AiGenerationConfig, {
-  type AiGenerationConfigValue,
-} from "@/components/AiGenerationConfig";
+import { AiInstructionsField } from "@/components/ai-generation/AiInstructionsField";
+import { AiModelField } from "@/components/ai-generation/AiModelField";
+import { AiPromptField } from "@/components/ai-generation/AiPromptField";
+import { AiTargetCountField } from "@/components/ai-generation/AiTargetCountField";
 import AiCardPreview from "./AiCardPreview";
 import AiErrorMessage from "@/components/AiErrorMessage";
 import { includedCardFields } from "@/lib/generatedDraftCards";
 import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
+
+type AiConfig = {
+  prompt: string;
+  instructions: string;
+  targetCount: number;
+  model: string;
+};
 
 export default function AiPath({
   state,
@@ -23,7 +31,7 @@ export default function AiPath({
 }) {
   const generateFromPrompt = useAction(api.ai.generateFromPrompt);
 
-  const [aiConfig, setAiConfig] = useState<AiGenerationConfigValue>({
+  const [aiConfig, setAiConfig] = useState<AiConfig>({
     prompt: "",
     instructions: "",
     targetCount: 20,
@@ -105,6 +113,10 @@ export default function AiPath({
     setError(null);
   };
 
+  const updateAiConfig = (patch: Partial<AiConfig>) => {
+    setAiConfig((current) => ({ ...current, ...patch }));
+  };
+
   return (
     <div className="space-y-4">
       {!hasGenerated && (
@@ -120,15 +132,31 @@ export default function AiPath({
             />
           </div>
 
-          <AiGenerationConfig
-            value={aiConfig}
-            onChange={setAiConfig}
-            promptPlaceholder='e.g., "Generate 20 basic Mandarin greetings" or "Common Japanese food vocabulary"'
-            instructionsPlaceholder='e.g., "Include example sentences" or "Use simplified Chinese only"'
-            countLabel="Card Count"
-            modelLabel="Model (optional)"
-            modelDefaultLabel="Use default for provider"
-          />
+          <div className="space-y-3">
+            <AiPromptField
+              value={aiConfig.prompt}
+              onChange={(prompt) => updateAiConfig({ prompt })}
+              placeholder='e.g., "Generate 20 basic Mandarin greetings" or "Common Japanese food vocabulary"'
+            />
+            <AiInstructionsField
+              value={aiConfig.instructions}
+              onChange={(instructions) => updateAiConfig({ instructions })}
+              placeholder='e.g., "Include example sentences" or "Use simplified Chinese only"'
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AiTargetCountField
+                value={aiConfig.targetCount}
+                onChange={(targetCount) => updateAiConfig({ targetCount })}
+                label="Card Count"
+              />
+              <AiModelField
+                value={aiConfig.model}
+                onChange={(model) => updateAiConfig({ model })}
+                label="Model (optional)"
+                defaultLabel="Use default for provider"
+              />
+            </div>
+          </div>
 
           <AiErrorMessage message={error} />
 
