@@ -7,13 +7,13 @@ import { api } from "../../../convex/_generated/api";
 import { buildCacheKey, useOfflineQuery } from "@/hooks/useOfflineQuery";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { deleteCachedQuery } from "@/lib/offlineDb";
-import StreakBadge from "@/components/StreakBadge";
-import DailyGoalRing from "@/components/DailyGoalRing";
+import { getFailureMessage } from "@/lib/domainResultMessage";
 import DailyActivityChart from "@/components/DailyActivityChart";
 import AccuracyChart from "@/components/AccuracyChart";
 import CardStatusBreakdown from "@/components/CardStatusBreakdown";
 import SetMasteryList from "@/components/SetMasteryList";
 import { classifyProgressHistoryResult } from "./progressHistoryState";
+import ProgressStatsBand from "./ProgressStatsBand";
 
 type Props = {
   preloadedSrsSummary: Preloaded<typeof api.progress.getSrsProgressSummary>;
@@ -64,14 +64,14 @@ export default function ProgressClient({
 
   return (
     <div className="space-y-8">
-      <div className="p-4 border border-edge rounded-lg flex items-center justify-between">
-        <StreakBadge preloaded={preloadedStreak} />
-        <DailyGoalRing preloaded={preloadedGoal} />
-      </div>
+      <ProgressStatsBand
+        preloadedStreak={preloadedStreak}
+        preloadedGoal={preloadedGoal}
+      />
 
       {!srsSummaryResult.ok && (
         <div className="h-24 flex items-center justify-center text-sm text-muted">
-          {srsSummaryResult.error.message}
+          Could not load SRS progress: {getFailureMessage(srsSummaryResult.error)}
         </div>
       )}
 

@@ -66,8 +66,18 @@ export const getFlagged = query({
       })
     );
 
-    const setMap = new Map<string, { name: string; fieldDefinitions: ReturnType<typeof getFieldDefinitions> }>();
-    const userSetMap = new Map<string, { defaultFrontFields: string[]; defaultBackFields: string[]; defaultTtsOnlyFields: string[] }>();
+    const setMap = new Map<
+      string,
+      { name: string; fieldDefinitions: ReturnType<typeof getFieldDefinitions> }
+    >();
+    const userSetMap = new Map<
+      string,
+      {
+        defaultFrontFields: string[];
+        defaultBackFields: string[];
+        defaultTtsOnlyFields: string[];
+      }
+    >();
 
     for (const { setId, set, userSet } of perSetData) {
       if (!set || !userSet) continue;
@@ -81,15 +91,17 @@ export const getFlagged = query({
 
     const cardIds = flagged.map((a) => a.cardId);
     const cards = await Promise.all(cardIds.map((id) => ctx.db.get(id)));
-    const cardMap = new Map(cards.filter((c): c is NonNullable<typeof c> => c !== null).map((c) => [c._id, c]));
+    const cardMap = new Map(
+      cards.flatMap((card) => card === null ? [] : [[card._id, card] as const])
+    );
 
-    return ok(flagged
-      .map((a) => {
+    return ok(
+      flagged.flatMap((a) => {
         const card = cardMap.get(a.cardId);
         const setData = setMap.get(a.setId);
         const userSetData = userSetMap.get(a.setId);
-        if (!card || !setData || !userSetData) return null;
-        return {
+        if (!card || !setData || !userSetData) return [];
+        return [{
           annotationId: a._id,
           cardId: a.cardId,
           setId: a.setId,
@@ -100,9 +112,9 @@ export const getFlagged = query({
           frontFields: userSetData.defaultFrontFields,
           backFields: userSetData.defaultBackFields,
           ttsOnlyFields: userSetData.defaultTtsOnlyFields,
-        };
+        }];
       })
-      .filter(Boolean));
+    );
   },
 });
 
