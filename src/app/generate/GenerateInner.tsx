@@ -12,8 +12,10 @@ import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import { isMethodology } from "@/lib/types";
 import { parseOptionalWeakCardsDateRangeParams } from "@/lib/weakCardsDateRange";
 import GenerateConfigForm, { type GenerateConfig } from "./GenerateConfigForm";
-import GeneratePreview from "./GeneratePreview";
+import GeneratePreviewActions from "./GeneratePreviewActions";
+import AiRefinementPanel from "@/components/AiRefinementPanel";
 import AiErrorMessage from "@/components/AiErrorMessage";
+import CardPreviewList from "@/components/CardPreviewList";
 import PageHeader from "@/components/PageHeader";
 
 type Step = "config" | "loading" | "preview" | "done";
@@ -57,10 +59,11 @@ export default function GenerateInner({ userSets }: { userSets: UserSets }) {
     payload,
     cards,
     selectedCount,
-    setCards,
     refinementModel,
     setRefinementModel,
     applyPayload,
+    toggleCard,
+    editCardField,
     isRefining,
     refineDraft,
   } = useGeneratedDraftCards({
@@ -164,17 +167,28 @@ export default function GenerateInner({ userSets }: { userSets: UserSets }) {
         );
       case "preview":
         return (
-          <GeneratePreview
-            cards={cards}
-            selectedCount={selectedCount}
-            onCardsChange={setCards}
-            onBack={() => setStep("config")}
-            onConfirm={handleConfirm}
-            onRefine={refineDraft}
-            refinementModel={refinementModel}
-            onRefinementModelChange={setRefinementModel}
-            isRefining={isRefining}
-          />
+          <div className="space-y-4">
+            <GeneratePreviewActions
+              selectedCount={selectedCount}
+              totalCount={cards.length}
+              onBack={() => setStep("config")}
+              onConfirm={handleConfirm}
+              locked={isRefining}
+            />
+            <AiRefinementPanel
+              cards={cards}
+              onRefine={refineDraft}
+              refinementModel={refinementModel}
+              onRefinementModelChange={setRefinementModel}
+              pending={isRefining}
+            />
+            <CardPreviewList
+              cards={cards}
+              onToggle={toggleCard}
+              onEdit={editCardField}
+              disabled={isRefining}
+            />
+          </div>
         );
       case "done":
         return null;

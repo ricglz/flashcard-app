@@ -7,9 +7,11 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import type { FieldDefinition } from "@/lib/types";
 import { selectedCardsForAppend } from "@/lib/generatedDraftCards";
 import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
-import GeneratePreview from "@/app/generate/GeneratePreview";
+import GeneratePreviewActions from "@/app/generate/GeneratePreviewActions";
 import AiAppendConfig, { type AiAppendConfigValue } from "./AiAppendConfig";
 import AiErrorMessage from "@/components/AiErrorMessage";
+import AiRefinementPanel from "@/components/AiRefinementPanel";
+import CardPreviewList from "@/components/CardPreviewList";
 
 type Phase = "config" | "generating" | "preview" | "confirming";
 
@@ -43,10 +45,11 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
   const {
     cards,
     selectedCount,
-    setCards,
     refinementModel,
     setRefinementModel,
     applyPayload,
+    toggleCard,
+    editCardField,
     isRefining,
     refineDraft,
   } = useGeneratedDraftCards({
@@ -141,18 +144,29 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
       )}
 
       {phase === "preview" && (
-        <GeneratePreview
-          cards={cards}
-          selectedCount={selectedCount}
-          onCardsChange={setCards}
-          onBack={() => setPhase("config")}
-          onConfirm={handleConfirm}
-          onRefine={refineDraft}
-          refinementModel={refinementModel}
-          onRefinementModelChange={setRefinementModel}
-          isRefining={isRefining}
-          confirmLabel={`Add to Set (${selectedCount} cards)`}
-        />
+        <div className="space-y-4">
+          <GeneratePreviewActions
+            selectedCount={selectedCount}
+            totalCount={cards.length}
+            onBack={() => setPhase("config")}
+            onConfirm={handleConfirm}
+            locked={isRefining}
+            confirmAction="Add to Set"
+          />
+          <AiRefinementPanel
+            cards={cards}
+            onRefine={refineDraft}
+            refinementModel={refinementModel}
+            onRefinementModelChange={setRefinementModel}
+            pending={isRefining}
+          />
+          <CardPreviewList
+            cards={cards}
+            onToggle={toggleCard}
+            onEdit={editCardField}
+            disabled={isRefining}
+          />
+        </div>
       )}
     </div>
   );
