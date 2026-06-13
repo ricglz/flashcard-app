@@ -26,6 +26,29 @@
 ### Form / Draft State Helpers
 - [ ] Extend reusable local draft helpers beyond `useDraftValue` if more settings sections need nullable draft-over-server-state behavior.
 
+### Component API Size
+- [ ] Revisit the enforced React component prop limit after the initial wide component APIs are reduced.
+  - Current enforcement target is more than 8 props.
+  - Evaluate whether lowering the limit to more than 5 props is practical without noisy exceptions.
+  - Keep the rule focused on component definitions, not JSX call sites.
+
+### Route Component Boundaries
+- [ ] Consider a shared centered route-state shell if more pages duplicate the same header/back-link plus centered message/action layout.
+  - Current candidates: flagged-card empty/review-complete states and browse empty/complete states.
+  - Keep the component narrow; do not create a generic page framework.
+- [ ] Revisit flagged-card review state ownership if `FlaggedCardReview` keeps receiving navigation, TTS, assistant, and annotation props.
+  - A feature-local context/provider may be clearer than a wide render-only prop interface.
+  - Keep the route-state branches explicit until there is a concrete shared state shape.
+- [ ] Revisit `SetDetailInner` if set detail keeps accumulating owner/member/visitor actions.
+  - Candidate split points: visibility controls, visitor/member actions, SRS membership controls, AI append, and card table TTS fallback.
+  - Preserve one-component-per-file and keep data ownership explicit.
+- [ ] Consider a reducer or state machine for edit-set mode and mutation errors if editing flows become more complex.
+  - Current state is still small, but set info editing, card removal, card creation, and CSV import all write into one local error channel.
+- [ ] Revisit study config state shape if more booleans/modes are added.
+  - Candidate cleanup: represent navigation/submission states as a discriminated union instead of independent `mode`, `isNavigating`, and error state.
+- [ ] Revisit browse/session boundary prop ownership after preloaded-query ownership settles.
+  - Prefer moving hooks into the smallest component that owns their data, but avoid passing unresolved query results into UI-only components.
+
 ### Async Action State
 - [ ] Evaluate `@convex-dev/react-query` / TanStack Query for components that still hand-roll `isSaving`/`error`/success state around Convex mutations.
   - Compare against a small local async-action hook before adopting another provider and dependency.
@@ -100,17 +123,10 @@
 
 ## Code Quality — Error Handling
 
-### Client Query Failure Handling
-- [ ] Define per-surface UI behavior for non-ok `DomainResult` query states instead of relying on empty fallbacks or `null` renders.
-  - Cover auth-gated client surfaces that now branch locally: flagged cards, AI generation, progress, weak spots, study config, dashboard SRS status, settings, card annotations, and TTS config.
-  - Decide case-by-case whether failure should redirect, show an inline error, show an access-denied state, or trigger auth recovery.
-  - Keep each client aware of its concrete query result shape; do not add a shared result-unwrapping helper.
-- [ ] Revisit preloaded/offline query ownership for auth-gated surfaces.
+### Query Boundary Ownership Follow-Up
+- [ ] Revisit preloaded/offline query ownership for auth-gated surfaces if more controllers keep growing prop-heavy inner components.
   - Consider moving result checks into server wrappers or small inner components where that clarifies hook order and avoids rendering controllers with placeholder data.
   - Candidate surfaces: `SrsQueueStatus`, SRS review, settings sections, AI generation, weak spots, and flagged cards.
-- [ ] Revisit query-backed hooks that currently hide non-ok query results behind default local state.
-  - Candidate hooks: `useCardAnnotationsForSetPreloaded`, `useCardAnnotationsAllPreloaded`, and `useTtsControls`.
-  - Prefer returning enough result state for consuming screens to decide fallback behavior explicitly.
 
 ### Fork Sync State Shape
 - [ ] Consider a discriminated fork-sync status if more fork states are added.
