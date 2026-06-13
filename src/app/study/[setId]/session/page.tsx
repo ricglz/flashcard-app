@@ -75,8 +75,6 @@ export default async function StudySessionPage({
 
   return (
     <StudySessionClient
-      flashcardSetId={flashcardSetId}
-      sessionId={typedSessionId}
       initialSession={session}
       preloadedSet={preloadedSet}
       initialSet={setData}

@@ -3,7 +3,6 @@
 import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import type { api } from "../../../../../convex/_generated/api";
-import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { ActiveStudySession } from "@/lib/types";
 import {
   type FlashcardSetWithViewer,
@@ -16,8 +15,6 @@ import type { LlmModel } from "@/lib/aiModels";
 import StudySessionInner from "./StudySessionInner";
 
 type Props = {
-  flashcardSetId: Id<"flashcardSets">;
-  sessionId: Id<"studySessions">;
   initialSession: ActiveStudySession;
   preloadedSet: Preloaded<typeof api.flashcardSets.get>;
   initialSet: FlashcardSetWithViewer;
@@ -27,10 +24,7 @@ type Props = {
   initialAssistantModels?: readonly LlmModel[];
 };
 
-// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function StudySessionClient({
-  flashcardSetId,
-  sessionId,
   initialSession,
   preloadedSet,
   initialSet,
@@ -39,6 +33,7 @@ export default function StudySessionClient({
   preloadedAnnotations,
   initialAssistantModels,
 }: Props) {
+  const flashcardSetId = initialSession.setId;
   const setId = String(flashcardSetId);
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
@@ -59,8 +54,6 @@ export default function StudySessionClient({
 
   return (
     <StudySessionInner
-      flashcardSetId={flashcardSetId}
-      sessionId={sessionId}
       session={initialSession}
       setData={setResult.value}
       cards={cardsResult.value}

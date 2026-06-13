@@ -6,7 +6,6 @@ import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../../../convex/_generated/api";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
-import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
 import StudyCard from "@/components/StudyCard";
 import CardRatingButtons from "@/components/CardRatingButtons";
@@ -30,8 +29,6 @@ type Flashcards = Extract<
 >["value"];
 
 export default function StudySessionInner({
-  flashcardSetId,
-  sessionId,
   session,
   setData,
   cards,
@@ -39,8 +36,6 @@ export default function StudySessionInner({
   preloadedAnnotations,
   initialAssistantModels,
 }: {
-  flashcardSetId: Id<"flashcardSets">;
-  sessionId: Id<"studySessions">;
   session: ActiveStudySession;
   setData: TypedSetWithViewer;
   cards: Flashcards;
@@ -49,6 +44,8 @@ export default function StudySessionInner({
   initialAssistantModels?: readonly LlmModel[];
 }) {
   const router = useRouter();
+  const flashcardSetId = session.setId;
+  const sessionId = session._id;
   const setId = String(flashcardSetId);
   const recordResult = useOfflineMutation(api.studySessions.recordResult, {
     strategy: "queue-first",
