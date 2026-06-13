@@ -24,6 +24,18 @@ Apply the smallest fix that makes the component easier to understand.
 - Move event handlers into the child when the child owns the interaction and the parent only forwards plumbing.
 - Replace repeated prop groups with a named domain value only when that value is real in the product language.
 
+## Ownership Check
+
+Before using wrapper or `children` composition, verify the parent is only arranging external content. Do not move component-owned controls, mutations, derived UI, or domain-specific actions into the caller just to reduce the prop count.
+
+Prefer moving hooks, mutation handlers, and derived state into the component when:
+
+- The behavior is only used by that component.
+- The parent only forwards values or callbacks.
+- The child already has the domain data needed to perform the action.
+
+If extracting a small subcomponent, check local React lint rules first. Some repos disallow multiple components per file, so the extraction may need a separate file.
+
 ## Avoid
 
 - Do not replace many unrelated props with `config`, `options`, `state`, or `handlers` just to satisfy lint.
