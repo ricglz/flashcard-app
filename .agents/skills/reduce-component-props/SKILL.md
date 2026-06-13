@@ -28,6 +28,10 @@ Apply the smallest fix that makes the component easier to understand.
 
 Before using wrapper or `children` composition, verify the parent is only arranging external content. Do not move component-owned controls, mutations, derived UI, or domain-specific actions into the caller just to reduce the prop count.
 
+Each new component must own a clear responsibility: behavior, state derivation, layout, or a real product concept. If the responsibility sentence is only "passes props to another component," delete the wrapper and use the existing component directly.
+
+If the caller naturally owns the workflow composition, such as phase ordering, loading state, and which sections appear together, keep that composition in the caller and render focused child components directly.
+
 Prefer moving hooks, mutation handlers, and derived state into the component when:
 
 - The behavior is only used by that component.
