@@ -5,8 +5,10 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import { useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
+import { getFailureMessage } from "@/lib/domainResultMessage";
 
 
 function formatDate(ms: number | undefined) {
@@ -76,7 +78,9 @@ export default function CliTokenSection({
       </div>
 
       {!statusResult.ok ? (
-        <p className="text-sm text-muted">Unable to load status.</p>
+        <Alert variant="danger">
+          Could not load CLI access status: {getFailureMessage(statusResult.error)}
+        </Alert>
       ) : statusResult.value.enabled ? (
         <div className="space-y-3 text-sm">
           <div className="grid gap-2 sm:grid-cols-2">

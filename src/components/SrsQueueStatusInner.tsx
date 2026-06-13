@@ -3,8 +3,11 @@
 
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import type { Preloaded } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
+import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
+import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { SrsConfig } from "./SrsSettingsPanel";
 import SrsSettingsPanel from "./SrsSettingsPanel";
 import SrsQueueEmpty from "./SrsQueueEmpty";
@@ -18,12 +21,6 @@ type QueueStats = Extract<
   FunctionReturnType<typeof api.srsReviewQueue.getQueueStats>,
   { ok: true }
 >["value"];
-type Settings =
-  | Extract<
-      FunctionReturnType<typeof api.userSettings.get>,
-      { ok: true }
-    >["value"]
-  | null;
 
 function formatResetTime(dayResetUtcHour: number): string {
   const d = new Date();
@@ -36,11 +33,16 @@ function formatResetTime(dayResetUtcHour: number): string {
 
 export default function SrsQueueStatusInner({
   stats,
-  settings,
+  preloadedSettings,
 }: {
   stats: QueueStats;
-  settings: Settings;
+  preloadedSettings: Preloaded<typeof api.userSettings.get>;
 }) {
+  const settingsResult = useOfflinePreloadedQuery(preloadedSettings);
+  const settings = settingsResult.ok ? settingsResult.value : null;
+  const settingsError = settingsResult.ok
+    ? null
+    : `Could not load SRS settings; using defaults. ${getFailureMessage(settingsResult.error)}`;
   const updateSrsSettings = useMutation(api.userSettings.updateSrsSettings);
   const updateTtsSpeed = useMutation(api.userSettings.updateTtsPlaybackSpeed);
   const {
@@ -55,7 +57,7 @@ export default function SrsQueueStatusInner({
   const { execute, isSaving, error, setError } = useSaveHandler<boolean>({
     onSuccess: () => setShowSettings(false),
   });
-  const displayError = error ?? refreshError;
+  const displayError = error ?? refreshError ?? settingsError;
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
     const result = await execute(async () => {

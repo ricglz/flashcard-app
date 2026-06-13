@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import SpeakerIcon from "@/components/SpeakerIcon";
 import TtsSpeedControl from "@/components/TtsSpeedControl";
+import { Alert } from "@/components/ui/Alert";
 import type { useTtsControls } from "@/hooks/useTtsControls";
 
 type StudyLayoutProps = {
@@ -69,6 +70,12 @@ export default function StudyLayout({
           }}
         />
       </div>
+
+      {tts.errorMessage && (
+        <div className="px-4 sm:px-6 pt-4">
+          <Alert variant="danger">{tts.errorMessage}</Alert>
+        </div>
+      )}
 
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
         {children}

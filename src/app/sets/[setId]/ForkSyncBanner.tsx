@@ -4,6 +4,7 @@ import type { Preloaded } from "convex/react";
 import { usePreloadedQuery } from "convex/react";
 import type { api } from "../../../../convex/_generated/api";
 import { Alert } from "@/components/ui/Alert";
+import { getFailureMessage } from "@/lib/domainResultMessage";
 
 export default function ForkSyncBanner({
   preloaded,
@@ -11,7 +12,14 @@ export default function ForkSyncBanner({
   preloaded: Preloaded<typeof api.flashcardSets.getForkSyncStatus>;
 }) {
   const statusResult = usePreloadedQuery(preloaded);
-  if (!statusResult.ok || statusResult.value === null) return null;
+  if (!statusResult.ok) {
+    return (
+      <Alert variant="danger" className="mb-4">
+        Could not check fork updates: {getFailureMessage(statusResult.error)}
+      </Alert>
+    );
+  }
+  if (statusResult.value === null) return null;
   const status = statusResult.value;
 
   if (status.sourceDeleted) {

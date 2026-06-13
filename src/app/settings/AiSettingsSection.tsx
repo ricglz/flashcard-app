@@ -7,10 +7,12 @@ import { api } from "../../../convex/_generated/api";
 
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
 import { TextInput } from "@/components/ui/TextInput";
 import { Textarea } from "@/components/ui/Textarea";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
+import { getFailureMessage } from "@/lib/domainResultMessage";
 
 const LLM_PROVIDER_OPTIONS = [
   "",
@@ -64,7 +66,13 @@ export default function AiSettingsSection({
     },
   });
 
-  if (!settingsResult.ok) return null;
+  if (!settingsResult.ok) {
+    return (
+      <Alert variant="danger" className="mt-6">
+        Could not load AI settings: {getFailureMessage(settingsResult.error)}
+      </Alert>
+    );
+  }
   const settings = settingsResult.value;
 
   const savedProvider = isLlmProvider(settings.llmProvider)

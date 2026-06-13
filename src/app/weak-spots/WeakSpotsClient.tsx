@@ -13,8 +13,10 @@ import {
   parseWeakCardsDateRangeParams,
 } from "@/lib/weakCardsDateRange";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
 import PageHeader from "@/components/PageHeader";
+import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { Id } from "../../../convex/_generated/dataModel";
 import WeakCardsList from "./WeakCardsList";
 
@@ -71,7 +73,7 @@ export default function WeakSpotsClient({
     !dateRange.ok
       ? dateRange.error
       : weakCardsResult && !weakCardsResult.ok
-        ? weakCardsResult.error.message
+        ? getFailureMessage(weakCardsResult.error)
         : null;
   const generateHref = useMemo(() => {
     const params = new URLSearchParams();
@@ -117,6 +119,8 @@ export default function WeakSpotsClient({
       <PageHeader title="Weak Spots" onBack={() => router.back()} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
+        {!userSetsResult.ok && <Alert variant="danger" className="mb-4">Could not load your sets: {getFailureMessage(userSetsResult.error)}</Alert>}
+
         <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-2 md:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_minmax(0,8.5rem)_minmax(0,8.5rem)]">
           <label className="block min-w-0 col-span-2 sm:col-span-1">
             <span className="block text-xs text-muted mb-1">Methodology</span>

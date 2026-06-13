@@ -23,13 +23,14 @@ describe("deriveAiAvailability", () => {
     });
   });
 
-  it("returns no-key when the query returns an auth failure", () => {
+  it("returns error when the query returns a failure", () => {
     expect(deriveAiAvailability(true, {
       ok: false,
       error: { _tag: "Unauthenticated", message: "Please sign in to continue." },
     })).toEqual({
       available: false,
-      reason: "no-key",
+      reason: "error",
+      message: "Please sign in to continue.",
     });
   });
 
