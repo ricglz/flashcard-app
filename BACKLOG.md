@@ -25,6 +25,10 @@
 
 ### Form / Draft State Helpers
 - [ ] Extend reusable local draft helpers beyond `useDraftValue` if more settings sections need nullable draft-over-server-state behavior.
+- [ ] Evaluate a React form library if controlled patch-update plumbing keeps recurring across AI generation and settings forms.
+  - Compare `@tanstack/react-form` and React Hook Form against small local typed updater helpers before adding a dependency.
+  - Adopt only if repeated forms need shared validation, dirty/touched/reset state, field-level errors, field arrays, or submit lifecycle handling.
+  - Keep shallow controlled forms local when a library would mostly replace explicit `onChange({ ...value, field })` calls.
 
 ### Component API Size
 - [ ] Revisit the enforced React component prop limit after the initial wide component APIs are reduced.
