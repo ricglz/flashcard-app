@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import localRules from "./eslint-local-rules/index.mjs";
 
 const reactPlugin = nextVitals.find(c => c.plugins?.react)?.plugins.react;
 
@@ -46,6 +47,7 @@ const eslintConfig = defineConfig([
   ]),
   {
     plugins: {
+      local: localRules,
       react: reactPlugin,
     },
     linterOptions: {
@@ -88,6 +90,12 @@ const eslintConfig = defineConfig([
         skipComments: true,
       }],
       "no-restricted-syntax": ["error", ...restrictedSyntaxRules],
+    },
+  },
+  {
+    files: ["src/**/*.{jsx,tsx}"],
+    rules: {
+      "local/no-large-component-props": ["error", { max: 8 }],
     },
   },
   {
@@ -164,7 +172,7 @@ const eslintConfig = defineConfig([
     rules: typeAwareRulesOff,
   },
   {
-    files: ["*.mjs"],
+    files: ["**/*.mjs"],
     languageOptions: {
       parserOptions: { projectService: false },
     },

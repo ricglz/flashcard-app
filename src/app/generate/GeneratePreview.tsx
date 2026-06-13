@@ -21,6 +21,7 @@ type GeneratePreviewProps = {
   confirmLabel?: string;
 };
 
+// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function GeneratePreview({
   cards,
   selectedCount,

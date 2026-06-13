@@ -4,6 +4,7 @@ import CardPreviewList, { type PreviewCard } from "@/components/CardPreviewList"
 import AiRefinementPanel from "@/components/AiRefinementPanel";
 import type { RefinementRequest, RefinementResult } from "@/lib/refinementScope";
 
+// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function AiCardPreview({
   cards,
   selectedCount,

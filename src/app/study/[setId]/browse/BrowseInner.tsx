@@ -23,6 +23,7 @@ type Flashcards = Extract<
   { ok: true }
 >["value"];
 
+// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function BrowseInner({
   flashcardSetId,
   frontFields,

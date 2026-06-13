@@ -23,6 +23,7 @@ type Props = {
   onSetNote?: (note: string) => void;
 };
 
+// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function StudyCard({
   card,
   fieldDefinitions,

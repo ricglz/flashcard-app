@@ -8,6 +8,7 @@ import type { useTtsControls } from "@/hooks/useTtsControls";
 import type { LlmModel } from "@/lib/aiModels";
 import type { FlaggedCard } from "./FlaggedCardsInner";
 
+// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function FlaggedCardReview({
   currentCard,
   currentNote,

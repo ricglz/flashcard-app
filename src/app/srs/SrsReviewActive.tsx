@@ -4,6 +4,7 @@ import StudyLayout from "@/components/StudyLayout";
 import type { useTtsControls } from "@/hooks/useTtsControls";
 import type { SrsReviewItem } from "./srsReviewTypes";
 
+// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function SrsReviewActive({
   currentItem,
   reviewedCount,
