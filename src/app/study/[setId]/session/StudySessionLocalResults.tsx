@@ -51,16 +51,9 @@ export default function StudySessionLocalResults({
           results={results}
           cards={cards}
           scorePercent={scorePercent}
-          scoreLabel="Local score"
           completedCards={completedCards}
           totalCards={totalCards}
-          breakdownTitle="Recent Breakdown"
-          detailsTitle="Recent Cards"
-          syncMessage={
-            <p className="text-sm text-muted">
-              Results are syncing in the background.
-            </p>
-          }
+          variant="localSyncing"
         />
 
         <div className="flex gap-3">

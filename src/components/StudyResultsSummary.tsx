@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { CARD_RATING_LABELS, CARD_RATINGS, type CardRating } from "@/lib/types";
 import {
   countRatings,
@@ -19,36 +18,60 @@ type ResultCard = {
   fields: Record<string, string>;
 };
 
-// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
+type StudyResultsSummaryVariant = "completed" | "localSyncing";
+
+const VARIANT_COPY: Record<
+  StudyResultsSummaryVariant,
+  {
+    scoreLabel: string;
+    breakdownTitle: string;
+    detailsTitle: string;
+    showSyncMessage: boolean;
+  }
+> = {
+  completed: {
+    scoreLabel: "Score",
+    breakdownTitle: "Breakdown",
+    detailsTitle: "Card Details",
+    showSyncMessage: false,
+  },
+  localSyncing: {
+    scoreLabel: "Local score",
+    breakdownTitle: "Recent Breakdown",
+    detailsTitle: "Recent Cards",
+    showSyncMessage: true,
+  },
+};
+
 export default function StudyResultsSummary({
   results,
   cards,
   scorePercent,
-  scoreLabel = "Score",
   completedCards,
   totalCards,
   durationSeconds,
-  breakdownTitle = "Breakdown",
-  detailsTitle = "Card Details",
-  syncMessage,
+  variant = "completed",
 }: {
   results: Result[];
   cards: ResultCard[];
   scorePercent: number;
-  scoreLabel?: string;
   completedCards: number;
   totalCards: number;
   durationSeconds?: number | null;
-  breakdownTitle?: string;
-  detailsTitle?: string;
-  syncMessage?: ReactNode;
+  variant?: StudyResultsSummaryVariant;
 }) {
+  const { scoreLabel, breakdownTitle, detailsTitle, showSyncMessage } =
+    VARIANT_COPY[variant];
   const cardsMap = new Map(cards.map((card) => [card._id, card]));
   const ratingCounts = countRatings(results);
 
   return (
     <>
-      {syncMessage}
+      {showSyncMessage && (
+        <p className="text-sm text-muted">
+          Results are syncing in the background.
+        </p>
+      )}
 
       <div className="flex justify-center">
         <div className="w-32 h-32 rounded-full border-4 border-accent flex items-center justify-center">
