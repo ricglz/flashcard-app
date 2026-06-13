@@ -1,6 +1,7 @@
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import {
+  assertPreloadedDomainResult,
   preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
@@ -26,7 +27,7 @@ export default async function SetDetailPage({
   ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
-  requirePreloadedDomainResult(preloadedCards);
+  assertPreloadedDomainResult(preloadedCards);
 
   return (
     <SetDetailClient

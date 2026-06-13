@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import {
+  assertPreloadedDomainResult,
   fetchRouteQuery,
   preloadRouteQuery,
   requireAuthToken,
@@ -71,7 +72,7 @@ export default async function StudySessionPage({
   ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
-  requirePreloadedDomainResult(preloadedCards);
+  assertPreloadedDomainResult(preloadedCards);
 
   return (
     <StudySessionClient

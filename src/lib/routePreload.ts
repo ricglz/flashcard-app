@@ -85,6 +85,14 @@ export function requirePreloadedDomainResult<
   return result.value;
 }
 
+export function assertPreloadedDomainResult<Query extends DomainQuery>(
+  preloaded: Preloaded<Query>,
+  redirectTo = "/",
+): void {
+  const result = preloadedQueryResult(preloaded);
+  if (!result.ok) redirect(redirectTo);
+}
+
 export function requirePreloadedValue<Query extends FunctionReference<"query">>(
   preloaded: Preloaded<Query>,
   redirectTo = "/",

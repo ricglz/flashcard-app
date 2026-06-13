@@ -1,6 +1,7 @@
 import { preloadQuery } from "convex/nextjs";
 import { api } from "../../../../../convex/_generated/api";
 import {
+  assertPreloadedDomainResult,
   preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
@@ -43,7 +44,7 @@ export default async function BrowsePage({
     ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
-  requirePreloadedDomainResult(preloadedCards);
+  assertPreloadedDomainResult(preloadedCards);
 
   const frontFields = sp.frontFields?.split(",") ?? [];
   const backFields = sp.backFields?.split(",") ?? [];

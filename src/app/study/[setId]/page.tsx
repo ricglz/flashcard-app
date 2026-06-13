@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { api } from "../../../../convex/_generated/api";
 import {
+  assertPreloadedDomainResult,
   preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
@@ -32,7 +33,7 @@ export default async function StudyConfigPage({
     ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
-  requirePreloadedDomainResult(preloadedCards);
+  assertPreloadedDomainResult(preloadedCards);
   if (setData.viewer.role === "visitor") redirect(`/sets/${setId}`);
 
   const initialMode = modeParam === "browse" ? "browse" : "study";

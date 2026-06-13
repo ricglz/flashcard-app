@@ -1,5 +1,6 @@
 import { api } from "../../../../../convex/_generated/api";
 import {
+  assertPreloadedDomainResult,
   preloadRouteQuery,
   requireAuthToken,
   requirePreloadedDomainResult,
@@ -30,7 +31,7 @@ export default async function EditSetPage({
     { token }
   );
 
-  requirePreloadedDomainResult(preloadedCards);
+  assertPreloadedDomainResult(preloadedCards);
 
   return (
     <EditSetClient

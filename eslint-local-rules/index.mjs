@@ -247,6 +247,49 @@ function getForwardedPropNames(attributes) {
   return names;
 }
 
+function getCalleeNames(callee) {
+  if (callee?.type === "ChainExpression") {
+    return getCalleeNames(callee.expression);
+  }
+
+  if (callee?.type === "Identifier") {
+    return [callee.name];
+  }
+
+  if (callee?.type !== "MemberExpression") {
+    return [];
+  }
+
+  const objectNames = getCalleeNames(callee.object);
+  const propertyName = getNodeName(callee.property);
+  if (!propertyName) {
+    return [];
+  }
+
+  const names = [propertyName];
+  for (const objectName of objectNames) {
+    names.push(`${objectName}.${propertyName}`);
+  }
+
+  return names;
+}
+
+function getIgnoredCallExpression(expression) {
+  if (expression?.type === "ChainExpression") {
+    return getIgnoredCallExpression(expression.expression);
+  }
+
+  if (expression?.type === "AwaitExpression") {
+    return getIgnoredCallExpression(expression.argument);
+  }
+
+  if (expression?.type === "UnaryExpression" && expression.operator === "void") {
+    return getIgnoredCallExpression(expression.argument);
+  }
+
+  return expression?.type === "CallExpression" ? expression : undefined;
+}
+
 function isLikelyComponent(node) {
   const name = getComponentName(node);
   if (isPascalCase(name)) {
@@ -335,6 +378,70 @@ const noLargeComponentProps = {
       FunctionDeclaration: checkFunction,
       FunctionExpression: checkFunction,
       ArrowFunctionExpression: checkFunction,
+    };
+  },
+};
+
+const noIgnoredReturnValues = {
+  meta: {
+    type: "problem",
+    docs: {
+      description: "Require selected function return values to be used.",
+    },
+    schema: [
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          functions: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["name"],
+              properties: {
+                name: { type: "string", minLength: 1 },
+                message: { type: "string", minLength: 1 },
+              },
+            },
+            uniqueItems: true,
+          },
+        },
+      },
+    ],
+    messages: {
+      ignoredReturn: "{{name}} returns a value that must be used. {{message}}",
+    },
+  },
+
+  create(context) {
+    const checks = context.options[0]?.functions ?? [];
+    const checkByName = new Map(checks.map((check) => [check.name, check]));
+
+    function checkExpressionStatement(node) {
+      const callExpression = getIgnoredCallExpression(node.expression);
+      if (!callExpression) {
+        return;
+      }
+
+      const names = getCalleeNames(callExpression.callee);
+      const check = names.map((name) => checkByName.get(name)).find(Boolean);
+      if (!check) {
+        return;
+      }
+
+      context.report({
+        node: callExpression,
+        messageId: "ignoredReturn",
+        data: {
+          name: check.name,
+          message: check.message ?? "Assign, return, or otherwise consume the result.",
+        },
+      });
+    }
+
+    return {
+      ExpressionStatement: checkExpressionStatement,
     };
   },
 };
@@ -431,6 +538,7 @@ const noPassthroughComponentWrapper = {
 const localRules = {
   rules: {
     "no-large-component-props": noLargeComponentProps,
+    "no-ignored-return-values": noIgnoredReturnValues,
     "no-passthrough-component-wrapper": noPassthroughComponentWrapper,
   },
 };

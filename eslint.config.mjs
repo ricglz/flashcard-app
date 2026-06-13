@@ -90,6 +90,14 @@ const eslintConfig = defineConfig([
         skipComments: true,
       }],
       "no-restricted-syntax": ["error", ...restrictedSyntaxRules],
+      "local/no-ignored-return-values": ["error", {
+        functions: [
+          {
+            name: "requirePreloadedDomainResult",
+            message: "Use the returned value or call assertPreloadedDomainResult for assertion-only route gating.",
+          },
+        ],
+      }],
     },
   },
   {
