@@ -34,7 +34,6 @@ export default function AiPath({
   const [error, setError] = useState<string | null>(null);
   const {
     cards: generatedCards,
-    selectedCount,
     refinementModel,
     setRefinementModel,
     applyPayload,
@@ -153,7 +152,6 @@ export default function AiPath({
       {hasGenerated && (
         <AiCardPreview
           cards={generatedCards}
-          selectedCount={selectedCount}
           onToggle={handleToggleCard}
           onEdit={updateCardField}
           onRegenerate={resetGeneratedCards}

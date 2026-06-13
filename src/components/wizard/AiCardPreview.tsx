@@ -4,10 +4,8 @@ import CardPreviewList, { type PreviewCard } from "@/components/CardPreviewList"
 import AiRefinementPanel from "@/components/AiRefinementPanel";
 import type { RefinementRequest, RefinementResult } from "@/lib/refinementScope";
 
-// eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
 export default function AiCardPreview({
   cards,
-  selectedCount,
   onToggle,
   onEdit,
   onRegenerate,
@@ -17,7 +15,6 @@ export default function AiCardPreview({
   locked,
 }: {
   cards: PreviewCard[];
-  selectedCount: number;
   onToggle: (idx: number) => void;
   onEdit: (idx: number, key: string, value: string) => void;
   onRegenerate: () => void;
@@ -26,6 +23,8 @@ export default function AiCardPreview({
   onRefinementModelChange: (model: string) => void;
   locked: boolean;
 }) {
+  const selectedCount = cards.filter((card) => card.selected).length;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
