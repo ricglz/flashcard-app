@@ -129,6 +129,27 @@ function getFunctionPropCount(node, typeDeclarationCounts, ignoredProps) {
   return countObjectPatternProperties(propParam, ignoredProps);
 }
 
+function getObjectPatternPropertyNames(pattern, ignoredProps) {
+  if (pattern?.type !== "ObjectPattern") {
+    return undefined;
+  }
+
+  const names = [];
+
+  for (const property of pattern.properties) {
+    if (property.type === "RestElement") {
+      return undefined;
+    }
+
+    const name = getNodeName(property.key);
+    if (name && !ignoredProps.has(name)) {
+      names.push(name);
+    }
+  }
+
+  return names;
+}
+
 function getComponentName(node) {
   if (node.type === "FunctionDeclaration") {
     return getNodeName(node.id);
@@ -150,6 +171,80 @@ function getComponentName(node) {
   }
 
   return undefined;
+}
+
+function getReturnedExpression(node) {
+  if (node.type === "ArrowFunctionExpression" && node.body.type !== "BlockStatement") {
+    return node.body;
+  }
+
+  if (node.body?.type !== "BlockStatement" || node.body.body.length !== 1) {
+    return undefined;
+  }
+
+  const statement = node.body.body[0];
+  if (statement.type !== "ReturnStatement") {
+    return undefined;
+  }
+
+  return statement.argument;
+}
+
+function isEmptyJsxText(node) {
+  return node.type === "JSXText" && node.value.trim() === "";
+}
+
+function isSingleCustomElement(expression) {
+  if (expression?.type !== "JSXElement") {
+    return false;
+  }
+
+  const name = expression.openingElement.name;
+  if (name.type !== "JSXIdentifier" || !isPascalCase(name.name)) {
+    return false;
+  }
+
+  return expression.children.every(isEmptyJsxText);
+}
+
+function getJsxElementName(expression) {
+  const name = expression?.openingElement?.name;
+  if (name?.type === "JSXIdentifier") {
+    return name.name;
+  }
+
+  return undefined;
+}
+
+function getForwardedPropName(attribute) {
+  if (attribute.type !== "JSXAttribute") {
+    return undefined;
+  }
+
+  if (attribute.value?.type !== "JSXExpressionContainer") {
+    return undefined;
+  }
+
+  const expression = attribute.value.expression;
+  if (expression.type !== "Identifier") {
+    return undefined;
+  }
+
+  return expression.name;
+}
+
+function getForwardedPropNames(attributes) {
+  const names = [];
+
+  for (const attribute of attributes) {
+    const name = getForwardedPropName(attribute);
+    if (!name) {
+      return undefined;
+    }
+    names.push(name);
+  }
+
+  return names;
 }
 
 function isLikelyComponent(node) {
@@ -244,9 +339,99 @@ const noLargeComponentProps = {
   },
 };
 
+const noPassthroughComponentWrapper = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Avoid React components that only forward props to another component.",
+    },
+    schema: [
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          minProps: {
+            type: "integer",
+            minimum: 1,
+          },
+          forwardRatio: {
+            type: "number",
+            minimum: 0,
+            maximum: 1,
+          },
+          ignoreProps: {
+            type: "array",
+            items: { type: "string" },
+            uniqueItems: true,
+          },
+        },
+      },
+    ],
+    messages: {
+      passthroughWrapper: "{{name}} only forwards props to {{target}}. Use {{target}} directly or add component-owned behavior before extracting a wrapper.",
+    },
+  },
+
+  create(context) {
+    const options = context.options[0] ?? {};
+    const minProps = options.minProps ?? 3;
+    const forwardRatio = options.forwardRatio ?? 0.75;
+    const ignoredProps = new Set([...DEFAULT_IGNORED_PROPS, ...(options.ignoreProps ?? [])]);
+
+    function checkFunction(node) {
+      if (!isLikelyComponent(node)) {
+        return;
+      }
+
+      const propNames = getObjectPatternPropertyNames(node.params[0], ignoredProps);
+      if (!propNames || propNames.length < minProps) {
+        return;
+      }
+
+      const returnedExpression = getReturnedExpression(node);
+      if (!isSingleCustomElement(returnedExpression)) {
+        return;
+      }
+
+      const attributes = returnedExpression.openingElement.attributes;
+      const forwardedPropNames = getForwardedPropNames(attributes);
+      if (!forwardedPropNames) {
+        return;
+      }
+
+      const propNameSet = new Set(propNames);
+      if (forwardedPropNames.some((name) => !propNameSet.has(name))) {
+        return;
+      }
+
+      const forwardedOwnProps = new Set(forwardedPropNames);
+      if (forwardedOwnProps.size / propNames.length < forwardRatio) {
+        return;
+      }
+
+      const target = getJsxElementName(returnedExpression) ?? "the child component";
+      context.report({
+        node,
+        messageId: "passthroughWrapper",
+        data: {
+          name: getComponentName(node) ?? "Component",
+          target,
+        },
+      });
+    }
+
+    return {
+      FunctionDeclaration: checkFunction,
+      FunctionExpression: checkFunction,
+      ArrowFunctionExpression: checkFunction,
+    };
+  },
+};
+
 const localRules = {
   rules: {
     "no-large-component-props": noLargeComponentProps,
+    "no-passthrough-component-wrapper": noPassthroughComponentWrapper,
   },
 };
 

@@ -96,6 +96,7 @@ const eslintConfig = defineConfig([
     files: ["src/**/*.{jsx,tsx}"],
     rules: {
       "local/no-large-component-props": ["error", { max: 8 }],
+      "local/no-passthrough-component-wrapper": "error",
     },
   },
   {
