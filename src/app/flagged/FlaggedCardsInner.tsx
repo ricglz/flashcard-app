@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
+import type { api } from "../../../convex/_generated/api";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
-import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { LlmModel } from "@/lib/aiModels";
 import Link from "next/link";
 import FlaggedCardReview from "./FlaggedCardReview";
@@ -29,11 +26,6 @@ export default function FlaggedCardsInner({
   initialAssistantModels?: readonly LlmModel[];
 }) {
   const tts = useTtsControls(preloadedTtsConfig);
-  const toggleFlag = useOfflineMutation(api.cardAnnotations.toggleFlag);
-  const setNoteMutation = useOfflineMutation(api.cardAnnotations.setNote);
-  const [localNotes, setLocalNotes] = useState(
-    () => new Map<Id<"flashcards">, string | undefined>(),
-  );
   const { revealed, reveal, resetReveal } = useReviewCardState();
 
   const navigation = useCardNavigation({
@@ -106,48 +98,19 @@ export default function FlaggedCardsInner({
     );
   }
 
-  const handleToggleFlag = () => {
-    const cardId = currentCard.cardId;
-    void toggleFlag({
-      cardId,
-      setId: currentCard.setId,
-    });
-    navigation.hideCurrent();
-  };
-
-  const handleSetNote = (note: string) => {
-    const trimmed = note.trim();
-    setLocalNotes((previous) => {
-      const next = new Map(previous);
-      next.set(currentCard.cardId, trimmed || undefined);
-      return next;
-    });
-    void setNoteMutation({
-      cardId: currentCard.cardId,
-      setId: currentCard.setId,
-      note,
-    });
-  };
-  const currentNote = localNotes.has(currentCard.cardId)
-    ? localNotes.get(currentCard.cardId)
-    : currentCard.note;
-
   return (
     <FlaggedCardReview
       currentCard={currentCard}
-      currentNote={currentNote}
-      hiddenIds={navigation.hiddenIds}
-      safeIndex={navigation.safeIndex}
-      totalCards={navigation.activeIds.length}
       tts={tts}
-      revealed={revealed}
-      canPrevious={navigation.canPrevious}
-      canNext={navigation.canNext}
-      onReveal={reveal}
-      onToggleFlag={handleToggleFlag}
-      onSetNote={handleSetNote}
-      onPrevious={navigation.goPrevious}
-      onNext={navigation.goNext}
+      progress={{ current: navigation.safeIndex, total: navigation.activeIds.length }}
+      review={{ revealed, onReveal: reveal }}
+      navigation={{
+        canPrevious: navigation.canPrevious,
+        canNext: navigation.canNext,
+        onPrevious: navigation.goPrevious,
+        onNext: navigation.goNext,
+        onHideCurrent: navigation.hideCurrent,
+      }}
       initialAssistantModels={initialAssistantModels}
     />
   );
