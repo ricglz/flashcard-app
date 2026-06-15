@@ -84,6 +84,7 @@ export default defineSchema({
     shareToken: v.optional(v.string()),
     fieldDefinitions: v.array(fieldDefinitionValidator),
     cardCount: v.number(),
+    // updatedAt tracks last card content change (create/update/delete/append), not metadata edits
     updatedAt: v.number(),
     origin: setOriginValidator,
     visibility: literalUnion(VISIBILITIES),
