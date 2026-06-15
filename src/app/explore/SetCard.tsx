@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { FieldDefinition } from "@/lib/types";
 import { detectLanguage, languageLabel } from "./FilterBar";
+import { formatDate } from "@/lib/formatDate";
 
 export function SetCard({
   set,
@@ -11,6 +12,8 @@ export function SetCard({
     description?: string;
     fieldDefinitions: FieldDefinition[];
     cardCount: number;
+    updatedAt: number;
+    createdAt: number;
   };
 }) {
   const lang = detectLanguage(set.fieldDefinitions);
@@ -44,6 +47,7 @@ export function SetCard({
           {set.cardCount} card
           {set.cardCount !== 1 ? "s" : ""}
         </span>
+        <span>{formatDate(set.updatedAt)}</span>
       </div>
     </Link>
   );

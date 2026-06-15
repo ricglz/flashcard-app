@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
@@ -16,17 +16,26 @@ import FilterBar, {
   type CardCountRange,
 } from "./FilterBar";
 
-const SORT_OPTIONS = ["newest", "name", "cards"] as const;
+const SORT_OPTIONS = ["updated", "newest", "name", "cards"] as const;
 type SortOption = (typeof SORT_OPTIONS)[number];
 const SORT_LABELS: Record<SortOption, string> = {
-  newest: "Newest",
+  updated: "Last updated",
+  newest: "Date created",
   name: "Name A-Z",
   cards: "Most Cards",
 };
 
+function isSortOption(value: string | null): value is SortOption {
+  return value === "updated" || value === "newest" || value === "name" || value === "cards";
+}
+
 export default function ExploreClient() {
   const [searchInput, setSearchInput] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const sortParam = searchParams.get("sort");
+  const sortBy: SortOption = isSortOption(sortParam) ? sortParam : "updated";
   const [cardCountRange, setCardCountRange] = useState<CardCountRange>("any");
   const [languageTag, setLanguageTag] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -43,11 +52,21 @@ export default function ExploreClient() {
     isSearching ? { searchTerm: debouncedSearch } : "skip"
   );
 
-  const router = useRouter();
+  const updateSort = (next: SortOption) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "updated") {
+      params.delete("sort");
+    } else {
+      params.set("sort", next);
+    }
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      scroll: false,
+    });
+  };
 
   const allResults = useMemo(() => {
     if (isSearching) return searchResults ?? [];
-    if (sortBy === "newest") return [...browseResults];
     const sorted = [...browseResults];
     switch (sortBy) {
       case "name":
@@ -55,6 +74,17 @@ export default function ExploreClient() {
         break;
       case "cards":
         sorted.sort((a, b) => b.cardCount - a.cardCount);
+        break;
+      case "newest":
+        sorted.sort((a, b) => {
+          const aTime = a.createdAt;
+          const bTime = b.createdAt;
+          return bTime - aTime;
+        });
+        break;
+      case "updated":
+      default:
+        sorted.sort((a, b) => b.updatedAt - a.updatedAt);
         break;
     }
     return sorted;
@@ -108,7 +138,7 @@ export default function ExploreClient() {
               value={sortBy}
               options={SORT_OPTIONS}
               labels={SORT_LABELS}
-              onChange={setSortBy}
+              onChange={updateSort}
             />
           )}
         </div>
