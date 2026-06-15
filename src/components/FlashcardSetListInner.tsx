@@ -4,22 +4,77 @@ import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
+import { useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { Select } from "@/components/ui/Select";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
+import { formatDate } from "@/lib/formatDate";
 
 type SetList = Extract<
   FunctionReturnType<typeof api.flashcardSets.list>,
   { ok: true }
 >["value"];
 
+const SORT_OPTIONS = ["updated", "created", "name"] as const;
+type SortOption = (typeof SORT_OPTIONS)[number];
+const SORT_LABELS: Record<SortOption, string> = {
+  updated: "Last updated",
+  created: "Date created",
+  name: "Name A-Z",
+};
+
+function isSortOption(value: string | null): value is SortOption {
+  return value === "updated" || value === "created" || value === "name";
+}
+
 export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
   const removeSet = useMutation(api.flashcardSets.remove);
   const { execute: executeRemove, error } = useSaveHandler<null>({
     fallbackErrorMessage: "Failed to delete set",
   });
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const sortParam = searchParams.get("sort");
+  const sortBy: SortOption = isSortOption(sortParam) ? sortParam : "updated";
+
+  const updateSort = (next: SortOption) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "updated") {
+      params.delete("sort");
+    } else {
+      params.set("sort", next);
+    }
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+      scroll: false,
+    });
+  };
+
+  const sortedSets = useMemo(() => {
+    const copy = [...sets];
+    switch (sortBy) {
+      case "name":
+        copy.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "created":
+        copy.sort((a, b) => {
+          const aTime = a.createdAt;
+          const bTime = b.createdAt;
+          return bTime - aTime;
+        });
+        break;
+      case "updated":
+      default:
+        copy.sort((a, b) => b.updatedAt - a.updatedAt);
+        break;
+    }
+    return copy;
+  }, [sets, sortBy]);
 
   if (sets.length === 0) {
     return (
@@ -36,10 +91,18 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Your Flashcard Sets</h2>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <h2 className="text-2xl font-bold">Your Flashcard Sets</h2>
+        <Select
+          value={sortBy}
+          options={SORT_OPTIONS}
+          labels={SORT_LABELS}
+          onChange={updateSort}
+        />
+      </div>
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {sets.map((set) => {
+        {sortedSets.map((set) => {
           const isOwner = set.userSet.role === "owner";
           return (
             <div
@@ -72,10 +135,15 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
                     {set.fieldDefinitions.length} field
                     {set.fieldDefinitions.length !== 1 ? "s" : ""}
                   </span>
+                  <span>•</span>
+                  <span>{formatDate(set.updatedAt)}</span>
                   {!isOwner && (
-                    <Badge variant="neutral" size="sm">
-                      Shared
-                    </Badge>
+                    <>
+                      <span>•</span>
+                      <Badge variant="neutral" size="sm">
+                        Shared
+                      </Badge>
+                    </>
                   )}
                 </div>
               </Link>
