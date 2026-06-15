@@ -29,6 +29,11 @@
   - Compare `@tanstack/react-form` and React Hook Form against small local typed updater helpers before adding a dependency.
   - Adopt only if repeated forms need shared validation, dirty/touched/reset state, field-level errors, field arrays, or submit lifecycle handling.
   - Keep shallow controlled forms local when a library would mostly replace explicit `onChange({ ...value, field })` calls.
+- [ ] Create custom hook for URL-persisted UI state with Zod parsing, starting with sort controls.
+  - Extract duplicated `useSearchParams`/`usePathname`/`router.replace` pattern from My Sets and Explore into `useUrlSort` or generic `useUrlState`.
+  - Use Zod schema for safe parsing with defaults, handling invalid query values gracefully.
+  - Keep scroll:false behavior and default-value cleanup (delete param when default to keep URLs clean).
+  - Evaluate generalization only after sort hook proves useful for other filters like weak-spots date range or explore filters.
 
 ### Component API Size
 - [ ] Revisit the enforced React component prop limit after the initial wide component APIs are reduced.
