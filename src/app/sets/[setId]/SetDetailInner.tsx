@@ -17,6 +17,7 @@ import { Select } from "@/components/ui/Select";
 import SrsSetConfig from "@/components/SrsSetConfig";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 import { getFailureMessage } from "@/lib/domainResultMessage";
+import { formatDate } from "@/lib/formatDate";
 import type { TypedSetWithViewer } from "@/hooks/convex/useTypedFlashcardSet";
 import CardsTable from "./CardsTable";
 import SetDetailHeader from "./SetDetailHeader";
@@ -97,6 +98,9 @@ export default function SetDetailInner({
         )}
         <p className="text-sm text-muted mb-2">
           {cards.length} card{cards.length !== 1 ? "s" : ""}
+        </p>
+        <p className="text-sm text-muted mb-2">
+          Last updated: {formatDate(set.updatedAt)}
         </p>
 
         <div className="flex items-center gap-2 mb-6">
