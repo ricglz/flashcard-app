@@ -178,7 +178,7 @@ export const update = mutation({
         }
         patch.fieldDefinitions = validation.fieldDefinitions;
       }
-      yield* Effect.promise(() => ctx.db.patch(args.id, { ...patch, updatedAt: Date.now() }));
+      yield* Effect.promise(() => ctx.db.patch(args.id, patch));
       return null;
     }),
   ),
