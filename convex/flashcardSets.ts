@@ -49,22 +49,30 @@ function hasStructuralFieldDefinitionChange(
 }
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { includeArchived: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return fail(unauthenticated());
-    const links = await ctx.db
-      .query("userSets")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
-      .take(100);
-    const sets = await Promise.all(
-      links.map(async (link) => {
+    const includeArchived = args.includeArchived ?? false;
+    const target = 100;
+    const result: Array<Doc<"flashcardSets"> & { userSet: Doc<"userSets"> }> = [];
+    let cursor: string | null = null;
+    while (result.length < target) {
+      const page = await ctx.db
+        .query("userSets")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.tokenIdentifier))
+        .paginate({ cursor, numItems: 100 });
+      for (const link of page.page) {
         const set = await ctx.db.get(link.setId);
-        if (!set) return null;
-        return { ...set, userSet: link };
-      })
-    );
-    return ok(sets.filter((s) => s !== null));
+        if (!set) continue;
+        if (!includeArchived && set.archivedAt !== undefined) continue;
+        result.push({ ...set, userSet: link });
+        if (result.length >= target) break;
+      }
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+    return ok(result);
   },
 });
 
@@ -349,6 +357,10 @@ export const updateVisibility = mutation({
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
+      const set = yield* requireEntity(ctx.db.get(args.id), "Set not found");
+      if (set.archivedAt !== undefined && args.visibility !== "private") {
+        return yield* Effect.fail(invalidInput("Archived sets can only be private."));
+      }
       yield* Effect.promise(() => ctx.db.patch(args.id, { visibility: args.visibility }));
       return null;
     }),
@@ -440,7 +452,7 @@ export const fork = mutation({
               fields: card.fields,
               order: card.order,
             })),
-            origin: "forked",
+            origin: { kind: "forked", sourceSetId: args.sourceSetId },
             srsEnrollment: {
               kind: "specificUser",
               userId: identity.tokenIdentifier,
@@ -450,6 +462,22 @@ export const fork = mutation({
       );
 
       return newSetId;
+    }),
+  ),
+});
+
+export const unarchive = mutation({
+  args: { id: v.id("flashcardSets") },
+  handler: (ctx, args) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      yield* assertOwnerEffect(ctx, identity.tokenIdentifier, args.id);
+      const set = yield* requireEntity(ctx.db.get(args.id), "Set not found");
+      if (set.archivedAt === undefined) {
+        return yield* Effect.fail(invalidInput("Set is not archived."));
+      }
+      yield* Effect.promise(() => ctx.db.patch(args.id, { archivedAt: undefined }));
+      return null;
     }),
   ),
 });

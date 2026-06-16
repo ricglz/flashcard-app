@@ -179,7 +179,7 @@ export async function appendGeneratedCardsToSet(
   const appended = await appendCardsToSet(ctx, {
     set,
     cards,
-    origin: "ai_generated",
+    origin: { kind: "ai_generated" },
     srsEnrollment,
   });
   if (!appended.ok) return appended;
@@ -223,6 +223,86 @@ export async function createInitialCardsForSet(
     fieldNames: set.fieldDefinitions.map((field) => field.name),
     cards,
     origin,
+  });
+  if (!inserted.ok) return inserted;
+
+  await enrollCreatedCards(ctx, {
+    setId: set._id,
+    cardIds: inserted.value,
+    srsEnrollment,
+  });
+
+  return {
+    ok: true,
+    value: {
+      cardIds: inserted.value,
+      cardCount: set.cardCount,
+      updatedAt: set.updatedAt,
+    },
+  };
+}
+
+export type CardInsertInputWithOrigin = CardInsertInput & {
+  origin?: FlashcardOrigin;
+};
+
+async function insertCardsWithOrigins(
+  ctx: MutationCtx,
+  {
+    setId,
+    fieldNames,
+    cards,
+    defaultOrigin,
+  }: {
+    setId: Id<"flashcardSets">;
+    fieldNames: readonly string[];
+    cards: readonly CardInsertInputWithOrigin[];
+    defaultOrigin: FlashcardOrigin;
+  },
+): Promise<DomainResult<Id<"flashcards">[], CommonFailure>> {
+  const validatedCards: { fields: Record<string, string>; order: number; origin: FlashcardOrigin }[] = [];
+  for (const card of cards) {
+    const validated = validateCardFields(fieldNames, card.fields);
+    if (!validated.ok) return { ok: false, error: invalidInput(validated.error.message) };
+    validatedCards.push({ fields: validated.value, order: card.order, origin: card.origin ?? defaultOrigin });
+  }
+
+  const ids: Id<"flashcards">[] = [];
+  for (const card of validatedCards) {
+    ids.push(await ctx.db.insert("flashcards", { setId, fields: card.fields, order: card.order, origin: card.origin }));
+  }
+  return { ok: true, value: ids };
+}
+
+export async function createInitialCardsForSetWithOrigins(
+  ctx: MutationCtx,
+  {
+    set,
+    cards,
+    defaultOrigin,
+    srsEnrollment,
+  }: {
+    set: CardCreationSet & Pick<Doc<"flashcardSets">, "updatedAt">;
+    cards: readonly CardInsertInputWithOrigin[];
+    defaultOrigin: FlashcardOrigin;
+    srsEnrollment: CardCreationSrsEnrollment;
+  },
+): Promise<DomainResult<CreatedCards, CommonFailure>> {
+  const limitCheck = validateCardSetLimit(0, cards.length);
+  if (!limitCheck.ok) return limitCheck;
+
+  if (set.cardCount !== cards.length) {
+    return {
+      ok: false,
+      error: invalidInput("Initial card count must match the cards being created."),
+    };
+  }
+
+  const inserted = await insertCardsWithOrigins(ctx, {
+    setId: set._id,
+    fieldNames: set.fieldDefinitions.map((field) => field.name),
+    cards,
+    defaultOrigin,
   });
   if (!inserted.ok) return inserted;
 

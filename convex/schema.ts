@@ -2,7 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v, type Validator } from "convex/values";
 import {
   CARD_RATINGS,
-  FLASHCARD_ORIGINS,
+  LEGACY_FLASHCARD_ORIGINS,
   FIELD_ROLES,
   METHODOLOGIES,
   SESSION_STATUSES,
@@ -51,6 +51,15 @@ export const sourceScopeValidator = v.union(
   v.literal("custom")
 );
 
+export const cardOriginValidator = v.union(
+  literalUnion(LEGACY_FLASHCARD_ORIGINS),
+  v.object({ kind: v.literal("manual") }),
+  v.object({ kind: v.literal("csv_import") }),
+  v.object({ kind: v.literal("ai_generated") }),
+  v.object({ kind: v.literal("forked"), sourceSetId: v.optional(v.id("flashcardSets")) }),
+  v.object({ kind: v.literal("merged"), sourceSetId: v.id("flashcardSets") }),
+);
+
 export const setOriginValidator = v.union(
   v.object({ kind: v.literal("manual") }),
   v.object({ kind: v.literal("csv_import"), importedAt: v.number() }),
@@ -66,7 +75,12 @@ export const setOriginValidator = v.union(
     sourceSetId: v.id("flashcardSets"),
     forkedAt: v.number(),
   }),
-  v.object({ kind: v.literal("mixed") })
+  v.object({ kind: v.literal("mixed") }),
+  v.object({
+    kind: v.literal("merged"),
+    sourceSetIds: v.array(v.id("flashcardSets")),
+    mergedAt: v.number(),
+  }),
 );
 
 export const cliScopeValidator = v.union(
@@ -89,6 +103,7 @@ export default defineSchema({
     origin: setOriginValidator,
     visibility: literalUnion(VISIBILITIES),
     createdAt: v.number(),
+    archivedAt: v.optional(v.number()),
   })
     .index("by_ownerId", ["ownerId"])
     .index("by_visibility_and_createdAt", ["visibility", "createdAt"])
@@ -99,7 +114,7 @@ export default defineSchema({
     setId: v.id("flashcardSets"),
     fields: v.record(v.string(), v.string()),
     order: v.number(),
-    origin: literalUnion(FLASHCARD_ORIGINS),
+    origin: cardOriginValidator,
     archivedAt: v.optional(v.number()),
   })
     .index("by_setId", ["setId"]),

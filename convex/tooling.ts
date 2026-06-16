@@ -541,7 +541,7 @@ export const createGeneratedSetForTool = internalMutation({
         fields: card.fields,
         order: index,
       })),
-      origin: "ai_generated",
+      origin: { kind: "ai_generated" },
       srsEnrollment: normalized.addToSrs
         ? { kind: "specificUser", userId: args.userId }
         : { kind: "none" },

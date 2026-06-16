@@ -38,7 +38,7 @@ describe("flashcards.create", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0]!._id).toBe(cardId);
     expect(cards[0]!.fields).toEqual({ Front: "Question", Back: "Answer" });
-    expect(cards[0]!.origin).toBe("manual");
+    expect(cards[0]!.origin).toEqual({ kind: "manual" });
   });
 
   it("enrolls created cards for SRS-enabled users of the set", async () => {
@@ -142,7 +142,7 @@ describe("flashcards.batchCreate", () => {
     expect(srsCards).toEqual([expect.objectContaining({ cardId: cardIds[0] }), expect.objectContaining({ cardId: cardIds[1] })]);
 
     const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
-    expect(cards.map((card) => card.origin)).toEqual(["manual", "manual"]);
+    expect(cards.map((card) => card.origin)).toEqual([{ kind: "manual" }, { kind: "manual" }]);
   });
 
   it("rejects a batch containing an unknown field", async () => {

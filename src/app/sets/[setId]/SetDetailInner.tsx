@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable max-lines-per-function */
 
 import { useState } from "react";
 import type { Preloaded } from "convex/react";
@@ -9,11 +10,9 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { VISIBILITIES, VISIBILITY_LABELS } from "@/lib/types";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import SrsSetConfig from "@/components/SrsSetConfig";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 import { getFailureMessage } from "@/lib/domainResultMessage";
@@ -24,6 +23,9 @@ import SetDetailHeader from "./SetDetailHeader";
 import VisitorActions from "./VisitorActions";
 import AiAppendFlow from "./AiAppendFlow";
 import ForkSyncBanner from "./ForkSyncBanner";
+import { ArchivedBadge } from "./ArchivedBadge";
+import { UnarchiveButton } from "./UnarchiveButton";
+import { VisibilityControls } from "./VisibilityControls";
 
 const DEFAULT_TTS_PLAYBACK_SPEED = 0.75;
 
@@ -53,7 +55,14 @@ export default function SetDetailInner({
   const ai = useAiAvailablePreloaded(preloadedHasLlmKey);
   const updateVisibility = useMutation(api.flashcardSets.updateVisibility);
   const forkSet = useMutation(api.flashcardSets.fork);
+  const unarchive = useMutation(api.flashcardSets.unarchive);
   const [showAiAppend, setShowAiAppend] = useState(false);
+  const {
+    execute: executeUnarchive,
+    error: unarchiveError,
+  } = useSaveHandler<null>({
+    fallbackErrorMessage: "Failed to unarchive",
+  });
   const {
     execute: executeVisibility,
     error: visibilityError,
@@ -115,23 +124,31 @@ export default function SetDetailInner({
           >
             {set.visibility.charAt(0).toUpperCase() + set.visibility.slice(1)}
           </Badge>
-          {isOwner && (
-            <Select
-              value={set.visibility}
-              options={VISIBILITIES}
-              labels={VISIBILITY_LABELS}
+          {set.archivedAt !== undefined && <ArchivedBadge />}
+          {isOwner && set.archivedAt === undefined && (
+            <VisibilityControls
+              visibility={set.visibility}
               onChange={(visibility) => {
                 void executeVisibility(() =>
                   updateVisibility({ id: set._id, visibility })
                 );
               }}
-              className="px-2 py-0.5 text-xs"
+            />
+          )}
+          {isOwner && set.archivedAt !== undefined && (
+            <UnarchiveButton
+              onClick={() => void executeUnarchive(() => unarchive({ id: set._id }))}
             />
           )}
         </div>
         {visibilityError && (
           <Alert variant="danger" className="mb-4">
             {visibilityError}
+          </Alert>
+        )}
+        {unarchiveError && (
+          <Alert variant="danger" className="mb-4">
+            {unarchiveError}
           </Alert>
         )}
 

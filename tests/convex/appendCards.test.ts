@@ -92,8 +92,8 @@ describe("createGeneratedSetForTool", () => {
       }),
     );
     expect(cards.map((card) => card.origin)).toEqual([
-      "ai_generated",
-      "ai_generated",
+      { kind: "ai_generated" },
+      { kind: "ai_generated" },
     ]);
 
     const set = await unwrap(
@@ -197,7 +197,7 @@ describe("appendGeneratedCardsForTool", () => {
 
     const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     const appended = cards[cards.length - 1]!;
-    expect(appended.origin).toBe("ai_generated");
+    expect(appended.origin).toEqual({ kind: "ai_generated" });
   });
 
   it("rejects schema fingerprint mismatch", async () => {

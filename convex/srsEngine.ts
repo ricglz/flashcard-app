@@ -4,6 +4,7 @@ import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { SRS_DEFAULTS, insertDefaultSrsCard, selectNewCardsRoundRobin } from "./srs";
 import { shuffleArray } from "../src/lib/shuffle";
+import type { Id } from "./_generated/dataModel";
 
 export async function populateQueue(
   ctx: MutationCtx,
@@ -12,14 +13,24 @@ export async function populateQueue(
 ): Promise<number> {
   const now = Date.now();
 
-  const userSetLinks = await ctx.db
-    .query("userSets")
-    .withIndex("by_userId", (q) => q.eq("userId", userId))
-    .take(100);
-
-  const srsSetIds = userSetLinks
-    .filter((us) => us.srsEnabled)
-    .map((us) => us.setId);
+  const srsSetIds: Id<"flashcardSets">[] = [];
+  let cursor: string | null = null;
+  while (srsSetIds.length < 100) {
+    const page = await ctx.db
+      .query("userSets")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .paginate({ cursor, numItems: 100 });
+    for (const us of page.page) {
+      if (!us.srsEnabled) continue;
+      const set = await ctx.db.get(us.setId);
+      if (set && set.archivedAt === undefined) {
+        srsSetIds.push(us.setId);
+        if (srsSetIds.length >= 100) break;
+      }
+    }
+    if (page.isDone) break;
+    cursor = page.continueCursor;
+  }
   const enabledSetIds = new Set(srsSetIds);
 
   if (srsSetIds.length === 0) return 0;
