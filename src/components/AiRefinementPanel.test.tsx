@@ -3,15 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import AiRefinementPanel from "./AiRefinementPanel";
 
-vi.mock("@/hooks/useAvailableModels", () => ({
-  useAvailableModels: () => ({
-    models: [
-      { id: "fast-model", name: "Fast model" },
-      { id: "precise-model", name: "Precise model" },
-    ],
-    loading: false,
-    refetch: vi.fn(),
-  }),
+vi.mock("@/contexts/AvailableModelsContext", () => ({
+  useAvailableModelsContext: () => [
+    { id: "fast-model", name: "Fast model" },
+    { id: "precise-model", name: "Precise model" },
+  ],
+  AvailableModelsContext: { Provider: ({ children }: { children: React.ReactNode }) => children },
 }));
 
 const cards = [

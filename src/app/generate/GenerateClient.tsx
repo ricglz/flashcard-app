@@ -6,11 +6,15 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import QueryErrorState from "@/components/QueryErrorState";
 import GenerateInner from "./GenerateInner";
+import { AvailableModelsProvider } from "@/contexts/AvailableModelsContext";
+import type { AvailableModelsSnapshot } from "@/lib/availableModels";
 
 export default function GenerateClient({
   preloadedSets,
+  availableModels,
 }: {
   preloadedSets: Preloaded<typeof api.flashcardSets.list>;
+  availableModels: AvailableModelsSnapshot;
 }) {
   const userSetsResult = useOfflinePreloadedQuery(preloadedSets);
   if (!userSetsResult.ok) {
@@ -22,5 +26,9 @@ export default function GenerateClient({
     );
   }
 
-  return <GenerateInner userSets={userSetsResult.value} />;
+  return (
+    <AvailableModelsProvider snapshot={availableModels}>
+      <GenerateInner userSets={userSetsResult.value} />
+    </AvailableModelsProvider>
+  );
 }

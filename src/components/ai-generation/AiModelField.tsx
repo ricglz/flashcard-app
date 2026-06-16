@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Select } from "@/components/ui/Select";
-import { useAvailableModels } from "@/hooks/useAvailableModels";
+import { useAvailableModelsContext } from "@/contexts/AvailableModelsContext";
 
 type Props = {
   value: string;
@@ -19,7 +19,7 @@ export function AiModelField({
   defaultLabel = "Default for provider",
   disabled = false,
 }: Props) {
-  const { models: availableModels } = useAvailableModels();
+  const availableModels = useAvailableModelsContext();
   const modelOptions = useMemo(
     () => ["", ...availableModels.map((model) => model.id)],
     [availableModels],

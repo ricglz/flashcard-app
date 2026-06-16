@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
-import { useAvailableModels } from "@/hooks/useAvailableModels";
+import { useAvailableModelsContext } from "@/contexts/AvailableModelsContext";
 import {
   getRefinementScopeCount,
   type RefinementRequest,
@@ -35,7 +35,7 @@ export default function AiRefinementPanel({
 }) {
   const [instructions, setInstructions] = useState("");
   const [scope, setScope] = useState<RefinementScope>("all");
-  const { models: availableModels } = useAvailableModels();
+  const availableModels = useAvailableModelsContext();
   const trimmedInstructions = instructions.trim();
   const scopeCount = getRefinementScopeCount(cards, scope);
 
