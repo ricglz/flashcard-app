@@ -18,6 +18,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.4.2",
     "@sentry/nextjs": "^10.56.0",
+    "@tanstack/react-query": "^5.51.1",
     "convex": "^1.40.0",
     "effect": "^3.21.2",
     "idb": "^8.0.3",

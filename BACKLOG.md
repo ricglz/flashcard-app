@@ -57,12 +57,14 @@
   - Candidate cleanup: represent navigation/submission states as a discriminated union instead of independent `mode`, `isNavigating`, and error state.
 - [ ] Revisit browse/session boundary prop ownership after preloaded-query ownership settles.
   - Prefer moving hooks into the smallest component that owns their data, but avoid passing unresolved query results into UI-only components.
+  - Note: AI models now provided via AvailableModelsContext instead of prop drilling through BrowseInner/SessionInner; assistant models prop remains for backward compat but context is preferred path.
 
 ### Async Action State
 - [ ] Evaluate `@convex-dev/react-query` / TanStack Query for components that still hand-roll `isSaving`/`error`/success state around Convex mutations.
   - Compare against a small local async-action hook before adopting another provider and dependency.
   - Treat offline support as a prototype target, not a blocker: TanStack Query has persisted cache and paused-mutation examples, but this app still needs validation against Convex live queries, Next route preloading, Clerk auth, and the existing IndexedDB outbox.
   - Keep standard Convex React hooks where live subscription or preloaded-query behavior is materially simpler.
+  - Note: TanStack Query adopted for AI available models via `AvailableModelsContext` with SSR preload and suspense fallback as first real usage; mutations still use local hooks.
 - [ ] Consider a feature-local mutation result normalizer if SRS review keeps handling rejected mutation promises in multiple handlers.
   - Keep it local before generalizing; the goal is to reduce duplicated `catch`/fallback-message plumbing without introducing Effect or a broad async abstraction for simple UI event handlers.
 - [ ] Stabilize local async-action helpers if `useSaveHandler` keeps spreading.
@@ -135,7 +137,7 @@
 ### Query Boundary Ownership Follow-Up
 - [ ] Revisit preloaded/offline query ownership for auth-gated surfaces if more controllers keep growing prop-heavy inner components.
   - Consider moving result checks into server wrappers or small inner components where that clarifies hook order and avoids rendering controllers with placeholder data.
-  - Candidate surfaces: `SrsQueueStatus`, SRS review, settings sections, AI generation, weak spots, and flagged cards.
+  - Candidate surfaces: `SrsQueueStatus`, SRS review, settings sections, weak spots, and flagged cards. AI generation resolved via AvailableModelsContext with SSR preload.
 
 ### Fork Sync State Shape
 - [ ] Consider a discriminated fork-sync status if more fork states are added.

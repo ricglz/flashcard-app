@@ -6,6 +6,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
 import SyncProvider from "@/lib/SyncProvider";
 import OfflineIndicator from "./OfflineIndicator";
+import QueryProvider from "./QueryProvider";
 
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
 if (!convexUrl) {
@@ -21,10 +22,12 @@ export default function ConvexClientProvider({
 }) {
   return (
     <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-      <SyncProvider>
-        <OfflineIndicator />
-        {children}
-      </SyncProvider>
+      <QueryProvider>
+        <SyncProvider>
+          <OfflineIndicator />
+          {children}
+        </SyncProvider>
+      </QueryProvider>
     </ConvexProviderWithClerk>
   );
 }

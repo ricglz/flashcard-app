@@ -12,6 +12,7 @@ import SetAccessError from "@/components/SetAccessError";
 import QueryErrorState from "@/components/QueryErrorState";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { LlmModel } from "@/lib/aiModels";
+import { AvailableModelsProvider } from "@/contexts/AvailableModelsContext";
 import StudySessionInner from "./StudySessionInner";
 
 type Props = {
@@ -53,13 +54,15 @@ export default function StudySessionClient({
   }
 
   return (
-    <StudySessionInner
-      session={initialSession}
-      setData={setResult.value}
-      cards={cardsResult.value}
-      preloadedTtsConfig={preloadedTtsConfig}
-      preloadedAnnotations={preloadedAnnotations}
-      initialAssistantModels={initialAssistantModels}
-    />
+    <AvailableModelsProvider initialModels={initialAssistantModels}>
+      <StudySessionInner
+        session={initialSession}
+        setData={setResult.value}
+        cards={cardsResult.value}
+        preloadedTtsConfig={preloadedTtsConfig}
+        preloadedAnnotations={preloadedAnnotations}
+        initialAssistantModels={initialAssistantModels}
+      />
+    </AvailableModelsProvider>
   );
 }

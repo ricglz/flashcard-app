@@ -3,15 +3,15 @@ import { api } from "../../../../convex/_generated/api";
 import Link from "next/link";
 import WizardShell from "@/components/wizard/WizardShell";
 import { requireAuthToken } from "@/lib/routePreload";
+import { fetchAvailableModelsForServer } from "@/lib/serverAiModels";
 
 export default async function NewSetPage() {
   const token = await requireAuthToken();
 
-  const preloadedHasLlmKey = await preloadQuery(
-    api.userSettings.hasLlmKey,
-    {},
-    { token },
-  );
+  const [preloadedHasLlmKey, initialModels] = await Promise.all([
+    preloadQuery(api.userSettings.hasLlmKey, {}, { token }),
+    fetchAvailableModelsForServer(token),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -23,7 +23,7 @@ export default async function NewSetPage() {
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <h1 className="text-2xl font-bold mb-6">Create New Flashcard Set</h1>
-        <WizardShell preloadedHasLlmKey={preloadedHasLlmKey} />
+        <WizardShell preloadedHasLlmKey={preloadedHasLlmKey} initialModels={initialModels} />
       </main>
     </div>
   );

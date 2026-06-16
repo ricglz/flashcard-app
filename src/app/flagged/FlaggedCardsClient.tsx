@@ -6,6 +6,7 @@ import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import QueryErrorState from "@/components/QueryErrorState";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { LlmModel } from "@/lib/aiModels";
+import { AvailableModelsProvider } from "@/contexts/AvailableModelsContext";
 import FlaggedCardsInner from "./FlaggedCardsInner";
 
 type Props = {
@@ -30,10 +31,12 @@ export default function FlaggedCardsClient({
   }
 
   return (
-    <FlaggedCardsInner
-      flaggedCards={flaggedResult.value}
-      preloadedTtsConfig={preloadedTtsConfig}
-      initialAssistantModels={initialAssistantModels}
-    />
+    <AvailableModelsProvider initialModels={initialAssistantModels}>
+      <FlaggedCardsInner
+        flaggedCards={flaggedResult.value}
+        preloadedTtsConfig={preloadedTtsConfig}
+        initialAssistantModels={initialAssistantModels}
+      />
+    </AvailableModelsProvider>
   );
 }

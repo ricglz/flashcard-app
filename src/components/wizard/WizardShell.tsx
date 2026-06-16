@@ -18,13 +18,17 @@ import StepAddCards from "./StepAddCards";
 import StepConfigureFields from "./StepConfigureFields";
 import StepReview from "./StepReview";
 import WizardStepIndicator from "./WizardStepIndicator";
+import { AvailableModelsProvider } from "@/contexts/AvailableModelsContext";
+import type { LlmModel } from "@/lib/aiModels";
 
 const STEP_COUNT = 4;
 
 export default function WizardShell({
   preloadedHasLlmKey,
+  initialModels,
 }: {
   preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
+  initialModels?: readonly LlmModel[];
 }) {
   const createSet = useMutation(api.flashcardSets.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
@@ -82,37 +86,40 @@ export default function WizardShell({
 
   if (createdSetId) {
     return (
-      <div className="text-center py-12 space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Set created!</h2>
-          <p className="text-muted">
-            Your flashcard set is ready to use.
-          </p>
+      <AvailableModelsProvider initialModels={initialModels}>
+        <div className="text-center py-12 space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Set created!</h2>
+            <p className="text-muted">
+              Your flashcard set is ready to use.
+            </p>
+          </div>
+          <div className="flex justify-center gap-3">
+            <Link
+              href={`/sets/${createdSetId}`}
+              className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
+            >
+              View Set
+            </Link>
+            <button
+              onClick={() => {
+                dispatch({ type: "RESET" });
+                setCreatedSetId(null);
+                setIsSubmitting(false);
+              }}
+              className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
+            >
+              Create Another
+            </button>
+          </div>
         </div>
-        <div className="flex justify-center gap-3">
-          <Link
-            href={`/sets/${createdSetId}`}
-            className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
-          >
-            View Set
-          </Link>
-          <button
-            onClick={() => {
-              dispatch({ type: "RESET" });
-              setCreatedSetId(null);
-              setIsSubmitting(false);
-            }}
-            className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
-          >
-            Create Another
-          </button>
-        </div>
-      </div>
+      </AvailableModelsProvider>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <AvailableModelsProvider initialModels={initialModels}>
+      <div className="space-y-8">
       <WizardStepIndicator currentStep={state.step} />
 
       <div>
@@ -161,5 +168,6 @@ export default function WizardShell({
         </div>
       )}
     </div>
+    </AvailableModelsProvider>
   );
 }

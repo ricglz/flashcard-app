@@ -12,6 +12,7 @@ import SetAccessError from "@/components/SetAccessError";
 import QueryErrorState from "@/components/QueryErrorState";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { LlmModel } from "@/lib/aiModels";
+import { AvailableModelsProvider } from "@/contexts/AvailableModelsContext";
 import BrowseInner from "./BrowseInner";
 
 type Props = {
@@ -63,18 +64,20 @@ export default function BrowseClient({
   }
 
   return (
-    <BrowseInner
-      flashcardSetId={flashcardSetId}
-      frontFields={frontFields}
-      backFields={backFields}
-      ttsOnlyFields={ttsOnlyFields}
-      shuffle={shuffle}
-      cardLimit={cardLimit}
-      setData={setResult.value}
-      cards={cardsResult.value}
-      preloadedTtsConfig={preloadedTtsConfig}
-      preloadedAnnotations={preloadedAnnotations}
-      initialAssistantModels={initialAssistantModels}
-    />
+    <AvailableModelsProvider initialModels={initialAssistantModels}>
+      <BrowseInner
+        flashcardSetId={flashcardSetId}
+        frontFields={frontFields}
+        backFields={backFields}
+        ttsOnlyFields={ttsOnlyFields}
+        shuffle={shuffle}
+        cardLimit={cardLimit}
+        setData={setResult.value}
+        cards={cardsResult.value}
+        preloadedTtsConfig={preloadedTtsConfig}
+        preloadedAnnotations={preloadedAnnotations}
+        initialAssistantModels={initialAssistantModels}
+      />
+    </AvailableModelsProvider>
   );
 }

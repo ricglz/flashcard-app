@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type RefObject } from "react";
+import { useState, useRef, useCallback, useEffect, type RefObject, useContext } from "react";
 import { useAvailableModels } from "@/hooks/useAvailableModels";
+import { AvailableModelsContext } from "@/contexts/AvailableModelsContext";
 import {
   streamChat,
   reduceEvent,
@@ -50,7 +51,9 @@ export default function AssistantPanelInner({ context, initialModels }: Assistan
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const { models: availableModels } = useAvailableModels(open, initialModels);
+  const contextValue = useContext(AvailableModelsContext);
+  const hookResult = useAvailableModels(open && !contextValue, initialModels);
+  const availableModels = contextValue ? contextValue.models : hookResult.models;
   const { modelOptions, modelLabels } = getModelSelectData(availableModels);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);

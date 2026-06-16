@@ -12,6 +12,7 @@ import QueryErrorState from "@/components/QueryErrorState";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import SetDetailInner from "./SetDetailInner";
 import type { LlmModel } from "@/lib/aiModels";
+import { AvailableModelsProvider } from "@/contexts/AvailableModelsContext";
 
 type Props = {
   setId: string;
@@ -21,7 +22,7 @@ type Props = {
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedHasLlmKey: Preloaded<typeof api.userSettings.hasLlmKey>;
   preloadedForkSyncStatus: Preloaded<typeof api.flashcardSets.getForkSyncStatus>;
-  initialAssistantModels?: readonly LlmModel[];
+  initialModels?: readonly LlmModel[];
 };
 
 export default function SetDetailClient({
@@ -32,6 +33,7 @@ export default function SetDetailClient({
   preloadedTtsConfig,
   preloadedHasLlmKey,
   preloadedForkSyncStatus,
+  initialModels,
 }: Props) {
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
   const cardsResult = usePreloadedQuery(preloadedCards);
@@ -51,13 +53,15 @@ export default function SetDetailClient({
   }
 
   return (
-    <SetDetailInner
-      setId={setId}
-      setData={setResult.value}
-      cards={cardsResult.value}
-      preloadedTtsConfig={preloadedTtsConfig}
-      preloadedHasLlmKey={preloadedHasLlmKey}
-      preloadedForkSyncStatus={preloadedForkSyncStatus}
-    />
+    <AvailableModelsProvider initialModels={initialModels}>
+      <SetDetailInner
+        setId={setId}
+        setData={setResult.value}
+        cards={cardsResult.value}
+        preloadedTtsConfig={preloadedTtsConfig}
+        preloadedHasLlmKey={preloadedHasLlmKey}
+        preloadedForkSyncStatus={preloadedForkSyncStatus}
+      />
+    </AvailableModelsProvider>
   );
 }
