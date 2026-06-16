@@ -635,3 +635,59 @@ describe("recordReview", () => {
     expect(await getQueueRows(t)).toHaveLength(1);
   });
 });
+
+describe("shuffleQueue", () => {
+  it("shuffles existing queue order and preserves count", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+    const { setId, cards: cardList } = await createSetWithCards(as, {
+      cardCount: 5,
+    });
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < cardList.length; i++) {
+        await insertQueuedSrsCardForTest(ctx, {
+          cardId: cardList[i]!._id,
+          setId,
+          order: i,
+        });
+      }
+    });
+
+    const before = await getQueueRows(t);
+    expect(before.map((q) => q.order)).toEqual([0, 1, 2, 3, 4]);
+
+    const result = await as.mutation(api.srsReviewQueue.shuffleQueue, {});
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.shuffled).toBe(5);
+    }
+
+    const after = await getQueueRows(t);
+    expect(after).toHaveLength(5);
+    const orders = after.map((q) => q.order).sort((a, b) => a - b);
+    expect(orders).toEqual([0, 1, 2, 3, 4]);
+    // Ensure set of cardIds preserved
+    const beforeIds = before.map((q) => q.cardId).sort();
+    const afterIds = after.map((q) => q.cardId).sort();
+    expect(afterIds).toEqual(beforeIds);
+  });
+
+  it("returns error when queue empty", async () => {
+    const t = createTestDb();
+    const as = t.withIdentity(TEST_USER);
+
+    const result = await as.mutation(api.srsReviewQueue.shuffleQueue, {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error._tag).toBe("Conflict");
+    }
+  });
+
+  it("returns unauthenticated when no identity", async () => {
+    const t = createTestDb();
+
+    const result = await t.mutation(api.srsReviewQueue.shuffleQueue, {});
+    expect(result).toMatchObject({ ok: false, error: { _tag: "Unauthenticated" } });
+  });
+});

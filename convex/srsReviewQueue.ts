@@ -5,6 +5,7 @@ import { ratingValidator } from "./schema";
 import { computeSM2, computeNextReviewAt, computeDayStartMs, SRS_DEFAULTS } from "./srs";
 import { populateQueue } from "./srsEngine";
 import { CARD_RATING_SCORES } from "../src/lib/types";
+import { shuffleArray } from "../src/lib/shuffle";
 import { incrementDailyStats } from "./progress";
 import {
   conflict,
@@ -313,6 +314,37 @@ export const forceRefreshQueue = mutation({
 
       const added = yield* Effect.promise(() => populateQueue(ctx, userId, newCardLimit));
       return { added };
+    }),
+  ),
+});
+
+export const shuffleQueue = mutation({
+  args: {},
+  handler: (ctx) => toDomainResultAsync(
+    Effect.gen(function* () {
+      const identity = yield* requireAuth(ctx);
+      const userId = identity.tokenIdentifier;
+
+      const queueItems = yield* Effect.promise(() =>
+        ctx.db
+          .query("reviewQueue")
+          .withIndex("by_userId_and_order", (q) => q.eq("userId", userId))
+          .take(QUEUE_STATS_LIMIT),
+      );
+
+      if (queueItems.length === 0) {
+        return yield* Effect.fail(conflict("Queue is empty"));
+      }
+
+      const shuffled = shuffleArray(queueItems);
+
+      for (const [i, item] of shuffled.entries()) {
+        yield* Effect.promise(() =>
+          ctx.db.patch(item._id, { order: i }),
+        );
+      }
+
+      return { shuffled: shuffled.length };
     }),
   ),
 });
