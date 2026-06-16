@@ -10,6 +10,7 @@ import {
 } from "@/lib/chatStream";
 import type { StudyContext } from "./AssistantPanel";
 import { Select } from "@/components/ui/Select";
+import { Spinner } from "@/components/ui/Spinner";
 import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
 import type { LlmModel } from "@/lib/aiModels";
@@ -189,7 +190,7 @@ export default function AssistantPanelInner({ context, initialModels }: Assistan
         {streaming?.toolStatus && <ToolStatusIndicator status={streaming.toolStatus} />}
         {streaming && !streaming.text && !streaming.toolStatus && (
           <div className="flex items-center gap-2 text-sm lg:text-base text-muted">
-            <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
+            <Spinner size="sm" />
             Thinking...
           </div>
         )}

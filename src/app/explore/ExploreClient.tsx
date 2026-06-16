@@ -8,6 +8,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Select } from "@/components/ui/Select";
+import { Spinner } from "@/components/ui/Spinner";
 import { SetCard } from "./SetCard";
 import FilterBar, {
   collectLanguages,
@@ -153,7 +154,7 @@ export default function ExploreClient() {
 
         {isLoading && (
           <div className="flex justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+            <Spinner size="lg" />
           </div>
         )}
 
@@ -195,7 +196,7 @@ export default function ExploreClient() {
 
         {!isSearching && status === "LoadingMore" && (
           <div className="flex justify-center mt-6">
-            <div className="animate-spin h-6 w-6 border-4 border-accent border-t-transparent rounded-full" />
+            <Spinner size="md" />
           </div>
         )}
       </main>

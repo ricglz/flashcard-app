@@ -22,6 +22,7 @@ import type { LlmModel } from "@/lib/aiModels";
 import StudySessionLocalResults, {
   type LocalStudyResult,
 } from "./StudySessionLocalResults";
+import { Spinner } from "@/components/ui/Spinner";
 
 type Flashcards = Extract<
   FunctionReturnType<typeof api.flashcards.list>,
@@ -123,7 +124,7 @@ export default function StudySessionInner({
   if (!currentCard) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+        <Spinner size="lg" />
       </div>
     );
   }

@@ -12,6 +12,7 @@ import DailyActivityChart from "@/components/DailyActivityChart";
 import AccuracyChart from "@/components/AccuracyChart";
 import CardStatusBreakdown from "@/components/CardStatusBreakdown";
 import SetMasteryList from "@/components/SetMasteryList";
+import { Spinner } from "@/components/ui/Spinner";
 import { classifyProgressHistoryResult } from "./progressHistoryState";
 import ProgressStatsBand from "./ProgressStatsBand";
 
@@ -77,7 +78,7 @@ export default function ProgressClient({
 
       {historyState.status === "loading" ? (
         <div className="h-40 flex items-center justify-center">
-          <div className="animate-spin h-6 w-6 border-2 border-accent border-t-transparent rounded-full" />
+          <Spinner size="md" />
         </div>
       ) : historyState.status === "error" ||
         historyState.status === "malformedCache" ? (

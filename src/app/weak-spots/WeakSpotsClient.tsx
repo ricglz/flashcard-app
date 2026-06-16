@@ -15,6 +15,7 @@ import {
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
+import { Spinner } from "@/components/ui/Spinner";
 import PageHeader from "@/components/PageHeader";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -184,7 +185,7 @@ export default function WeakSpotsClient({
 
         {dateRange.ok && weakCardsResult === undefined && (
           <div className="flex justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+            <Spinner size="lg" />
           </div>
         )}
 
