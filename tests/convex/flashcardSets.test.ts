@@ -389,7 +389,10 @@ describe("flashcardSets.fork", () => {
 
     const cards = await unwrap(await other.query(api.flashcards.list, { setId: newSetId }));
     expect(cards).toHaveLength(2);
-    expect(cards.map((card) => card.origin)).toEqual(["forked", "forked"]);
+    expect(cards.map((card) => card.origin)).toEqual([
+      { kind: "forked", sourceSetId },
+      { kind: "forked", sourceSetId },
+    ]);
   });
 
   it("forks an unlisted set", async () => {

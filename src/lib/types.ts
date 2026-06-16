@@ -1,4 +1,4 @@
-import type { Doc } from "../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
 
 // Convex schema imports the literal arrays from this file. Keep this module free
 // of runtime imports from convex/schema.ts so generated types remain one-way.
@@ -134,7 +134,62 @@ export const FLASHCARD_ORIGINS = [
   "ai_generated",
   "forked",
 ] as const;
-export type FlashcardOrigin = (typeof FLASHCARD_ORIGINS)[number];
+
+export const LEGACY_FLASHCARD_ORIGINS = FLASHCARD_ORIGINS;
+
+export type FlashcardOrigin =
+  | { kind: "manual" }
+  | { kind: "csv_import" }
+  | { kind: "ai_generated" }
+  | { kind: "forked"; sourceSetId?: Id<"flashcardSets"> }
+  | { kind: "merged"; sourceSetId: Id<"flashcardSets"> };
+
+export type SetOrigin =
+  | { kind: "manual" }
+  | { kind: "csv_import"; importedAt: number }
+  | {
+      kind: "ai_generated";
+      generatedAt: number;
+      sourceSetIds: Id<"flashcardSets">[];
+      sourceScope: "single_set" | "srs_enabled_sets" | "custom";
+      weakContextMethodology?: Methodology;
+    }
+  | { kind: "forked"; sourceSetId: Id<"flashcardSets">; forkedAt: number }
+  | { kind: "mixed" }
+  | { kind: "merged"; sourceSetIds: Id<"flashcardSets">[]; mergedAt: number };
+
+export function normalizeCardOrigin(value: unknown): FlashcardOrigin {
+  if (typeof value === "string") {
+    if (LEGACY_FLASHCARD_ORIGINS.includes(value as (typeof LEGACY_FLASHCARD_ORIGINS)[number])) {
+      if (value === "forked") return { kind: "forked" };
+      return { kind: value as "manual" | "csv_import" | "ai_generated" };
+    }
+    return { kind: "manual" };
+  }
+  if (value && typeof value === "object") {
+    const obj = value as { kind?: unknown; sourceSetId?: unknown };
+    const kind = obj.kind;
+    if (kind === "manual" || kind === "csv_import" || kind === "ai_generated") {
+      return { kind };
+    }
+    if (kind === "forked") {
+      return { kind: "forked", sourceSetId: obj.sourceSetId as Id<"flashcardSets"> | undefined };
+    }
+    if (kind === "merged" && typeof obj.sourceSetId === "string") {
+      return { kind: "merged", sourceSetId: obj.sourceSetId as Id<"flashcardSets"> };
+    }
+  }
+  return { kind: "manual" };
+}
+
+export function normalizeSetOrigin(value: unknown): SetOrigin {
+  if (value && typeof value === "object") {
+    const obj = value as { kind?: unknown; sourceSetIds?: unknown };
+    if (obj.kind === "merged" && Array.isArray(obj.sourceSetIds)) return value as SetOrigin;
+    if (typeof obj.kind === "string") return value as SetOrigin;
+  }
+  return { kind: "manual" };
+}
 
 export const METHODOLOGIES = [
   "balanced",
@@ -205,5 +260,5 @@ export function isActiveStudySession(
 export function isPublicFlashcardSet(
   set: Doc<"flashcardSets">,
 ): set is PublicFlashcardSet {
-  return set.visibility === "public";
+  return set.visibility === "public" && set.archivedAt === undefined;
 }

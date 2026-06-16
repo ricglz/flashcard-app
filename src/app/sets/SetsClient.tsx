@@ -37,6 +37,12 @@ export default function SetsClient({ preloadedSets }: Props) {
             Quick Create
           </button>
           <Link
+            href="/sets/merge"
+            className="px-3 sm:px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
+          >
+            Merge sets
+          </Link>
+          <Link
             href="/sets/new"
             className="px-3 sm:px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
           >

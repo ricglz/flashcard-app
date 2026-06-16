@@ -66,7 +66,7 @@ export const create = mutation({
           appendCardsToSet(ctx, {
             set,
             cards: [{ fields: args.fields, order: args.order }],
-            origin: "manual",
+            origin: { kind: "manual" },
             srsEnrollment: { kind: "enabledUsersForSet" },
           }),
         ),
@@ -99,7 +99,7 @@ export const batchCreate = mutation({
           appendCardsToSet(ctx, {
             set,
             cards: args.cards,
-            origin: "manual",
+            origin: { kind: "manual" },
             srsEnrollment: { kind: "enabledUsersForSet" },
           }),
         ),
