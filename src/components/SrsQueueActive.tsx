@@ -8,11 +8,15 @@ export default function SrsQueueActive({
   reviewedToday,
   onToggleSettings,
   settingsPanel,
+  onShuffle,
+  isShuffling,
 }: {
   remaining: number;
   reviewedToday: number;
   onToggleSettings: () => void;
   settingsPanel: ReactNode;
+  onShuffle: () => void;
+  isShuffling: boolean;
 }) {
   return (
     <div className="mb-6 p-4 border border-accent/30 bg-accent/5 rounded-lg">
@@ -35,6 +39,15 @@ export default function SrsQueueActive({
             title="SRS settings"
           >
             <GearIcon />
+          </button>
+          <button
+            onClick={onShuffle}
+            disabled={isShuffling}
+            className="px-3 py-2 border border-edge rounded-lg text-sm font-medium hover:bg-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Shuffle queue"
+            title="Shuffle SRS queue order"
+          >
+            {isShuffling ? "Shuffling..." : "Shuffle"}
           </button>
           <Link
             href="/srs"

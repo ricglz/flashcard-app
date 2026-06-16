@@ -15,6 +15,7 @@ import SrsQueueComplete from "./SrsQueueComplete";
 import SrsQueueActive from "./SrsQueueActive";
 import InlineError from "./InlineError";
 import { useForceRefreshQueue } from "@/hooks/useForceRefreshQueue";
+import { useShuffleQueue } from "@/hooks/useShuffleQueue";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
 
 type QueueStats = Extract<
@@ -52,12 +53,18 @@ export default function SrsQueueStatusInner({
     error: refreshError,
     clearError: clearRefreshError,
   } = useForceRefreshQueue();
+  const {
+    handleShuffle,
+    isShuffling,
+    error: shuffleError,
+    clearError: clearShuffleError,
+  } = useShuffleQueue();
 
   const [showSettings, setShowSettings] = useState(false);
   const { execute, isSaving, error, setError } = useSaveHandler<boolean>({
     onSuccess: () => setShowSettings(false),
   });
-  const displayError = error ?? refreshError ?? settingsError;
+  const displayError = error ?? refreshError ?? shuffleError ?? settingsError;
 
   async function handleSave(config: SrsConfig): Promise<boolean> {
     const result = await execute(async () => {
@@ -81,6 +88,7 @@ export default function SrsQueueStatusInner({
     setShowSettings((v) => !v);
     setError(null);
     clearRefreshError();
+    clearShuffleError();
   };
 
   const settingsPanel = showSettings ? (
@@ -134,6 +142,8 @@ export default function SrsQueueStatusInner({
         reviewedToday={stats.reviewedToday}
         onToggleSettings={onToggleSettings}
         settingsPanel={settingsPanel}
+        onShuffle={handleShuffle}
+        isShuffling={isShuffling}
       />
     </>
   );
