@@ -6,7 +6,6 @@ import type { api } from "../../../convex/_generated/api";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
-import type { LlmModel } from "@/lib/aiModels";
 import Link from "next/link";
 import FlaggedCardReview from "./FlaggedCardReview";
 
@@ -19,11 +18,9 @@ export type FlaggedCard = FlaggedCardResult[number];
 export default function FlaggedCardsInner({
   flaggedCards: flaggedCardResult,
   preloadedTtsConfig,
-  initialAssistantModels,
 }: {
   flaggedCards: FlaggedCardResult;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
-  initialAssistantModels?: readonly LlmModel[];
 }) {
   const tts = useTtsControls(preloadedTtsConfig);
   const { revealed, reveal, resetReveal } = useReviewCardState();
@@ -111,7 +108,6 @@ export default function FlaggedCardsInner({
         onNext: navigation.goNext,
         onHideCurrent: navigation.hideCurrent,
       }}
-      initialAssistantModels={initialAssistantModels}
     />
   );
 }

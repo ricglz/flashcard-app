@@ -8,7 +8,6 @@ import StudyCard from "@/components/StudyCard";
 import AssistantPanel from "@/components/AssistantPanel";
 import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { useTtsControls } from "@/hooks/useTtsControls";
-import type { LlmModel } from "@/lib/aiModels";
 import type { FlaggedCard } from "./FlaggedCardsInner";
 
 type FlaggedReviewState = {
@@ -30,7 +29,6 @@ type FlaggedCardReviewProps = {
   progress: { current: number; total: number };
   review: FlaggedReviewState;
   navigation: FlaggedReviewNavigation;
-  initialAssistantModels?: readonly LlmModel[];
 };
 
 export default function FlaggedCardReview({
@@ -39,7 +37,6 @@ export default function FlaggedCardReview({
   progress,
   review,
   navigation,
-  initialAssistantModels,
 }: FlaggedCardReviewProps) {
   const toggleFlag = useOfflineMutation(api.cardAnnotations.toggleFlag);
   const setNoteMutation = useOfflineMutation(api.cardAnnotations.setNote);
@@ -78,7 +75,6 @@ export default function FlaggedCardReview({
       tts={tts}
       assistant={
         <AssistantPanel
-          initialModels={initialAssistantModels}
           context={{
             setId: currentCard.setId,
             cardId: currentCard.cardId,

@@ -11,7 +11,6 @@ import {
 import SetAccessError from "@/components/SetAccessError";
 import QueryErrorState from "@/components/QueryErrorState";
 import { getFailureMessage } from "@/lib/domainResultMessage";
-import type { LlmModel } from "@/lib/aiModels";
 import BrowseInner from "./BrowseInner";
 
 type Props = {
@@ -26,7 +25,6 @@ type Props = {
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
-  initialAssistantModels?: readonly LlmModel[];
 };
 
 // eslint-disable-next-line local/no-large-component-props -- Existing wide component API; reduce before removing this override.
@@ -42,7 +40,6 @@ export default function BrowseClient({
   preloadedCards,
   preloadedTtsConfig,
   preloadedAnnotations,
-  initialAssistantModels,
 }: Props) {
   const setId = String(flashcardSetId);
   const setResult = useTypedFlashcardSet(preloadedSet, initialSet);
@@ -74,7 +71,6 @@ export default function BrowseClient({
       cards={cardsResult.value}
       preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}
-      initialAssistantModels={initialAssistantModels}
     />
   );
 }

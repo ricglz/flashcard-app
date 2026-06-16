@@ -18,7 +18,6 @@ import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
 import InlineError from "@/components/InlineError";
-import type { LlmModel } from "@/lib/aiModels";
 import StudySessionLocalResults, {
   type LocalStudyResult,
 } from "./StudySessionLocalResults";
@@ -35,14 +34,12 @@ export default function StudySessionInner({
   cards,
   preloadedTtsConfig,
   preloadedAnnotations,
-  initialAssistantModels,
 }: {
   session: ActiveStudySession;
   setData: TypedSetWithViewer;
   cards: Flashcards;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
-  initialAssistantModels?: readonly LlmModel[];
 }) {
   const router = useRouter();
   const flashcardSetId = session.setId;
@@ -150,7 +147,6 @@ export default function StudySessionInner({
       }}
       assistant={
         <AssistantPanel
-          initialModels={initialAssistantModels}
           context={{
             setId: session.setId,
             cardId: currentCard._id,

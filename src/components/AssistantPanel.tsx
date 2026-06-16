@@ -5,7 +5,6 @@ import { Alert } from "@/components/ui/Alert";
 import AssistantErrorBoundary from "./AssistantErrorBoundary";
 import AssistantPanelInner from "./AssistantPanelInner";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { LlmModel } from "@/lib/aiModels";
 
 export type StudyContext = {
   setId: Id<"flashcardSets">;
@@ -17,10 +16,8 @@ export type StudyContext = {
 
 export default function AssistantPanel({
   context,
-  initialModels,
 }: {
   context: StudyContext;
-  initialModels?: readonly LlmModel[];
 }) {
   const ai = useAiAvailable();
   if (!ai.available) {
@@ -37,7 +34,7 @@ export default function AssistantPanel({
   }
   return (
     <AssistantErrorBoundary>
-      <AssistantPanelInner context={context} initialModels={initialModels} />
+      <AssistantPanelInner context={context} />
     </AssistantErrorBoundary>
   );
 }

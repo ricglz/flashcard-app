@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type RefObject } from "react";
-import { useAvailableModels } from "@/hooks/useAvailableModels";
+import { Suspense, useState, useRef, useCallback, useEffect, type RefObject } from "react";
+import AvailableModelsSuspenseProvider from "@/contexts/AvailableModelsSuspenseProvider";
 import {
   streamChat,
   reduceEvent,
@@ -9,11 +9,11 @@ import {
   type ChatStreamState,
 } from "@/lib/chatStream";
 import type { StudyContext } from "./AssistantPanel";
-import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
-import type { LlmModel } from "@/lib/aiModels";
+import AssistantModelSelect from "./AssistantModelSelect";
+import AssistantPanelSkeleton from "./AssistantPanelSkeleton";
 
 function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
   queueMicrotask(() => {
@@ -23,24 +23,11 @@ function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
   });
 }
 
-function getModelSelectData(availableModels: readonly LlmModel[]) {
-  return {
-    modelOptions: ["", ...availableModels.map((model) => model.id)],
-    modelLabels: {
-      "": "Default model",
-      ...Object.fromEntries(
-        availableModels.map((model) => [model.id, model.name]),
-      ),
-    },
-  };
-}
-
 type AssistantPanelInnerProps = {
   context: StudyContext;
-  initialModels?: readonly LlmModel[];
 };
 
-export default function AssistantPanelInner({ context, initialModels }: AssistantPanelInnerProps) {
+export default function AssistantPanelInner({ context }: AssistantPanelInnerProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -49,9 +36,6 @@ export default function AssistantPanelInner({ context, initialModels }: Assistan
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-
-  const { models: availableModels } = useAvailableModels(open, initialModels);
-  const { modelOptions, modelLabels } = getModelSelectData(availableModels);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
@@ -120,7 +104,16 @@ export default function AssistantPanelInner({ context, initialModels }: Assistan
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 lg:w-[28rem] max-w-[calc(100vw-2rem)] h-[32rem] lg:h-[36rem] max-h-[calc(100vh-2rem)] bg-background border border-edge rounded-xl shadow-xl flex flex-col">
+    <Suspense
+      fallback={
+        <AssistantPanelSkeleton
+          setName={context.setName}
+          onClose={() => setOpen(false)}
+        />
+      }
+    >
+      <AvailableModelsSuspenseProvider>
+        <div className="fixed bottom-4 right-4 z-50 w-96 lg:w-[28rem] max-w-[calc(100vw-2rem)] h-[32rem] lg:h-[36rem] max-h-[calc(100vh-2rem)] bg-background border border-edge rounded-xl shadow-xl flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 border-b border-edge">
         <h3 className="font-semibold text-sm lg:text-base">Study Assistant</h3>
         <div className="flex items-center gap-2">
@@ -144,13 +137,7 @@ export default function AssistantPanelInner({ context, initialModels }: Assistan
         <span className="text-xs text-muted truncate flex-1">
           {context.setName}
         </span>
-        <Select
-          value={model}
-          options={modelOptions}
-          labels={modelLabels}
-          onChange={setModel}
-          className="w-36 px-2 py-1 text-xs"
-        />
+        <AssistantModelSelect value={model} onChange={setModel} />
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -223,6 +210,8 @@ export default function AssistantPanelInner({ context, initialModels }: Assistan
           </button>
         </div>
       </div>
-    </div>
+        </div>
+      </AvailableModelsSuspenseProvider>
+    </Suspense>
   );
 }

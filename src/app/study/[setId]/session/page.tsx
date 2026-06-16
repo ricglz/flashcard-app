@@ -9,7 +9,6 @@ import {
   requirePreloadedDomainResult,
   requireRouteId,
 } from "@/lib/routePreload";
-import { fetchAvailableModelsForServer } from "@/lib/serverAiModels";
 import { isActiveStudySession } from "@/lib/types";
 import StudySessionClient from "./StudySessionClient";
 
@@ -62,13 +61,11 @@ export default async function StudySessionPage({
     preloadedCards,
     preloadedTtsConfig,
     preloadedAnnotations,
-    initialAssistantModels,
   ] = await Promise.all([
     preloadRouteQuery(api.flashcardSets.get, { id: flashcardSetId }, { token }),
     preloadRouteQuery(api.flashcards.list, { setId: flashcardSetId }, { token }),
     preloadQuery(api.userSettings.getTtsConfig, {}, { token }),
     preloadRouteQuery(api.cardAnnotations.getForSet, { setId: flashcardSetId }, { token }),
-    fetchAvailableModelsForServer(token),
   ]);
 
   const setData = requirePreloadedDomainResult(preloadedSet);
@@ -82,7 +79,6 @@ export default async function StudySessionPage({
       preloadedCards={preloadedCards}
       preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}
-      initialAssistantModels={initialAssistantModels}
     />
   );
 }

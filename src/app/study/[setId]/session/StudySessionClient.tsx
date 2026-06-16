@@ -11,7 +11,6 @@ import {
 import SetAccessError from "@/components/SetAccessError";
 import QueryErrorState from "@/components/QueryErrorState";
 import { getFailureMessage } from "@/lib/domainResultMessage";
-import type { LlmModel } from "@/lib/aiModels";
 import StudySessionInner from "./StudySessionInner";
 
 type Props = {
@@ -21,7 +20,6 @@ type Props = {
   preloadedCards: Preloaded<typeof api.flashcards.list>;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
-  initialAssistantModels?: readonly LlmModel[];
 };
 
 export default function StudySessionClient({
@@ -31,7 +29,6 @@ export default function StudySessionClient({
   preloadedCards,
   preloadedTtsConfig,
   preloadedAnnotations,
-  initialAssistantModels,
 }: Props) {
   const flashcardSetId = initialSession.setId;
   const setId = String(flashcardSetId);
@@ -59,7 +56,6 @@ export default function StudySessionClient({
       cards={cardsResult.value}
       preloadedTtsConfig={preloadedTtsConfig}
       preloadedAnnotations={preloadedAnnotations}
-      initialAssistantModels={initialAssistantModels}
     />
   );
 }

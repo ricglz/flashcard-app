@@ -16,7 +16,6 @@ import { useCardAnnotationsForSetPreloaded } from "@/hooks/useCardAnnotations";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
 import { shuffleArray } from "@/lib/shuffle";
-import type { LlmModel } from "@/lib/aiModels";
 
 type Flashcards = Extract<
   FunctionReturnType<typeof api.flashcards.list>,
@@ -35,7 +34,6 @@ export default function BrowseInner({
   cards,
   preloadedTtsConfig,
   preloadedAnnotations,
-  initialAssistantModels,
 }: {
   flashcardSetId: Id<"flashcardSets">;
   frontFields: string[];
@@ -47,7 +45,6 @@ export default function BrowseInner({
   cards: Flashcards;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   preloadedAnnotations: Preloaded<typeof api.cardAnnotations.getForSet>;
-  initialAssistantModels?: readonly LlmModel[];
 }) {
   const setId = String(flashcardSetId);
   const tts = useTtsControls(preloadedTtsConfig);
@@ -129,7 +126,6 @@ export default function BrowseInner({
       tts={tts}
       assistant={
         <AssistantPanel
-          initialModels={initialAssistantModels}
           context={{
             setId: flashcardSetId,
             cardId: currentCard._id,
