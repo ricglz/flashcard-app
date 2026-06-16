@@ -12,6 +12,7 @@ import AiAppendConfig, { type AiAppendConfigValue } from "./AiAppendConfig";
 import AiErrorMessage from "@/components/AiErrorMessage";
 import AiRefinementPanel from "@/components/AiRefinementPanel";
 import CardPreviewList from "@/components/CardPreviewList";
+import { Spinner } from "@/components/ui/Spinner";
 
 type Phase = "config" | "generating" | "preview" | "confirming";
 
@@ -133,13 +134,15 @@ export default function AiAppendFlow({ setId, fieldDefinitions, onClose }: Props
       )}
 
       {(phase === "generating" || phase === "confirming") && (
-        <div className="flex flex-col items-center py-8 gap-4">
-          <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-          <p className="text-muted text-sm">
-            {phase === "generating"
-              ? "Generating cards... this may take 10-30 seconds."
-              : "Adding cards to set..."}
-          </p>
+        <div className="flex flex-col items-center py-8">
+          <Spinner
+            size="lg"
+            label={
+              phase === "generating"
+                ? "Generating cards... this may take 10-30 seconds."
+                : "Adding cards to set..."
+            }
+          />
         </div>
       )}
 

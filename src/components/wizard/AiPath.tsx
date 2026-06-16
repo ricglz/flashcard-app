@@ -10,6 +10,7 @@ import { AiPromptField } from "@/components/ai-generation/AiPromptField";
 import { AiTargetCountField } from "@/components/ai-generation/AiTargetCountField";
 import AiCardPreview from "./AiCardPreview";
 import AiErrorMessage from "@/components/AiErrorMessage";
+import { Spinner } from "@/components/ui/Spinner";
 import { includedCardFields } from "@/lib/generatedDraftCards";
 import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import type { WizardAction, WizardState } from "./wizardState";
@@ -169,9 +170,8 @@ export default function AiPath({
           </button>
 
           {isGenerating && (
-            <div className="flex flex-col items-center py-4 gap-2">
-              <div className="animate-spin h-6 w-6 border-4 border-accent border-t-transparent rounded-full" />
-              <p className="text-muted text-xs">This may take 10-30 seconds.</p>
+            <div className="flex flex-col items-center py-4">
+              <Spinner size="md" label="This may take 10-30 seconds." />
             </div>
           )}
         </>

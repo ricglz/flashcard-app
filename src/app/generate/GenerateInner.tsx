@@ -17,6 +17,7 @@ import AiRefinementPanel from "@/components/AiRefinementPanel";
 import AiErrorMessage from "@/components/AiErrorMessage";
 import CardPreviewList from "@/components/CardPreviewList";
 import PageHeader from "@/components/PageHeader";
+import { Spinner } from "@/components/ui/Spinner";
 
 type Step = "config" | "loading" | "preview" | "done";
 type UserSets = Extract<
@@ -158,11 +159,11 @@ export default function GenerateInner({ userSets }: { userSets: UserSets }) {
         );
       case "loading":
         return (
-          <div className="flex flex-col items-center py-12 gap-4">
-            <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
-            <p className="text-muted text-sm">
-              Generating cards... this may take 10-30 seconds.
-            </p>
+          <div className="flex flex-col items-center py-12">
+            <Spinner
+              size="lg"
+              label="Generating cards... this may take 10-30 seconds."
+            />
           </div>
         );
       case "preview":
