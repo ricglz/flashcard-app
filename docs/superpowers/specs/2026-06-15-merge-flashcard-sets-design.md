@@ -39,14 +39,14 @@ Add ability to create a new flashcard set by merging 2+ existing sets the user o
 - Provide backward-compat helper `normalizeCardOrigin` to read legacy string origins as `{kind}` objects during transition.
 
 ### convex/schema.ts
-- New `cardOriginValidator` object union matching above TypeScript type, replacing `literalUnion(FLASHCARD_ORIGINS)`.
+- New `cardOriginValidator` object union matching above TypeScript type, replacing `literalUnion(FLASHCARD_ORIGINS)`. Validator must accept both legacy string forms and new object forms during transition for backward compatibility; normalize helper converts strings to objects on read.
 - `flashcardSets` table add `archivedAt: v.optional(v.number())`.
-- Add index `by_ownerId_and_archivedAt` or filter in queries; list queries default to exclude archived.
-- `setOriginValidator` add merged kind object as above.
+- No new index on flashcardSets for archived filtering because list query is driven by userSets. Filtering happens in memory after joining userSets to sets. Acknowledge pagination risk: with `.take(100)` on userSets, if many archived sets are in first 100 links, active sets beyond 100 may be hidden until archived are unarchived or pagination improved. Acceptable for v1 side project; future improvement could denormalize archived flag onto userSets with index.
+- `setOriginValidator` add merged kind object as above, and make validator permissive to unknown kinds mapping to manual fallback for rollback safety.
 - Update existing fork mutation to write card origin as object `{kind:"forked", sourceSetId}` instead of string.
 
 ### Migration
-No active users per AGENTS.md. Existing cards with string origin will be normalized on read by helper, and rewritten to object form on next write path or via one-time backfill script if needed. Accept breaking change in dev.
+No active users per AGENTS.md. Existing cards with string origin normalized on read. New writes use object form. Validators accept both during transition.
 
 ## 2. Backend — convex/flashcardSets.ts merge mutation
 
@@ -62,7 +62,7 @@ Effect pipeline steps:
 1. requireAuth, get tokenIdentifier.
 2. Fetch each source set, verify exists. Fetch userSets link via `by_userId_and_setId`. Fail forbidden if no link (must be owner or member).
 3. Verify all source fieldDefinitions deep-equal (name, role, order, metadata). Fail invalidInput listing mismatched set names.
-4. Query active flashcards per source via `by_setId`, filter archivedAt undefined. Compute deduplication key = stable JSON stringify of sorted fields. Total unique count must be >0 and <= MAX_CARDS_PER_SET else fail conflict.
+4. Query active flashcards per source via `by_setId`, filter archivedAt undefined. Compute deduplication key = stable JSON stringify of sorted fields. Track winning sourceSetId per unique key (first source in input order wins). Total unique count must be >0 and <= MAX_CARDS_PER_SET else fail conflict.
 5. If archiveSource true, verify caller is owner on each source set, else fail forbidden listing non-owned sets.
 6. Create new flashcardSet:
    - name: `Merged set YYYY-MM-DD` (user renames after)
@@ -72,19 +72,22 @@ Effect pipeline steps:
    - origin: `{kind:"merged", sourceSetIds, mergedAt: now}`
    - visibility: "private", archivedAt undefined, cardCount = deduped count, createdAt/updatedAt now
 7. Insert userSets owner link with srsEnabled true, default front/back from fieldDefinitions via getDefaultFieldLayout.
-8. Batch insert cards:
-   - For each source in order, for each unique card, insert into flashcards table with fields copied, order sequential, origin `{kind:"merged", sourceSetId: source._id}`, archivedAt undefined.
-   - Use DELETION_BATCH_SIZE chunks similar to fork.
-   - Call createInitialCardsForSet helper to enroll in SRS for owner.
-9. Post-action archive: if archiveSource true, for each source where caller is owner, patch flashcardSets with archivedAt=now and visibility="private", and patch userSets link to set srsEnabled false to pause reviews.
+8. Batch insert cards with per-card origin:
+   - Extend `convex/lib/cardCreation.ts` with new helper `createInitialCardsForSetWithOrigins` accepting cards array where each card includes optional `origin` override, or extend existing helper to accept per-card origin map. Helper must not assert single origin for whole batch.
+   - For each unique card in source order, insert into flashcards table with fields copied, order sequential, origin `{kind:"merged", sourceSetId: winningSourceId}`, archivedAt undefined.
+   - Use DELETION_BATCH_SIZE chunks.
+   - Enroll owner in SRS via helper similar to fork path.
+9. Post-action archive: if archiveSource true, for each source where caller is owner, patch flashcardSets with archivedAt=now and visibility="private", and patch ALL userSets links for that setId (not just caller's) to set srsEnabled false to pause reviews for all members. Also ensure srsEngine queries defensively filter out archived sets by joining to flashcardSets and checking archivedAt undefined.
 10. Return `{setId, skippedDuplicateCount}`.
 
 New mutations:
-- `unarchive` args `{id}` owner only, clears archivedAt, restores visibility to private (user can change later), sets srsEnabled true.
+- `unarchive` args `{id}` owner only, clears archivedAt, restores visibility to private (user can change later), sets srsEnabled true on all userSets links for that set.
+- `updateVisibility` add guard rejecting change to public or unlisted when target set has archivedAt defined; only private allowed while archived. UI hides visibility controls for archived sets.
 
 Updated queries:
-- `list` add optional arg `includeArchived` default false, filter out archivedAt defined.
-- `listPublic` unchanged (archived sets are private anyway).
+- `list` add optional arg `includeArchived` default false. After fetching userSets links (take 100), join to flashcardSets and filter out where archivedAt defined in memory. Document pagination limitation in code comment.
+- `listPublic` unchanged but relies on archived sets being forced private; add defensive filter in query to exclude archivedAt defined even if visibility somehow public.
+- `updateVisibility` add guard: if set.archivedAt defined, reject visibility change to public or unlisted, allow only private. Return invalidInput with clear message.
 
 Error types: CommonFailure plus invalidInput for schema mismatch, forbidden for permission, conflict for limit exceeded, notFound.
 
@@ -108,6 +111,9 @@ Update `src/app/sets/SetsClient.tsx`:
 Update `FlashcardSetList` component:
 - Filter out archived sets by default (relies on updated list query). Future backlog: toggle to show archived.
 
+Update `SetDetailInner` visibility UI:
+- Hide visibility dropdown or disable public/unlisted options when set is archived, show archived badge and unarchive button instead. Prevents archived sets becoming public via UI; server guard is authoritative.
+
 No changes to New Set wizard. Merge is separate action, not creation method.
 
 ## 4. Permissions and Archived State
@@ -116,10 +122,11 @@ No changes to New Set wizard. Merge is separate action, not creation method.
 - Archive action: owner only per source. Mutation fails upfront if archive requested but any source is member-only.
 - Archived semantics:
   - flashcardSets.archivedAt timestamp set, visibility forced private.
-  - list queries exclude archived by default.
-  - Direct link `/sets/[id]` still works, shows archived badge in UI (future).
-  - userSets srsEnabled set false on archive to pause SRS reviews.
-  - unarchive mutation reverses: clears archivedAt, sets srsEnabled true, leaves visibility private for user to adjust.
+  - list queries exclude archived by default via in-memory filter after userSets join; pagination limitation documented.
+  - Direct link `/sets/[id]` still works, shows archived badge in UI, hides visibility controls except unarchive.
+  - ALL userSets links for archived set patched to srsEnabled false to pause SRS for all members, not just caller. srsEngine defensively filters out archived sets when building review queues.
+  - unarchive mutation reverses: clears archivedAt, sets srsEnabled true on all userSets links, leaves visibility private.
+  - updateVisibility mutation rejects public/unlisted while archived.
 - No delete action in v1 per product decision.
 
 ## 5. Error Handling and Edge Cases
@@ -128,10 +135,12 @@ No changes to New Set wizard. Merge is separate action, not creation method.
 - Card limit exceeded after dedup: conflict error with count shown.
 - Empty result after dedup: invalidInput require at least 1 card (defensive, empty sets shouldn't exist per product note).
 - Duplicate selection: client dedupes, server validates unique IDs.
-- Archived source sets filtered from selection UI.
+- Archived source sets filtered from selection UI and rejected server-side if passed.
+- Archived visibility guard: updateVisibility rejects public/unlisted on archived sets server-side; UI hides controls.
 - Concurrent source edits during merge ignored — copy is snapshot.
-- SRS fresh start confirmed, no history carryover.
+- SRS fresh start confirmed, no history carryover. Archived source sets pause SRS for all members via userSets patch and srsEngine defensive filter.
 - Partial failure cleanup best effort delete new set.
+- Rollback safety via permissive validators mapping unknown origins to manual fallback.
 
 ## 6. Testing Strategy
 
@@ -139,9 +148,12 @@ Types first per AGENTS.md:
 - Update TypeScript types, ensure convex codegen passes.
 
 Unit tests `pnpm test`:
-- `convex/flashcardSets.merge.test.ts` testing pure deduplication function, schema match validator, permission checks mocked, archive flag behavior, limit enforcement.
+- `convex/flashcardSets.merge.test.ts` testing pure deduplication function, schema match validator, permission checks mocked, archive flag behavior, limit enforcement, per-card origin tracking.
 - Update existing fork tests for new card origin object shape.
-- Test list query archived filter.
+- Test list query archived filter and pagination behavior with mixed archived/active.
+- Test updateVisibility guard rejecting public on archived.
+- Test srsEngine skips archived sets.
+- Test card origin validator accepts legacy strings and new objects, and permissive fallback for unknown kinds.
 
 E2E `pnpm test:e2e` (user to run, agents can't):
 - Seed two sets with identical schema via UI or API, navigate to /sets/merge, select both, merge, verify new set card count equals sum minus duplicates, verify sources archived when checked, verify new set origin shows merged badge.
@@ -151,7 +163,7 @@ Manual checklist in PR description.
 ## 7. Rollout and Observability
 
 - Side project, no active users, no backfill needed.
-- Experimental feature acceptable with clear rollback: revert commit removes route and mutation, existing merged sets remain readable as manual sets with new origin kind (graceful degradation).
+- Experimental feature acceptable. Rollback safety: origin validators must be permissive to unknown kinds, mapping unknown set/card origins to manual fallback on read, so that reverting code does not break reading merged sets. If validators are strict, rollback would require keeping new code or running migration to convert merged origins back to manual.
 - Observability: rely on existing Sentry instrumentation, Convex logs for mutation failures.
 
 ## 8. Future Backlog Items
