@@ -137,6 +137,11 @@ export function preloadTtsVoices(): void {
   void ensureVoices();
 }
 
+export function cancelTts(): void {
+  const synth = getSpeechSynthesis();
+  synth?.cancel();
+}
+
 export function voiceScore(voice: SpeechSynthesisVoice, lang: string): number {
   const prefix = lang.split("-")[0] ?? lang;
   let score = 0;
