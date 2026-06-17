@@ -11,8 +11,14 @@ vi.mock("@/lib/tts", async (importOriginal) => {
     ...actual,
     speakSequence: vi.fn(() => Promise.resolve({ ok: true, status: "ended" })),
     cancelTts: vi.fn(),
+    ensureVoices: vi.fn(() => Promise.resolve([])),
   };
 });
+
+async function flush() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
 
 const fieldDefinitions: FieldDefinition[] = [
   { name: "Front", role: "primary", metadata: {}, order: 0 },
@@ -52,6 +58,8 @@ describe("StudyCard front autoplay", () => {
         ttsRate={0.9}
       />,
     );
+
+    await flush();
 
     expect(speakSequenceMock).toHaveBeenCalledWith(
       [{ text: "question", lang: "en-US" }],
@@ -134,6 +142,7 @@ describe("StudyCard front autoplay", () => {
       />,
     );
 
+    await flush();
     expect(speakSequenceMock).toHaveBeenCalledTimes(1);
 
     rerender(
@@ -161,6 +170,7 @@ describe("StudyCard front autoplay", () => {
       />,
     );
 
+    await flush();
     expect(speakSequenceMock).toHaveBeenCalledWith(
       [{ text: "question", lang: "en-US" }],
       expect.any(Object),
@@ -221,6 +231,7 @@ describe("StudyCard reveal", () => {
       />,
     );
 
+    await flush();
     expect(speakSequenceMock).toHaveBeenCalledTimes(1);
     expect(speakSequenceMock).toHaveBeenCalledWith(
       [{ text: "front", lang: "en-US" }],
