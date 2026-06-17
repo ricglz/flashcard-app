@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import type { FieldDefinition } from "@/lib/types";
-import type { TtsEvent } from "@/lib/tts";
-import { cancelTts, ensureVoices, speakSequence } from "@/lib/tts";
-import { isTtsProblem, useTtsInteraction } from "@/hooks/useTtsInteraction";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
-import { getRevealTtsItems, getTtsItems } from "./studyCardTts";
+import { getTtsPlan } from "./studyCardTts";
+import { useStudyCardTts } from "@/hooks/useStudyCardTts";
 
 type Props = {
   card: { fields: Record<string, string> };
@@ -38,85 +36,30 @@ export default function StudyCard({
   onSetNote,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
-  const { message: ttsMessage, setMessage: setTtsMessage } = useTtsInteraction();
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
-  const updateTtsStatus = useCallback(
-    (event: TtsEvent) => {
-      if (isTtsProblem(event.status)) {
-        setTtsMessage(
-          "message" in event
-            ? event.message
-            : "Couldn't play audio. Check volume or tap again.",
-        );
-        return;
-      }
+  const ttsPlan = getTtsPlan({
+    cardFields: card.fields,
+    fieldDefinitions,
+    frontFields,
+    backFields,
+    ttsOnlyFields,
+  });
 
-      setTtsMessage(null);
-    },
-    [setTtsMessage],
-  );
-
-  const frontFieldsKey = frontFields.join("|");
-  const cardFieldsKey = JSON.stringify(card.fields);
-  const fieldDefsKey = JSON.stringify(
-    fieldDefinitions.map((fd) => `${fd.name}:${fd.metadata.tts?.lang ?? ""}`),
-  );
-
-  useEffect(() => {
-    if (!autoPlayTts) {
-      cancelTts();
-      return;
-    }
-
-    const items = getTtsItems({
-      cardFields: card.fields,
-      fieldDefinitions,
-      fieldNames: frontFields,
-    });
-
-    if (items.length > 0) {
-      let cancelled = false;
-      void ensureVoices().then(() => {
-        if (cancelled) return;
-        void speakSequence(items, {
-          rate: ttsRate,
-          onEvent: updateTtsStatus,
-        });
-      });
-      return () => {
-        cancelled = true;
-        cancelTts();
-      };
-    } else {
-      cancelTts();
-    }
-
-    return () => {
-      cancelTts();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- content keys replace reference deps to avoid parent rerender loops; ttsRate omitted to prevent replay on speed slider change
-  }, [autoPlayTts, cardFieldsKey, frontFieldsKey, fieldDefsKey, updateTtsStatus]);
+  const tts = useStudyCardTts({
+    frontItems: ttsPlan.frontItems,
+    revealItems: ttsPlan.revealItems,
+    frontKey: ttsPlan.frontKey,
+    revealKey: ttsPlan.revealKey,
+    autoPlay: autoPlayTts ?? false,
+    rate: ttsRate,
+  });
 
   const handleReveal = () => {
     setRevealed(true);
     onRevealed?.();
-
-    if (autoPlayTts) {
-      const items = getRevealTtsItems({
-        cardFields: card.fields,
-        fieldDefinitions,
-        backFields,
-        ttsOnlyFields,
-      });
-      if (items.length > 0) {
-        void speakSequence(items, {
-          rate: ttsRate,
-          onEvent: updateTtsStatus,
-        });
-      }
-    }
+    tts.playRevealTts();
   };
 
   return (
@@ -129,7 +72,8 @@ export default function StudyCard({
           primaryClassName="text-2xl sm:text-4xl font-bold"
           secondaryClassName="text-xl sm:text-2xl"
           ttsRate={ttsRate}
-          onTtsEvent={updateTtsStatus}
+          onTtsEvent={tts.handleTtsEvent}
+          activeFieldId={tts.activeFieldId}
         />
 
         {revealed ? (
@@ -142,7 +86,8 @@ export default function StudyCard({
               primaryClassName="text-xl sm:text-3xl font-bold"
               secondaryClassName="text-lg sm:text-xl"
               ttsRate={ttsRate}
-              onTtsEvent={updateTtsStatus}
+              onTtsEvent={tts.handleTtsEvent}
+              activeFieldId={tts.activeFieldId}
             />
           </>
         ) : (
@@ -164,12 +109,12 @@ export default function StudyCard({
           />
         )}
 
-        {ttsMessage && (
+        {tts.message && (
           <div
             className="mt-4 rounded-lg bg-danger-surface px-3 py-2 text-center text-sm text-danger"
             aria-live="polite"
           >
-            {ttsMessage}
+            {tts.message}
           </div>
         )}
       </div>
