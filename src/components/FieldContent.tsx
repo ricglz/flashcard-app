@@ -15,6 +15,7 @@ type Props = {
   secondaryClassName: string;
   ttsRate?: number;
   onTtsEvent: (event: TtsEvent) => void;
+  activeFieldId?: string | null;
 };
 
 export default function FieldContent({
@@ -25,6 +26,7 @@ export default function FieldContent({
   secondaryClassName,
   ttsRate,
   onTtsEvent,
+  activeFieldId,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -58,6 +60,8 @@ export default function FieldContent({
                   lang={ttsConfig.lang}
                   rate={ttsRate}
                   onTtsEvent={onTtsEvent}
+                  externalSpeaking={activeFieldId === fieldName}
+                  fieldName={fieldName}
                 />
               )}
             </div>

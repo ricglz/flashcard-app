@@ -16,15 +16,18 @@ type Props = {
   className?: string;
   showMessage?: boolean;
   onTtsEvent?: (event: TtsEvent) => void;
+  externalSpeaking?: boolean;
+  fieldName?: string;
 };
 
-function ariaLabel(status: TtsStatus): string {
-  if (status === "speaking") return "Playing pronunciation";
+function ariaLabel(status: TtsStatus, fieldName?: string): string {
+  const base = fieldName ? `${fieldName} pronunciation` : "pronunciation";
+  if (status === "speaking") return `Playing ${base}`;
   if (status === "preparing" || status === "queued") {
-    return "Preparing pronunciation";
+    return `Preparing ${base}`;
   }
-  if (isTtsProblem(status)) return "Could not play pronunciation";
-  return "Listen to pronunciation";
+  if (isTtsProblem(status)) return `Could not play ${base}`;
+  return `Listen to ${base}`;
 }
 
 function buttonClasses(status: TtsStatus, className: string): string {
@@ -46,6 +49,8 @@ export default function TtsButton({
   className = "",
   showMessage = false,
   onTtsEvent,
+  externalSpeaking = false,
+  fieldName,
 }: Props) {
   const {
     status,
@@ -55,6 +60,12 @@ export default function TtsButton({
     clearMessage,
     handleTtsEvent,
   } = useTtsInteraction({ onTtsEvent });
+
+  const displayStatus: TtsStatus = isTtsBusy(status)
+    ? status
+    : externalSpeaking
+      ? "speaking"
+      : status;
 
   const handleClick = async () => {
     if (!isTtsSupported()) {
@@ -87,12 +98,12 @@ export default function TtsButton({
       <button
         type="button"
         onClick={handleClick}
-        className={buttonClasses(status, className)}
+        className={buttonClasses(displayStatus, className)}
         title={message ?? `Listen (${lang})`}
-        aria-label={ariaLabel(status)}
-        aria-busy={isTtsBusy(status)}
+        aria-label={ariaLabel(displayStatus, fieldName)}
+        aria-busy={isTtsBusy(displayStatus)}
       >
-        <TtsButtonIcon status={status} />
+        <TtsButtonIcon status={displayStatus} />
       </button>
       {showMessage && message && (
         <span
