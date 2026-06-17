@@ -3,8 +3,9 @@
 import { useState, useMemo } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useUrlState, zEnum } from "@/hooks/useUrlState";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Select } from "@/components/ui/Select";
@@ -26,17 +27,12 @@ const SORT_LABELS: Record<SortOption, string> = {
   cards: "Most Cards",
 };
 
-function isSortOption(value: string | null): value is SortOption {
-  return value === "updated" || value === "newest" || value === "name" || value === "cards";
-}
+const sortSchema = zEnum(SORT_OPTIONS);
 
 export default function ExploreClient() {
   const [searchInput, setSearchInput] = useState("");
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
   const router = useRouter();
-  const sortParam = searchParams.get("sort");
-  const sortBy: SortOption = isSortOption(sortParam) ? sortParam : "updated";
+  const [sortBy, setSortBy] = useUrlState("sort", sortSchema, "updated");
   const [cardCountRange, setCardCountRange] = useState<CardCountRange>("any");
   const [languageTag, setLanguageTag] = useState<string | null>(null);
   const debouncedSearch = useDebounce(searchInput, 300);
@@ -52,19 +48,6 @@ export default function ExploreClient() {
     api.flashcardSets.searchPublicCombined,
     isSearching ? { searchTerm: debouncedSearch } : "skip"
   );
-
-  const updateSort = (next: SortOption) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next === "updated") {
-      params.delete("sort");
-    } else {
-      params.set("sort", next);
-    }
-    const nextQuery = params.toString();
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-      scroll: false,
-    });
-  };
 
   const allResults = useMemo(() => {
     if (isSearching) return searchResults ?? [];
@@ -139,7 +122,7 @@ export default function ExploreClient() {
               value={sortBy}
               options={SORT_OPTIONS}
               labels={SORT_LABELS}
-              onChange={updateSort}
+              onChange={setSortBy}
             />
           )}
         </div>
