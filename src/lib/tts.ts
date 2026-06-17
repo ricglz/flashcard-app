@@ -28,6 +28,7 @@ type TtsEventBase = {
   lang?: string;
   voiceName?: string;
   voiceLang?: string;
+  itemId?: string;
 };
 
 type TtsProgressEvent = TtsEventBase & {
@@ -368,7 +369,7 @@ export function speak(
  * for better mobile user-gesture compatibility.
  */
 export function speakSequence(
-  items: { text: string; lang: string }[],
+  items: { text: string; lang: string; itemId?: string }[],
   rateOrOptions: number | SpeakOptions = 0.75,
 ): Promise<TtsResult> {
   const options = typeof rateOrOptions === "number" ? { rate: rateOrOptions } : rateOrOptions;
@@ -442,19 +443,21 @@ export function speakSequence(
           lang: item.lang,
           voiceName: voice?.name,
           voiceLang: voice?.lang,
+          ...(item.itemId ? { itemId: item.itemId } : {}),
         });
       };
 
       utterance.onend = () => {
         remaining -= 1;
+        options.onEvent?.({
+          status: "ended",
+          text: item.text,
+          lang: item.lang,
+          voiceName: voice?.name,
+          voiceLang: voice?.lang,
+          ...(item.itemId ? { itemId: item.itemId } : {}),
+        });
         if (remaining === 0) {
-          options.onEvent?.({
-            status: "ended",
-            text: item.text,
-            lang: item.lang,
-            voiceName: voice?.name,
-            voiceLang: voice?.lang,
-          });
           finish({
             ok: true,
             status: "ended",
@@ -479,6 +482,7 @@ export function speakSequence(
           kind,
           voiceName: voice?.name,
           voiceLang: voice?.lang,
+          ...(item.itemId ? { itemId: item.itemId } : {}),
         });
 
         if (status !== "cancelled") {
@@ -506,13 +510,14 @@ export function speakSequence(
         lang: item.lang,
         voiceName: voice?.name,
         voiceLang: voice?.lang,
+        ...(item.itemId ? { itemId: item.itemId } : {}),
       });
 
       try {
         synth.speak(utterance);
       } catch {
         const message = "Couldn’t start text-to-speech in this browser.";
-        options.onEvent?.({ status: "error", text: item.text, lang: item.lang, message, kind: "unknown" });
+        options.onEvent?.({ status: "error", text: item.text, lang: item.lang, message, kind: "unknown", ...(item.itemId ? { itemId: item.itemId } : {}) });
         finish({ ok: false, status: "error", kind: "unknown", message });
         return;
       }
