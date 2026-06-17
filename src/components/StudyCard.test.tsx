@@ -1,8 +1,10 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { act } from "react";
 import type { FieldDefinition } from "@/lib/types";
 import { cancelTts, speakSequence } from "@/lib/tts";
+import type { TtsEvent } from "@/lib/tts";
 import StudyCard from "./StudyCard";
 
 vi.mock("@/lib/tts", async (importOriginal) => {
@@ -62,7 +64,7 @@ describe("StudyCard front autoplay", () => {
     await flush();
 
     expect(speakSequenceMock).toHaveBeenCalledWith(
-      [{ text: "question", lang: "en-US" }],
+      [{ text: "question", lang: "en-US", itemId: "Front" }],
       expect.objectContaining({ rate: 0.9 }),
     );
   });
@@ -172,7 +174,7 @@ describe("StudyCard front autoplay", () => {
 
     await flush();
     expect(speakSequenceMock).toHaveBeenCalledWith(
-      [{ text: "question", lang: "en-US" }],
+      [{ text: "question", lang: "en-US", itemId: "Front" }],
       expect.any(Object),
     );
   });
@@ -207,8 +209,8 @@ describe("StudyCard reveal", () => {
     expect(onRevealed).toHaveBeenCalledTimes(1);
     expect(speakSequenceMock).toHaveBeenCalledWith(
       [
-        { text: "answer", lang: "ja-JP" },
-        { text: "pronunciation", lang: "ja-JP" },
+        { text: "answer", lang: "ja-JP", itemId: "Back" },
+        { text: "pronunciation", lang: "ja-JP", itemId: "Pronunciation" },
       ],
       expect.objectContaining({ rate: 1.25 }),
     );
@@ -234,7 +236,7 @@ describe("StudyCard reveal", () => {
     await flush();
     expect(speakSequenceMock).toHaveBeenCalledTimes(1);
     expect(speakSequenceMock).toHaveBeenCalledWith(
-      [{ text: "front", lang: "en-US" }],
+      [{ text: "front", lang: "en-US", itemId: "Front" }],
       expect.any(Object),
     );
 
@@ -261,7 +263,7 @@ describe("StudyCard reveal", () => {
     // Back should play, not front again
     expect(speakSequenceMock).toHaveBeenCalledTimes(1);
     expect(speakSequenceMock).toHaveBeenCalledWith(
-      [{ text: "answer", lang: "ja-JP" }],
+      [{ text: "answer", lang: "ja-JP", itemId: "Back" }],
       expect.any(Object),
     );
   });
@@ -295,5 +297,157 @@ describe("StudyCard reveal", () => {
 
     expect(onToggleFlag).toHaveBeenCalledTimes(1);
     expect(onSetNote).toHaveBeenCalledWith("mnemonic");
+  });
+});
+
+describe("StudyCard auto TTS visual indicator", () => {
+  it("highlights TtsButton during speaking and clears on ended", async () => {
+    const speakSequenceMock = vi.mocked(speakSequence);
+    let onEvent: ((e: TtsEvent) => void) | undefined;
+    speakSequenceMock.mockImplementation((_items, options) => {
+      onEvent = (options as { onEvent?: (e: TtsEvent) => void }).onEvent;
+      return Promise.resolve({ ok: true, status: "ended" });
+    });
+
+    render(
+      <StudyCard
+        card={{ fields: { Front: "question", Back: "answer" } }}
+        fieldDefinitions={fieldDefinitionsWithFrontTts}
+        frontFields={["Front"]}
+        backFields={["Back"]}
+        autoPlayTts
+      />,
+    );
+
+    await flush();
+    expect(speakSequenceMock).toHaveBeenCalled();
+    expect(onEvent).toBeDefined();
+
+    const button = screen.getByRole("button", { name: /Front pronunciation/i });
+    expect(button).toHaveAttribute("aria-label", "Listen to Front pronunciation");
+
+    // simulate speaking
+    act(() => {
+      onEvent!({ status: "speaking", itemId: "Front", text: "question", lang: "en-US" });
+    });
+    await waitFor(() => expect(button).toHaveAttribute("aria-label", "Playing Front pronunciation"));
+    expect(button.className).toContain("bg-accent");
+
+    // simulate ended
+    act(() => {
+      onEvent!({ status: "ended", itemId: "Front", text: "question", lang: "en-US" });
+    });
+    await waitFor(() => expect(button).toHaveAttribute("aria-label", "Listen to Front pronunciation"));
+    expect(button.className).not.toContain("bg-accent");
+  });
+
+  it("clears highlight on error and on toggle off", async () => {
+    const speakSequenceMock = vi.mocked(speakSequence);
+    const cancelTtsMock = vi.mocked(cancelTts);
+    let onEvent: ((e: TtsEvent) => void) | undefined;
+    speakSequenceMock.mockImplementation((_items, options) => {
+      onEvent = (options as { onEvent?: (e: TtsEvent) => void }).onEvent;
+      return Promise.resolve({ ok: true, status: "ended" });
+    });
+    cancelTtsMock.mockClear();
+
+    const { rerender } = render(
+      <StudyCard
+        card={{ fields: { Front: "question", Back: "answer" } }}
+        fieldDefinitions={fieldDefinitionsWithFrontTts}
+        frontFields={["Front"]}
+        backFields={["Back"]}
+        autoPlayTts
+      />,
+    );
+
+    await flush();
+    const button = screen.getByRole("button", { name: /Front pronunciation/i });
+    act(() => {
+      onEvent!({ status: "speaking", itemId: "Front", text: "question", lang: "en-US" });
+    });
+    await waitFor(() => expect(button.className).toContain("bg-accent"));
+
+    act(() => {
+      onEvent!({ status: "error", itemId: "Front", kind: "unknown", message: "err", text: "question", lang: "en-US" });
+    });
+    await waitFor(() => expect(button.className).not.toContain("bg-accent"));
+
+    // speaking again then toggle off
+    act(() => {
+      onEvent!({ status: "speaking", itemId: "Front", text: "question", lang: "en-US" });
+    });
+    await waitFor(() => expect(button.className).toContain("bg-accent"));
+
+    rerender(
+      <StudyCard
+        card={{ fields: { Front: "question", Back: "answer" } }}
+        fieldDefinitions={fieldDefinitionsWithFrontTts}
+        frontFields={["Front"]}
+        backFields={["Back"]}
+        autoPlayTts={false}
+      />,
+    );
+    await flush();
+    expect(cancelTtsMock).toHaveBeenCalled();
+    await waitFor(() => expect(button.className).not.toContain("bg-accent"));
+  });
+
+  it("clears old highlight immediately on new run and ignores stale events", async () => {
+    const speakSequenceMock = vi.mocked(speakSequence);
+    let firstOnEvent: ((e: TtsEvent) => void) | undefined;
+    let secondOnEvent: ((e: TtsEvent) => void) | undefined;
+    speakSequenceMock
+      .mockImplementationOnce((_items, options) => {
+        firstOnEvent = (options as { onEvent?: (e: TtsEvent) => void }).onEvent;
+        return Promise.resolve({ ok: true, status: "ended" });
+      })
+      .mockImplementationOnce((_items, options) => {
+        secondOnEvent = (options as { onEvent?: (e: TtsEvent) => void }).onEvent;
+        return Promise.resolve({ ok: true, status: "ended" });
+      });
+
+    const { rerender } = render(
+      <StudyCard
+        card={{ fields: { Front: "a", Back: "b" } }}
+        fieldDefinitions={fieldDefinitionsWithFrontTts}
+        frontFields={["Front"]}
+        backFields={["Back"]}
+        autoPlayTts
+      />,
+    );
+    await flush();
+    act(() => {
+      firstOnEvent!({ status: "speaking", itemId: "Front", text: "a", lang: "en-US" });
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Front pronunciation/i }).className).toContain("bg-accent"));
+    const buttonA = screen.getByRole("button", { name: /Front pronunciation/i });
+
+    // new run via card change
+    rerender(
+      <StudyCard
+        card={{ fields: { Front: "c", Back: "d" } }}
+        fieldDefinitions={fieldDefinitionsWithFrontTts}
+        frontFields={["Front"]}
+        backFields={["Back"]}
+        autoPlayTts
+      />,
+    );
+    await flush();
+    // old highlight cleared immediately on new run start
+    await waitFor(() => expect(buttonA.className).not.toContain("bg-accent"));
+
+    // stale event from old run ignored
+    act(() => {
+      firstOnEvent!({ status: "ended", itemId: "Front", text: "a", lang: "en-US" });
+    });
+    await flush();
+    expect(buttonA.className).not.toContain("bg-accent");
+
+    // new run speaking
+    act(() => {
+      secondOnEvent!({ status: "speaking", itemId: "Front", text: "c", lang: "en-US" });
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Front pronunciation/i }).className).toContain("bg-accent"));
   });
 });
