@@ -6,6 +6,31 @@ export type RevealTtsItem = {
   lang: string;
 };
 
+export function getTtsItems({
+  cardFields,
+  fieldDefinitions,
+  fieldNames,
+}: {
+  cardFields: Record<string, string>;
+  fieldDefinitions: readonly FieldDefinition[];
+  fieldNames: readonly string[];
+}): RevealTtsItem[] {
+  const fieldDefsMap = new Map(fieldDefinitions.map((field) => [field.name, field]));
+  const items: RevealTtsItem[] = [];
+
+  for (const fieldName of fieldNames) {
+    const fieldDefinition = fieldDefsMap.get(fieldName);
+    const value = cardFields[fieldName];
+    const ttsConfig = fieldDefinition ? getTtsConfig(fieldDefinition) : null;
+
+    if (ttsConfig && value) {
+      items.push({ text: value, lang: ttsConfig.lang });
+    }
+  }
+
+  return items;
+}
+
 export function getRevealTtsItems({
   cardFields,
   fieldDefinitions,
@@ -17,18 +42,9 @@ export function getRevealTtsItems({
   backFields: readonly string[];
   ttsOnlyFields: readonly string[];
 }): RevealTtsItem[] {
-  const fieldDefsMap = new Map(fieldDefinitions.map((field) => [field.name, field]));
-  const items: RevealTtsItem[] = [];
-
-  for (const fieldName of [...backFields, ...ttsOnlyFields]) {
-    const fieldDefinition = fieldDefsMap.get(fieldName);
-    const value = cardFields[fieldName];
-    const ttsConfig = fieldDefinition ? getTtsConfig(fieldDefinition) : null;
-
-    if (ttsConfig && value) {
-      items.push({ text: value, lang: ttsConfig.lang });
-    }
-  }
-
-  return items;
+  return getTtsItems({
+    cardFields,
+    fieldDefinitions,
+    fieldNames: [...backFields, ...ttsOnlyFields],
+  });
 }
