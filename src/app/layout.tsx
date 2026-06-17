@@ -5,6 +5,7 @@ import ConvexClientProvider from "@/components/ConvexClientProvider";
 import RegisterSW from "@/components/RegisterSW";
 import SentryUserContext from "@/components/SentryUserContext";
 import Toaster from "@/components/Toaster";
+import TtsPreloader from "@/components/TtsPreloader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -57,6 +58,7 @@ export default function RootLayout({
           </ConvexClientProvider>
         </ClerkProvider>
         <RegisterSW />
+        <TtsPreloader />
         <Toaster />
       </body>
     </html>
