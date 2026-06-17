@@ -5,13 +5,13 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import Link from "next/link";
 import { useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { LinkButton } from "@/components/ui/LinkButton";
 import { Select } from "@/components/ui/Select";
 import { useSaveHandler } from "@/hooks/useSaveHandler";
+import { useUrlState, zEnum } from "@/hooks/useUrlState";
 import { formatDate } from "@/lib/formatDate";
 
 type SetList = Extract<
@@ -27,33 +27,14 @@ const SORT_LABELS: Record<SortOption, string> = {
   name: "Name A-Z",
 };
 
-function isSortOption(value: string | null): value is SortOption {
-  return value === "updated" || value === "created" || value === "name";
-}
+const sortSchema = zEnum(SORT_OPTIONS);
 
 export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
   const removeSet = useMutation(api.flashcardSets.remove);
   const { execute: executeRemove, error } = useSaveHandler<null>({
     fallbackErrorMessage: "Failed to delete set",
   });
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const router = useRouter();
-  const sortParam = searchParams.get("sort");
-  const sortBy: SortOption = isSortOption(sortParam) ? sortParam : "updated";
-
-  const updateSort = (next: SortOption) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next === "updated") {
-      params.delete("sort");
-    } else {
-      params.set("sort", next);
-    }
-    const nextQuery = params.toString();
-    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
-      scroll: false,
-    });
-  };
+  const [sortBy, setSortBy] = useUrlState("sort", sortSchema, "updated");
 
   const sortedSets = useMemo(() => {
     const copy = [...sets];
@@ -97,7 +78,7 @@ export default function FlashcardSetListInner({ sets }: { sets: SetList }) {
           value={sortBy}
           options={SORT_OPTIONS}
           labels={SORT_LABELS}
-          onChange={updateSort}
+          onChange={setSortBy}
         />
       </div>
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
