@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FieldDefinition } from "@/lib/types";
 import type { TtsEvent } from "@/lib/tts";
-import { speakSequence } from "@/lib/tts";
+import { cancelTts, speakSequence } from "@/lib/tts";
 import { isTtsProblem, useTtsInteraction } from "@/hooks/useTtsInteraction";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
-import { getRevealTtsItems } from "./studyCardTts";
+import { getRevealTtsItems, getTtsItems } from "./studyCardTts";
 
 type Props = {
   card: { fields: Record<string, string> };
@@ -42,18 +42,54 @@ export default function StudyCard({
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
-  const updateTtsStatus = (event: TtsEvent) => {
-    if (isTtsProblem(event.status)) {
-      setTtsMessage(
-        "message" in event
-          ? event.message
-          : "Couldn't play audio. Check volume or tap again.",
-      );
+  const updateTtsStatus = useCallback(
+    (event: TtsEvent) => {
+      if (isTtsProblem(event.status)) {
+        setTtsMessage(
+          "message" in event
+            ? event.message
+            : "Couldn't play audio. Check volume or tap again.",
+        );
+        return;
+      }
+
+      setTtsMessage(null);
+    },
+    [setTtsMessage],
+  );
+
+  const frontFieldsKey = frontFields.join("|");
+  const cardFieldsKey = JSON.stringify(card.fields);
+  const fieldDefsKey = JSON.stringify(
+    fieldDefinitions.map((fd) => `${fd.name}:${fd.metadata.tts?.lang ?? ""}`),
+  );
+
+  useEffect(() => {
+    if (!autoPlayTts) {
+      cancelTts();
       return;
     }
 
-    setTtsMessage(null);
-  };
+    const items = getTtsItems({
+      cardFields: card.fields,
+      fieldDefinitions,
+      fieldNames: frontFields,
+    });
+
+    if (items.length > 0) {
+      void speakSequence(items, {
+        rate: ttsRate,
+        onEvent: updateTtsStatus,
+      });
+    } else {
+      cancelTts();
+    }
+
+    return () => {
+      cancelTts();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- content keys replace reference deps to avoid parent rerender loops; ttsRate omitted to prevent replay on speed slider change
+  }, [autoPlayTts, cardFieldsKey, frontFieldsKey, fieldDefsKey, updateTtsStatus]);
 
   const handleReveal = () => {
     setRevealed(true);
