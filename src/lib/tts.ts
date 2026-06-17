@@ -93,7 +93,7 @@ export function readVoices(): SpeechSynthesisVoice[] {
 }
 
 /** Ensure voices are loaded (they load async in some browsers). */
-function ensureVoices(): Promise<SpeechSynthesisVoice[]> {
+export function ensureVoices(): Promise<SpeechSynthesisVoice[]> {
   const currentVoices = readVoices();
   if (currentVoices.length > 0) return Promise.resolve(currentVoices);
   if (voicesLoadPromise) return voicesLoadPromise;
