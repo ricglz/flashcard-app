@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FieldDefinition } from "@/lib/types";
 import type { TtsEvent } from "@/lib/tts";
-import { cancelTts, speakSequence } from "@/lib/tts";
+import { cancelTts, ensureVoices, speakSequence } from "@/lib/tts";
 import { isTtsProblem, useTtsInteraction } from "@/hooks/useTtsInteraction";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
@@ -77,10 +77,18 @@ export default function StudyCard({
     });
 
     if (items.length > 0) {
-      void speakSequence(items, {
-        rate: ttsRate,
-        onEvent: updateTtsStatus,
+      let cancelled = false;
+      void ensureVoices().then(() => {
+        if (cancelled) return;
+        void speakSequence(items, {
+          rate: ttsRate,
+          onEvent: updateTtsStatus,
+        });
       });
+      return () => {
+        cancelled = true;
+        cancelTts();
+      };
     } else {
       cancelTts();
     }
