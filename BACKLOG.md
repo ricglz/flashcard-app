@@ -30,12 +30,6 @@
   - Adopt only if repeated forms need shared validation, dirty/touched/reset state, field-level errors, field arrays, or submit lifecycle handling.
   - Keep shallow controlled forms local when a library would mostly replace explicit `onChange({ ...value, field })` calls.
 
-### Component API Size
-- [ ] Revisit the enforced React component prop limit after the initial wide component APIs are reduced.
-  - Current enforcement target is more than 8 props.
-  - Evaluate whether lowering the limit to more than 5 props is practical without noisy exceptions.
-  - Keep the rule focused on component definitions, not JSX call sites.
-
 ### Route Component Boundaries
 - [ ] Consider a shared centered route-state shell if more pages duplicate the same header/back-link plus centered message/action layout.
   - Current candidates: flagged-card empty/review-complete states and browse empty/complete states.
