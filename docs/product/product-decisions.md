@@ -39,7 +39,7 @@ The app needs offline study, but not multi-user collaborative conflict resolutio
 
 ### AI Direction
 
-The app supports in-app BYOK LLM features and a local CLI/tooling workflow. In-app AI is useful for integrated generation and study assistance. The CLI workflow remains useful for external assistants, local review of generated JSON, and narrow token-scoped automation. See `docs/ai-cli-remedial-sets.md` and `docs/decisions/005-ai-cli-remedial-sets.md`.
+The app supports in-app BYOK LLM features and a local CLI/tooling workflow. In-app AI is useful for integrated generation and study assistance. The CLI workflow remains useful for external assistants, local review of generated JSON, and narrow token-scoped automation. See `docs/workflows/ai-cli-remedial-sets.md` and `docs/decisions/005-ai-cli-remedial-sets.md`.
 
 ## Current Product Direction
 

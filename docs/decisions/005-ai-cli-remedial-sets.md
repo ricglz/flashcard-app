@@ -7,6 +7,8 @@
 
 Implement AI-assisted remedial set generation through a local CLI and token-protected tooling API as the first AI workflow. In-app BYOK LLM features now also exist, but the CLI remains useful for external assistants and local review.
 
+Current workflow details live in `docs/workflows/ai-cli-remedial-sets.md`.
+
 ## Why
 
 This gave users targeted AI generation while avoiding early commitment to LLM provider integrations.

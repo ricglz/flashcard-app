@@ -1,7 +1,16 @@
 # E2E Testing
 
+## Purpose
+
 Playwright tests use Clerk's testing token support and the local Convex dev
 deployment configured by `.env.local`.
+
+## Why Local First
+
+The current E2E setup intentionally runs against local app code plus the dev
+Convex deployment because dedicated Clerk and Convex test infrastructure does
+not exist yet. This keeps real auth and real backend behavior in the loop
+without pretending the tests are CI-isolated.
 
 ## Current Local Setup
 
