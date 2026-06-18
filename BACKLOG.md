@@ -117,8 +117,8 @@
 - [ ] Expand tool set beyond the current `list_sets`, `get_weak_cards`, and `add_note_to_current_card` tools if usage shows demand (e.g., study stats, mastery levels, richer annotation workflows)
 
 ### Study Assistant UI Polish
-- [ ] Improve chat rendering with richer markdown/code support and better streaming UX.
-  - Use `react-markdown` + `remark-gfm` + `remark-math` + `rehype-raw` for rich message rendering.
+- [ ] Improve assistant message polish and streaming UX.
+  - Decide whether `remark-math` and `rehype-raw` are worth adding for assistant messages.
   - Add `react-syntax-highlighter` with Prism for code blocks with copy/download toolbar.
   - Add streaming cursor animation (`▍` with CSS pulse) during generation.
   - Smarter auto-scroll: MutationObserver on message container + pause when user scrolls up.
