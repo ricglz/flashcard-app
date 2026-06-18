@@ -4,7 +4,7 @@ Chinese-first flashcard PWA with a generic field-based data model. Built with Ne
 
 ## Product
 
-See `docs/product-decisions.md` for product intent and durable architecture choices. The source and tests are the source of truth for implemented behavior.
+See `docs/product/product-decisions.md` for product intent and durable architecture choices. The source and tests are the source of truth for implemented behavior.
 
 ## Development
 
@@ -70,10 +70,11 @@ pnpm flashcard-ai workflow
 
 ## Important Docs
 
-- `docs/product-decisions.md` — product intent and durable architecture rationale.
-- `docs/offline-strategy.md` — offline architecture boundaries and limitations.
-- `docs/e2e-testing.md` — local E2E setup and infrastructure constraints.
-- `docs/ai-cli-remedial-sets.md` — external-assistant remedial set workflow.
+- `docs/README.md` — docs index.
+- `docs/product/product-decisions.md` — product intent and durable architecture rationale.
+- `docs/architecture/offline-strategy.md` — offline architecture boundaries and limitations.
+- `docs/testing/e2e-testing.md` — local E2E setup and infrastructure constraints.
+- `docs/workflows/ai-cli-remedial-sets.md` — external-assistant remedial set workflow.
 - `docs/decisions/` — concise decision records explaining why key choices were made.
 
 ## Project Notes

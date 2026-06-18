@@ -5,7 +5,7 @@
 > This file is only for unstarted or in-progress work.
 > For current status, see git history and README.md.
 > 
-> Product decisions: `docs/product-decisions.md`
+> Product decisions: `docs/product/product-decisions.md`
 
 ## Code Quality — Typed Domain Validation Candidates
 
