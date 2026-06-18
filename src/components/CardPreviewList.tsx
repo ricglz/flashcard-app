@@ -1,4 +1,5 @@
 import MarkdownContent from "./MarkdownContent";
+import { sortedEntries } from "@/lib/objects";
 
 export type PreviewCard = {
   fields: Record<string, string>;
@@ -37,7 +38,7 @@ export default function CardPreviewList({
               Include
             </label>
             <div className="min-w-0 flex-1 text-sm">
-              {Object.entries(card.fields).map(([key, value]) => (
+              {sortedEntries(card.fields).map(([key, value]) => (
                 <div
                   key={key}
                   className="mb-1 flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-1"
