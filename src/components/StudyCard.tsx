@@ -6,6 +6,7 @@ import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
 import { getTtsPlan } from "./studyCardTts";
 import { useStudyCardTts } from "@/hooks/useStudyCardTts";
+import { sortedStrings } from "@/lib/objects";
 
 type Props = {
   card: { fields: Record<string, string> };
@@ -39,11 +40,14 @@ export default function StudyCard({
 
   const fieldDefsMap = new Map(fieldDefinitions.map((fd) => [fd.name, fd]));
 
+  const sortedFrontFields = sortedStrings(frontFields);
+  const sortedBackFields = sortedStrings(backFields);
+
   const ttsPlan = getTtsPlan({
     cardFields: card.fields,
     fieldDefinitions,
-    frontFields,
-    backFields,
+    frontFields: sortedFrontFields,
+    backFields: sortedBackFields,
     ttsOnlyFields,
   });
 
@@ -66,7 +70,7 @@ export default function StudyCard({
     <div className="w-full max-w-lg mx-auto">
       <div className="bg-card-bg border-2 border-card-border rounded-xl p-4 sm:p-8 shadow-sm">
         <FieldContent
-          fieldNames={frontFields}
+          fieldNames={sortedFrontFields}
           fields={card.fields}
           fieldDefsMap={fieldDefsMap}
           primaryClassName="text-2xl sm:text-4xl font-bold"
@@ -80,7 +84,7 @@ export default function StudyCard({
           <>
             <hr className="my-6 border-dashed" />
             <FieldContent
-              fieldNames={backFields}
+              fieldNames={sortedBackFields}
               fields={card.fields}
               fieldDefsMap={fieldDefsMap}
               primaryClassName="text-xl sm:text-3xl font-bold"
