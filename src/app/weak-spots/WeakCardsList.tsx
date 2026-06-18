@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { WeakCardsResponse, WeakReason } from "@/lib/aiToolingSchemas";
 import { Badge } from "@/components/ui/Badge";
+import { sortedEntries } from "@/lib/objects";
 
 const REASON_LABELS: Record<WeakReason, string> = {
   recent_wrong_rating: "Wrong",
@@ -55,7 +56,7 @@ export default function WeakCardsList({
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="min-w-0 flex-1 text-sm leading-6">
-                      {Object.entries(card.fields).map(([key, value]) => (
+                      {sortedEntries(card.fields).map(([key, value]) => (
                         <span key={key} className="mr-3 break-words">
                           <span className="text-muted">{key}:</span> {value}
                         </span>
