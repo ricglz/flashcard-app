@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSrsReviewProgressState,
   getSrsReviewScreenState,
+  getSrsActiveCardCount,
   srsReviewProgressReducer,
 } from "./srsReviewWorkflow";
 
@@ -33,7 +34,6 @@ describe("SRS review progress state", () => {
     expect(getSrsReviewScreenState({
       state,
       activeCardCount: 0,
-      currentItem: null,
       initialQueueSize: 2,
       initialReviewedToday: 4,
       serverReviewedToday: 4,
@@ -51,7 +51,6 @@ describe("SRS review progress state", () => {
     expect(getSrsReviewScreenState({
       state,
       activeCardCount: 0,
-      currentItem: null,
       initialQueueSize: 2,
       initialReviewedToday: 4,
       serverReviewedToday: 4,
@@ -68,7 +67,6 @@ describe("SRS review progress state", () => {
     const screenState = getSrsReviewScreenState({
       state,
       activeCardCount: 0,
-      currentItem: null,
       initialQueueSize: 1,
       initialReviewedToday: 5,
       serverReviewedToday: 8,
@@ -81,18 +79,37 @@ describe("SRS review progress state", () => {
     expect(screenState.reviewedToday).toBe(8);
   });
 
-  it("treats a missing current item as reconnecting even when active ids remain", () => {
-    const state = createSrsReviewProgressState();
+  it("handles live queue shrinking while local reviewed count increases", () => {
+    const state = reduce(
+      { type: "reviewRecorded", rating: "good" },
+      { type: "reviewRecorded", rating: "hard" },
+      { type: "reviewRecorded", rating: "easy" },
+      { type: "reviewRecorded", rating: "good" },
+      { type: "reviewRecorded", rating: "wrong" },
+    );
 
-    expect(getSrsReviewScreenState({
+    const activeCardCount = getSrsActiveCardCount({
+      effectiveQueueSize: 5,
+      reviewedCount: 5,
+      initialQueueSize: 10,
+    });
+
+    const screenState = getSrsReviewScreenState({
       state,
-      activeCardCount: 1,
-      currentItem: null,
-      initialQueueSize: 1,
+      activeCardCount,
+      initialQueueSize: 10,
       initialReviewedToday: 0,
       serverReviewedToday: 0,
-    })).toMatchObject({
-      status: "reconnecting",
     });
+
+    expect(activeCardCount).toBe(5);
+    expect(screenState.status).toBe("active");
+    if (screenState.status !== "active") {
+      throw new Error("Expected active SRS review screen");
+    }
+    expect(screenState.reviewedCount).toBe(5);
+    expect(screenState.totalCards).toBe(10);
   });
 });
+
+

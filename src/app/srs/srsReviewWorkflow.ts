@@ -13,10 +13,9 @@ export type SrsReviewLoadMoreState =
   | NoMoreCardsState
   | FailedLoadMoreState;
 
-export type SrsReviewScreenState<TCurrentItem = unknown> =
+export type SrsReviewScreenState =
   | {
       status: "active";
-      currentItem: TCurrentItem;
       reviewedCount: number;
       totalCards: number;
     }
@@ -63,21 +62,32 @@ export function srsReviewProgressReducer(
   };
 }
 
-export function getSrsReviewScreenState<TCurrentItem>({
+export function getSrsActiveCardCount({
+  effectiveQueueSize,
+  reviewedCount,
+  initialQueueSize,
+}: {
+  effectiveQueueSize: number;
+  reviewedCount: number;
+  initialQueueSize: number;
+}): number {
+  const remainingByInitial = initialQueueSize - reviewedCount;
+  return Math.max(0, Math.min(effectiveQueueSize, remainingByInitial));
+}
+
+export function getSrsReviewScreenState({
   state,
   activeCardCount,
-  currentItem,
   initialQueueSize,
   initialReviewedToday,
   serverReviewedToday,
 }: {
   state: SrsReviewProgressState;
   activeCardCount: number;
-  currentItem: TCurrentItem | null;
   initialQueueSize: number;
   initialReviewedToday: number;
   serverReviewedToday: number;
-}): SrsReviewScreenState<TCurrentItem> {
+}): SrsReviewScreenState {
   const isComplete =
     activeCardCount === 0 && state.reviewedCount >= initialQueueSize;
   const reviewedToday = Math.max(
@@ -94,13 +104,12 @@ export function getSrsReviewScreenState<TCurrentItem>({
     };
   }
 
-  if (activeCardCount === 0 || currentItem === null) {
+  if (activeCardCount === 0) {
     return { status: "reconnecting" };
   }
 
   return {
     status: "active",
-    currentItem,
     reviewedCount: state.reviewedCount,
     totalCards: activeCardCount + state.reviewedCount,
   };

@@ -1,20 +1,20 @@
 "use client";
 
 import {
-  useCallback,
   useDebugValue,
   useEffect,
   useMemo,
   useReducer,
   useState,
 } from "react";
-import type { CardRating } from "@/lib/types";
-import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { reportSlowSrsNavigation } from "@/lib/srsNavigationTelemetry";
 import {
   createSrsReviewProgressState,
   getSrsReviewScreenState,
+  getSrsActiveCardCount,
   type SrsReviewScreenState,
+  type SrsReviewProgressState,
+  type SrsReviewProgressAction,
   srsReviewProgressReducer,
 } from "./srsReviewWorkflow";
 import type {
@@ -23,9 +23,21 @@ import type {
 } from "./srsReviewTypes";
 import { useLastNonEmptyQueue } from "./useLastNonEmptyQueue";
 
+export type SrsReviewScreenStateWithoutItem = SrsReviewScreenState;
+
+export type SrsReviewSessionData = {
+  effectiveQueue: SrsReviewItem[];
+  orderedIds: string[];
+  workflow: SrsReviewProgressState;
+  dispatchWorkflow: React.Dispatch<SrsReviewProgressAction>;
+  initialQueueSize: number;
+  initialReviewedToday: number;
+  stats: ActiveSrsReviewSession["stats"];
+};
+
 export type SrsReviewSessionController = {
-  screenState: SrsReviewScreenState<SrsReviewItem>;
-  onReviewRecorded: (rating: CardRating) => void;
+  state: SrsReviewScreenStateWithoutItem;
+  data: SrsReviewSessionData;
 };
 
 export function useSrsReviewSessionController(
@@ -51,46 +63,38 @@ export function useSrsReviewSessionController(
   const [initialQueueSize] = useState(effectiveQueue.length);
   const [initialReviewedToday] = useState(stats.reviewedToday);
 
-  const navigation = useCardNavigation({
-    orderedIds,
-    initialIndex: 0,
-    mode: { kind: "bounded" },
+  const activeCardCount = getSrsActiveCardCount({
+    effectiveQueueSize: effectiveQueue.length,
+    reviewedCount: workflow.reviewedCount,
+    initialQueueSize,
   });
-  const currentItem = useMemo(
-    () =>
-      navigation.currentId
-        ? (effectiveQueue.find((item) => item._id === navigation.currentId) ??
-          null)
-        : null,
-    [effectiveQueue, navigation.currentId],
-  );
-  const screenState = getSrsReviewScreenState({
+
+  const state = getSrsReviewScreenState({
     state: workflow,
-    activeCardCount: navigation.activeIds.length,
-    currentItem,
+    activeCardCount,
     initialQueueSize,
     initialReviewedToday,
     serverReviewedToday: stats.reviewedToday,
   });
 
   useDebugValue({
-    screen: screenState.status,
+    screen: state.status,
     queue: queue.length,
     effectiveQueue: effectiveQueue.length,
-    activeCards: navigation.activeIds.length,
+    activeCards: activeCardCount,
     reviewed: workflow.reviewedCount,
   });
 
-  const onReviewRecorded = useCallback(
-    (rating: CardRating) => {
-      dispatchWorkflow({ type: "reviewRecorded", rating });
-      navigation.hideCurrent();
-    },
-    [navigation],
-  );
-
   return {
-    screenState,
-    onReviewRecorded,
+    state,
+    data: {
+      effectiveQueue,
+      orderedIds,
+      workflow,
+      dispatchWorkflow,
+      initialQueueSize,
+      initialReviewedToday,
+      stats,
+    },
   };
 }
