@@ -4,9 +4,11 @@ import { useState } from "react";
 import type { Preloaded } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "../../../../../convex/_generated/api";
-import Link from "next/link";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import StudyCard from "@/components/StudyCard";
+import { RouteStateShellWithHeader } from "@/components/ui/RouteStateShell";
+import { StateContent } from "@/components/ui/StateContent";
+import { LinkButton } from "@/components/ui/LinkButton";
 import BrowseNavigation from "@/components/BrowseNavigation";
 import AssistantPanel from "@/components/AssistantPanel";
 import StudyLayout from "@/components/StudyLayout";
@@ -79,29 +81,20 @@ export default function BrowseInner({
 
   if (navigation.activeIds.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="border-b px-4 sm:px-6 py-4">
-          <Link
-            href={`/study/${setId}?mode=browse`}
-            className="text-sm text-muted hover:text-foreground"
-          >
-            &larr; Back
-          </Link>
-        </header>
-        <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
-          <p className="text-lg font-medium mb-4">
-            {navigation.hiddenIds.size > 0
+      <RouteStateShellWithHeader backHref={`/study/${setId}?mode=browse`} backLabel="Back">
+        <StateContent
+          title={
+            navigation.hiddenIds.size > 0
               ? "You've reviewed all the cards!"
-              : "No cards to browse."}
-          </p>
-          <Link
-            href={`/study/${setId}?mode=browse`}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-          >
-            Back to Study Config
-          </Link>
-        </main>
-      </div>
+              : "No cards to browse."
+          }
+          actions={
+            <LinkButton href={`/study/${setId}?mode=browse`} variant="primary" size="md">
+              Back to Study Config
+            </LinkButton>
+          }
+        />
+      </RouteStateShellWithHeader>
     );
   }
 
