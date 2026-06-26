@@ -6,6 +6,7 @@ import SpeakerIcon from "@/components/SpeakerIcon";
 import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { Alert } from "@/components/ui/Alert";
 import type { useTtsControls } from "@/hooks/useTtsControls";
+import { AssistantPanelProvider } from "@/contexts/AssistantPanelContext";
 
 type StudyLayoutProps = {
   progress: { current: number; total: number; dismissed?: number };
@@ -25,7 +26,8 @@ export default function StudyLayout({
   const router = useRouter();
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <AssistantPanelProvider>
+      <div className="min-h-screen flex flex-col">
       <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -83,5 +85,6 @@ export default function StudyLayout({
 
       {assistant}
     </div>
+    </AssistantPanelProvider>
   );
 }
