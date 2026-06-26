@@ -1,17 +1,19 @@
+import { BackHeader } from "@/components/ui/BackHeader";
+
 export default function SrsReviewLoading() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-4 w-12 rounded bg-raised animate-pulse" />
-          <div className="h-4 w-14 rounded bg-raised animate-pulse" />
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-20 rounded bg-raised animate-pulse" />
-          <div className="h-8 w-8 rounded bg-raised animate-pulse" />
-          <div className="h-4 w-20 rounded bg-raised animate-pulse" />
-        </div>
-      </header>
+      <BackHeader
+        href="/"
+        label="Dashboard"
+        right={
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-20 rounded bg-raised animate-pulse" />
+            <div className="h-8 w-8 rounded bg-raised animate-pulse" />
+            <div className="h-4 w-20 rounded bg-raised animate-pulse" />
+          </div>
+        }
+      />
 
       <div className="h-1 bg-raised">
         <div className="h-full w-12 bg-accent/60" />
