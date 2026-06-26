@@ -6,7 +6,9 @@ import type { api } from "../../../convex/_generated/api";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import { useCardNavigation } from "@/hooks/useCardNavigation";
 import { useReviewCardState } from "@/hooks/useReviewCardState";
-import Link from "next/link";
+import { RouteStateShellWithHeader } from "@/components/ui/RouteStateShell";
+import { StateContent } from "@/components/ui/StateContent";
+import { LinkButton } from "@/components/ui/LinkButton";
 import FlaggedCardReview from "./FlaggedCardReview";
 
 type FlaggedCardResult = Extract<
@@ -37,53 +39,42 @@ export default function FlaggedCardsInner({
 
   if (flaggedCardResult.length === 0 && navigation.hiddenIds.size === 0) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="border-b px-4 sm:px-6 py-4">
-          <Link href="/" className="text-sm text-muted hover:text-foreground">
-            &larr; Dashboard
-          </Link>
-        </header>
-        <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center">
-          <p className="text-lg font-medium mb-2">No flagged cards yet</p>
-          <p className="text-muted text-sm mb-6">
-            Flag cards during study by tapping the &#9733; icon on any card.
-            Flagged cards appear here for focused review.
-          </p>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-          >
-            Back to Dashboard
-          </Link>
-        </main>
-      </div>
+      <RouteStateShellWithHeader backHref="/" backLabel="Dashboard">
+        <StateContent
+          title="No flagged cards yet"
+          description={
+            <>
+              Flag cards during study by tapping the &#9733; icon on any card.
+              Flagged cards appear here for focused review.
+            </>
+          }
+          actions={
+            <LinkButton href="/" variant="primary" size="md">
+              Back to Dashboard
+            </LinkButton>
+          }
+        />
+      </RouteStateShellWithHeader>
     );
   }
 
   if (navigation.activeIds.length === 0 && navigation.hiddenIds.size > 0) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <header className="border-b px-4 sm:px-6 py-4">
-          <Link href="/" className="text-sm text-muted hover:text-foreground">
-            &larr; Dashboard
-          </Link>
-        </header>
-        <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 text-center">
-          <p className="text-lg font-medium mb-2">
-            You&apos;ve reviewed all flagged cards!
-          </p>
-          <p className="text-muted text-sm mb-6">
-            {navigation.hiddenIds.size} card{navigation.hiddenIds.size !== 1 ? "s" : ""}{" "}
-            unflagged
-          </p>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-          >
-            Back to Dashboard
-          </Link>
-        </main>
-      </div>
+      <RouteStateShellWithHeader backHref="/" backLabel="Dashboard">
+        <StateContent
+          title="You've reviewed all flagged cards!"
+          description={
+            <>
+              {navigation.hiddenIds.size} card{navigation.hiddenIds.size !== 1 ? "s" : ""} unflagged
+            </>
+          }
+          actions={
+            <LinkButton href="/" variant="primary" size="md">
+              Back to Dashboard
+            </LinkButton>
+          }
+        />
+      </RouteStateShellWithHeader>
     );
   }
 
