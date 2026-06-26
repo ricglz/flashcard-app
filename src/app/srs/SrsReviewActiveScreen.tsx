@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 import type { CardRating } from "@/lib/types";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -6,7 +6,9 @@ import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import SrsReviewActive from "./SrsReviewActive";
 import { normalizeSrsMutationRejection } from "./srsReviewMutationResult";
 import type { SrsReviewScreenState } from "./srsReviewWorkflow";
-import type { SrsReviewItem } from "./srsReviewTypes";
+import type { SrsReviewSessionData } from "./useSrsReviewSessionController";
+import { useCardNavigation } from "@/hooks/useCardNavigation";
+import { useReviewCardState } from "@/hooks/useReviewCardState";
 
 type RatingRequest =
   | { status: "idle" }
@@ -33,16 +35,13 @@ function ratingRequestReducer(
 }
 
 export default function SrsReviewActiveScreen({
-  screenState,
+  state,
+  data,
   preloadedTtsConfig,
-  onReviewRecorded,
 }: {
-  screenState: Extract<
-    SrsReviewScreenState<SrsReviewItem>,
-    { status: "active" }
-  >;
+  state: Extract<SrsReviewScreenState, { status: "active" }>;
+  data: SrsReviewSessionData;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
-  onReviewRecorded: (rating: CardRating) => void;
 }) {
   const recordReview = useOfflineMutation(api.srsReviewQueue.recordReview, {
     strategy: "queue-first",
@@ -51,10 +50,39 @@ export default function SrsReviewActiveScreen({
     ratingRequestReducer,
     { status: "idle" },
   );
-  const currentItem = screenState.currentItem;
+
+  const { revealed, reveal, resetReveal } = useReviewCardState();
+
+  const navigation = useCardNavigation({
+    orderedIds: data.orderedIds,
+    initialIndex: 0,
+    mode: { kind: "bounded" },
+    onCardChange: () => {
+      dispatchRatingRequest({ type: "succeeded" });
+      resetReveal();
+    },
+  });
+
+  const currentItem = useMemo(
+    () =>
+      navigation.currentId
+        ? (data.effectiveQueue.find((item) => item._id === navigation.currentId) ??
+          null)
+        : null,
+    [data.effectiveQueue, navigation.currentId],
+  );
+
+  const onReviewRecorded = useCallback(
+    (rating: CardRating) => {
+      data.dispatchWorkflow({ type: "reviewRecorded", rating });
+      navigation.hideCurrent();
+    },
+    [data, navigation],
+  );
 
   async function handleRate(rating: CardRating) {
     if (ratingRequest.status === "submitting") return;
+    if (!currentItem) return;
     dispatchRatingRequest({ type: "started" });
 
     const result = await normalizeSrsMutationRejection(
@@ -75,12 +103,19 @@ export default function SrsReviewActiveScreen({
     onReviewRecorded(rating);
   }
 
+  if (!currentItem) {
+    return null;
+  }
+
   return (
     <SrsReviewActive
-      screenState={screenState}
+      screenState={state}
+      currentItem={currentItem}
       preloadedTtsConfig={preloadedTtsConfig}
       ratingRequest={ratingRequest}
       onRate={handleRate}
+      revealed={revealed}
+      onReveal={reveal}
     />
   );
 }

@@ -19,11 +19,11 @@ export default function SrsReviewScreen({
 }: SrsReviewScreenProps) {
   const controller = useSrsReviewSessionController(session);
 
-  switch (controller.screenState.status) {
+  switch (controller.state.status) {
     case "complete":
       return (
         <SrsReviewCompleteScreen
-          screenState={controller.screenState}
+          screenState={controller.state}
         />
       );
     case "reconnecting":
@@ -31,10 +31,9 @@ export default function SrsReviewScreen({
     case "active": {
       return (
         <SrsReviewActiveScreen
-          key={controller.screenState.currentItem._id}
-          screenState={controller.screenState}
+          state={controller.state}
+          data={controller.data}
           preloadedTtsConfig={preloadedTtsConfig}
-          onReviewRecorded={controller.onReviewRecorded}
         />
       );
     }

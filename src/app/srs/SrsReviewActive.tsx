@@ -9,7 +9,6 @@ import CardRatingButtons from "@/components/CardRatingButtons";
 import InlineError from "@/components/InlineError";
 import StudyCard from "@/components/StudyCard";
 import StudyLayout from "@/components/StudyLayout";
-import { useReviewCardState } from "@/hooks/useReviewCardState";
 import { useTtsControls } from "@/hooks/useTtsControls";
 import type { SrsReviewScreenState } from "./srsReviewWorkflow";
 import type { SrsReviewItem } from "./srsReviewTypes";
@@ -21,24 +20,28 @@ type RatingRequest =
 
 export default function SrsReviewActive({
   screenState,
+  currentItem,
   preloadedTtsConfig,
   ratingRequest,
   onRate,
+  revealed,
+  onReveal,
 }: {
   screenState: Extract<
-    SrsReviewScreenState<SrsReviewItem>,
+    SrsReviewScreenState,
     { status: "active" }
   >;
+  currentItem: SrsReviewItem;
   preloadedTtsConfig: Preloaded<typeof api.userSettings.getTtsConfig>;
   ratingRequest: RatingRequest;
   onRate: (rating: CardRating) => void | Promise<void>;
+  revealed: boolean;
+  onReveal: () => void;
 }) {
   const router = useRouter();
   const toggleFlag = useMutation(api.cardAnnotations.toggleFlag);
   const setNote = useMutation(api.cardAnnotations.setNote);
   const tts = useTtsControls(preloadedTtsConfig);
-  const { revealed, reveal } = useReviewCardState();
-  const currentItem = screenState.currentItem;
   const currentAnnotation = currentItem.annotation;
 
   return (
@@ -79,7 +82,7 @@ export default function SrsReviewActive({
         frontFields={currentItem.frontFields}
         backFields={currentItem.backFields}
         ttsOnlyFields={currentItem.ttsOnlyFields}
-        onRevealed={reveal}
+        onRevealed={onReveal}
         autoPlayTts={tts.ttsEnabled}
         ttsRate={tts.speed}
         annotation={
