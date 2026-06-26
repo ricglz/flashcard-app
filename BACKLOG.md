@@ -31,9 +31,6 @@
   - Keep shallow controlled forms local when a library would mostly replace explicit `onChange({ ...value, field })` calls.
 
 ### Route Component Boundaries
-- [ ] Consider a shared centered route-state shell if more pages duplicate the same header/back-link plus centered message/action layout.
-  - Current candidates: flagged-card empty/review-complete states and browse empty/complete states.
-  - Keep the component narrow; do not create a generic page framework.
 - [ ] Revisit flagged-card review state ownership if `FlaggedCardReview` keeps receiving navigation, TTS, assistant, and annotation props.
   - A feature-local context/provider may be clearer than a wide render-only prop interface.
   - Keep the route-state branches explicit until there is a concrete shared state shape.
