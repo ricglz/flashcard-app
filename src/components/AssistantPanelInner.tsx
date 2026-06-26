@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useRef, useCallback, useEffect, type RefObject } from "react";
 import AvailableModelsSuspenseProvider from "@/contexts/AvailableModelsSuspenseProvider";
+import { useAssistantPanel } from "@/contexts/AssistantPanelContext";
 import {
   streamChat,
   reduceEvent,
@@ -28,11 +29,8 @@ type AssistantPanelInnerProps = {
 };
 
 export default function AssistantPanelInner({ context }: AssistantPanelInnerProps) {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
+  const { messages, setMessages, open, setOpen, input, setInput, model, setModel, clear } = useAssistantPanel();
   const [streaming, setStreaming] = useState<ChatStreamState | null>(null);
-  const [model, setModel] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -83,13 +81,13 @@ export default function AssistantPanelInner({ context }: AssistantPanelInnerProp
     setStreaming(null);
     abortRef.current = null;
     scrollToBottom(scrollRef);
-  }, [input, streaming, messages, model, context.setId, context.cardId, context.hasNote, context.cardFields]);
+  }, [input, streaming, messages, model, context.setId, context.cardId, context.hasNote, context.cardFields, setInput, setMessages]);
 
   const handleClear = useCallback(() => {
     abortRef.current?.abort();
-    setMessages([]);
+    clear();
     setStreaming(null);
-  }, []);
+  }, [clear]);
 
   if (!open) {
     return (
