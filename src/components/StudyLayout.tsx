@@ -79,7 +79,7 @@ export default function StudyLayout({
         </div>
       )}
 
-      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6">
+      <main className="min-h-0 flex-1 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 overflow-y-auto">
         {children}
       </main>
 
