@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { FieldDefinition } from "@/lib/types";
+import type { FieldDefinition, TokenAnnotations } from "@/lib/types";
 import { getDisplayableFields } from "@/lib/types";
+import { normalizeTokenAnnotations } from "@/lib/tokenAnnotations";
+import TokenAnnotationEditor from "./TokenAnnotationEditor";
+import { Button } from "./ui/Button";
+import { TextInput } from "./ui/TextInput";
 
 type Props = {
   fieldDefinitions: FieldDefinition[];
   initialFields?: Record<string, string>;
-  onSubmit: (fields: Record<string, string>) => void;
+  initialTokenAnnotations?: TokenAnnotations;
+  onSubmit: (fields: Record<string, string>, tokenAnnotations: TokenAnnotations) => void;
   onCancel?: () => void;
   submitLabel?: string;
 };
@@ -15,6 +20,7 @@ type Props = {
 export default function CardForm({
   fieldDefinitions,
   initialFields,
+  initialTokenAnnotations,
   onSubmit,
   onCancel,
   submitLabel = "Add Card",
@@ -23,14 +29,18 @@ export default function CardForm({
     initialFields ??
       Object.fromEntries(fieldDefinitions.map((f) => [f.name, ""]))
   );
+  const [tokenAnnotations, setTokenAnnotations] = useState<TokenAnnotations>(
+    initialTokenAnnotations ?? {},
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(fields);
+    onSubmit(fields, normalizeTokenAnnotations(tokenAnnotations) ?? {});
     if (!initialFields) {
       setFields(
         Object.fromEntries(fieldDefinitions.map((f) => [f.name, ""]))
       );
+      setTokenAnnotations({});
     }
   };
 
@@ -42,35 +52,56 @@ export default function CardForm({
             <label className="block text-sm font-medium mb-1">
               {fd.name}
             </label>
-            <input
+            <TextInput
               type="text"
               value={fields[fd.name] ?? ""}
-              onChange={(e) =>
+              onChange={(e) => {
+                const value = e.target.value;
                 setFields((prev) => ({
                   ...prev,
-                  [fd.name]: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 border rounded text-sm"
+                  [fd.name]: value,
+                }));
+                setTokenAnnotations((prev) => {
+                  if (prev[fd.name] === undefined) return prev;
+                  const next = { ...prev };
+                  delete next[fd.name];
+                  return next;
+                });
+              }}
               placeholder={`Enter ${fd.name.toLowerCase()}...`}
+            />
+            <TokenAnnotationEditor
+              field={fd}
+              text={fields[fd.name] ?? ""}
+              annotations={tokenAnnotations[fd.name] ?? []}
+              onChange={(annotations) =>
+                setTokenAnnotations((prev) => {
+                  const next = { ...prev };
+                  if (annotations.length > 0) {
+                    next[fd.name] = annotations;
+                  } else {
+                    delete next[fd.name];
+                  }
+                  return next;
+                })
+              }
             />
           </div>
         ))}
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
-          className="px-4 py-2 bg-accent text-white rounded-lg text-sm hover:bg-accent-hover transition-colors"
         >
           {submitLabel}
-        </button>
+        </Button>
         {onCancel && (
-          <button
+          <Button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-edge rounded-lg text-sm hover:bg-surface-hover transition-colors"
+            variant="secondary"
           >
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </form>
