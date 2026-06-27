@@ -25,7 +25,7 @@ function statusClasses(status: TtsStatus): string {
   }
 }
 
-export default function TappableCjkChar({
+export default function TappablePinyinToken({
   text,
   lang,
   rate,
@@ -33,7 +33,7 @@ export default function TappableCjkChar({
   onTtsEvent,
 }: {
   text: string;
-  lang: string;
+  lang?: string;
   rate?: number;
   annotation?: TokenAnnotation;
   onTtsEvent?: (event: TtsEvent) => void;
@@ -45,30 +45,33 @@ export default function TappableCjkChar({
     problemResetMs: 1000,
   });
 
-  const handleClick = () => {
-    void speak(text, lang, {
-      rate,
-      onEvent: handleTtsEvent,
-    });
-  };
-
-  const button = (
+  const content = lang ? (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={() => {
+        void speak(text, lang, { rate, onEvent: handleTtsEvent });
+      }}
       aria-label={`Play ${text}`}
       aria-describedby={annotation ? tooltipId : undefined}
       className={`inline cursor-pointer border-0 bg-transparent p-0 font-inherit text-inherit transition-colors duration-150 ${statusClasses(status)}`}
     >
       {text}
     </button>
+  ) : (
+    <span
+      tabIndex={annotation ? 0 : undefined}
+      aria-describedby={annotation ? tooltipId : undefined}
+      className="outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      {text}
+    </span>
   );
 
-  if (!annotation) return button;
+  if (!annotation) return content;
 
   return (
     <span className="relative group inline-block">
-      {button}
+      {content}
       <Tooltip id={tooltipId}>
         <span className="block font-medium">{annotation.gloss}</span>
         {annotation.pinyin && (

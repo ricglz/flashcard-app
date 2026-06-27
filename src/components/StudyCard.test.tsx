@@ -181,6 +181,33 @@ describe("StudyCard front autoplay", () => {
 });
 
 describe("StudyCard reveal", () => {
+  it("shows token annotation tooltips only after reveal and never for front fields", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StudyCard
+        card={{
+          fields: { Front: "你", Back: "好" },
+          tokenAnnotations: {
+            Front: [{ start: 0, end: 1, gloss: "you" }],
+            Back: [{ start: 0, end: 1, gloss: "good" }],
+          },
+        }}
+        fieldDefinitions={fieldDefinitionsWithFrontTts}
+        frontFields={["Front"]}
+        backFields={["Back"]}
+      />,
+    );
+
+    expect(screen.queryByText("you")).not.toBeInTheDocument();
+    expect(screen.queryByText("good")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reveal Answer" }));
+
+    expect(screen.queryByText("you")).not.toBeInTheDocument();
+    expect(screen.getByText("good")).toBeInTheDocument();
+  });
+
   it("reveals back fields and autoplays configured TTS fields", async () => {
     const user = userEvent.setup();
     const onRevealed = vi.fn();

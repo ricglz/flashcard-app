@@ -3,17 +3,26 @@
 import type { FieldDefinition } from "@/lib/types";
 import { getTtsConfig } from "@/lib/types";
 import { hasCjkChars } from "@/lib/cjk";
+import type { TokenAnnotations } from "@/lib/types";
+import { getAnnotationsForField } from "@/lib/tokenAnnotations";
 import type { TtsEvent } from "@/lib/tts";
 import TtsButton from "./TtsButton";
 import TappableCjkText from "./TappableCjkText";
+import TappablePinyinText from "./TappablePinyinText";
 
 type Props = {
   fieldNames: string[];
   fields: Record<string, string>;
   fieldDefsMap: Map<string, FieldDefinition>;
-  primaryClassName: string;
-  secondaryClassName: string;
+  classNames: {
+    primary: string;
+    secondary: string;
+  };
   ttsRate?: number;
+  annotationDisplay: {
+    annotations: TokenAnnotations;
+    enabled: boolean;
+  };
   onTtsEvent: (event: TtsEvent) => void;
   activeFieldId?: string | null;
 };
@@ -22,9 +31,9 @@ export default function FieldContent({
   fieldNames,
   fields,
   fieldDefsMap,
-  primaryClassName,
-  secondaryClassName,
+  classNames,
   ttsRate,
+  annotationDisplay,
   onTtsEvent,
   activeFieldId,
 }: Props) {
@@ -34,8 +43,11 @@ export default function FieldContent({
         const fd = fieldDefsMap.get(fieldName);
         const value = fields[fieldName] ?? "";
         const ttsConfig = fd ? getTtsConfig(fd) : null;
+        const annotations = annotationDisplay.enabled
+          ? getAnnotationsForField(annotationDisplay.annotations, fieldName)
+          : [];
         const textClassName =
-          fd?.role === "primary" ? primaryClassName : secondaryClassName;
+          fd?.role === "primary" ? classNames.primary : classNames.secondary;
 
         return (
           <div key={fieldName} className="text-center">
@@ -48,6 +60,16 @@ export default function FieldContent({
                   text={value}
                   lang={ttsConfig.lang}
                   rate={ttsRate}
+                  annotations={annotations}
+                  className={textClassName}
+                  onTtsEvent={onTtsEvent}
+                />
+              ) : fd?.role === "pronunciation" ? (
+                <TappablePinyinText
+                  text={value}
+                  lang={ttsConfig?.lang}
+                  rate={ttsRate}
+                  annotations={annotations}
                   className={textClassName}
                   onTtsEvent={onTtsEvent}
                 />

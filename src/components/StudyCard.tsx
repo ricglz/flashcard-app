@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FieldDefinition } from "@/lib/types";
+import type { Doc } from "../../convex/_generated/dataModel";
 import AnnotationControls from "./AnnotationControls";
 import FieldContent from "./FieldContent";
 import { getTtsPlan } from "./studyCardTts";
@@ -9,7 +10,7 @@ import { useStudyCardTts } from "@/hooks/useStudyCardTts";
 import { sortedStrings } from "@/lib/objects";
 
 type Props = {
-  card: { fields: Record<string, string> };
+  card: Pick<Doc<"flashcards">, "fields" | "tokenAnnotations">;
   fieldDefinitions: FieldDefinition[];
   frontFields: string[];
   backFields: string[];
@@ -73,9 +74,15 @@ export default function StudyCard({
           fieldNames={sortedFrontFields}
           fields={card.fields}
           fieldDefsMap={fieldDefsMap}
-          primaryClassName="text-2xl sm:text-4xl font-bold"
-          secondaryClassName="text-xl sm:text-2xl"
+          classNames={{
+            primary: "text-2xl sm:text-4xl font-bold",
+            secondary: "text-xl sm:text-2xl",
+          }}
           ttsRate={ttsRate}
+          annotationDisplay={{
+            annotations: card.tokenAnnotations ?? {},
+            enabled: false,
+          }}
           onTtsEvent={tts.handleTtsEvent}
           activeFieldId={tts.activeFieldId}
         />
@@ -87,9 +94,15 @@ export default function StudyCard({
               fieldNames={sortedBackFields}
               fields={card.fields}
               fieldDefsMap={fieldDefsMap}
-              primaryClassName="text-xl sm:text-3xl font-bold"
-              secondaryClassName="text-lg sm:text-xl"
+              classNames={{
+                primary: "text-xl sm:text-3xl font-bold",
+                secondary: "text-lg sm:text-xl",
+              }}
               ttsRate={ttsRate}
+              annotationDisplay={{
+                annotations: card.tokenAnnotations ?? {},
+                enabled: revealed,
+              }}
               onTtsEvent={tts.handleTtsEvent}
               activeFieldId={tts.activeFieldId}
             />
