@@ -56,3 +56,5 @@ public/swe-worker-*.js
 
 # config
 .config
+
+.opencode
