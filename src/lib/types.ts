@@ -88,6 +88,15 @@ export function getStudyableFieldNames(
   return getDisplayableFields(fieldDefinitions).map((field) => field.name);
 }
 
+export type TokenAnnotation = {
+  start: number;
+  end: number;
+  gloss: string;
+  pinyin?: string;
+};
+
+export type TokenAnnotations = Record<string, TokenAnnotation[]>;
+
 export function getDefaultFieldLayout(fieldDefinitions: readonly FieldDefinition[]): {
   defaultFrontFields: string[];
   defaultBackFields: string[];

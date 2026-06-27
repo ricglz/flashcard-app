@@ -30,6 +30,13 @@ export const fieldDefinitionValidator = v.object({
   order: v.number(),
 });
 
+export const tokenAnnotationValidator = v.object({
+  start: v.number(),
+  end: v.number(),
+  gloss: v.string(),
+  pinyin: v.optional(v.string()),
+});
+
 export const ratingValidator = literalUnion(CARD_RATINGS);
 
 export const srsCardStatusValidator = v.union(
@@ -113,6 +120,7 @@ export default defineSchema({
   flashcards: defineTable({
     setId: v.id("flashcardSets"),
     fields: v.record(v.string(), v.string()),
+    tokenAnnotations: v.optional(v.record(v.string(), v.array(tokenAnnotationValidator))),
     order: v.number(),
     origin: cardOriginValidator,
     archivedAt: v.optional(v.number()),
@@ -241,6 +249,8 @@ export default defineSchema({
     .index("by_publicId", ["publicId"])
     .index("by_userId", ["userId"]),
 
+  // tokenAnnotations on flashcards are shared per-card glosses; cardAnnotations
+  // are private per-user flags and notes.
   cardAnnotations: defineTable({
     userId: v.string(),
     cardId: v.id("flashcards"),
