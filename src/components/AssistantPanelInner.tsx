@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState, useRef, useCallback, useEffect, type RefObject } from "react";
-import AvailableModelsSuspenseProvider from "@/contexts/AvailableModelsSuspenseProvider";
+import { useState, useRef, useCallback, useEffect, type RefObject } from "react";
 import { useAssistantPanel } from "@/contexts/AssistantPanelContext";
 import {
   streamChat,
@@ -14,7 +13,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
 import AssistantModelSelect from "./AssistantModelSelect";
-import AssistantPanelSkeleton from "./AssistantPanelSkeleton";
 import AssistantPanelHeader from "./AssistantPanelHeader";
 
 function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
@@ -30,13 +28,17 @@ type AssistantPanelInnerProps = {
 };
 
 export default function AssistantPanelInner({ context }: AssistantPanelInnerProps) {
-  const { messages, setMessages, open, setOpen, input, setInput, model, setModel, clear } = useAssistantPanel();
+  const { messages, setMessages, setOpen, input, setInput, model, setModel, clear } = useAssistantPanel();
   const [streaming, setStreaming] = useState<ChatStreamState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  useEffect(() => {
+    scrollToBottom(scrollRef);
+  }, [messages.length, streaming?.text, streaming?.toolStatus]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -90,28 +92,7 @@ export default function AssistantPanelInner({ context }: AssistantPanelInnerProp
     setStreaming(null);
   }, [clear]);
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-50 w-12 h-12 bg-accent text-white rounded-full shadow-lg hover:bg-accent-hover flex items-center justify-center text-xl transition-colors"
-        aria-label="Open study assistant"
-      >
-        ?
-      </button>
-    );
-  }
-
   return (
-    <Suspense
-      fallback={
-        <AssistantPanelSkeleton
-          setName={context.setName}
-          onClose={() => setOpen(false)}
-        />
-      }
-    >
-      <AvailableModelsSuspenseProvider>
         <div className="fixed inset-x-0 bottom-0 z-50 w-full h-[60dvh] max-h-[70dvh] bg-background border-t sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-w-[calc(100vw-2rem)] sm:h-[32rem] sm:max-h-[calc(100dvh-2rem)] sm:border border-edge rounded-t-xl sm:rounded-xl shadow-xl flex flex-col lg:w-[28rem] lg:h-[36rem]">
       <AssistantPanelHeader onClose={() => setOpen(false)} onClear={handleClear} />
 
@@ -193,7 +174,5 @@ export default function AssistantPanelInner({ context }: AssistantPanelInnerProp
         </div>
       </div>
         </div>
-      </AvailableModelsSuspenseProvider>
-    </Suspense>
   );
 }
