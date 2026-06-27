@@ -15,6 +15,7 @@ import ToolStatusIndicator from "./ToolStatusIndicator";
 import MarkdownContent from "./MarkdownContent";
 import AssistantModelSelect from "./AssistantModelSelect";
 import AssistantPanelSkeleton from "./AssistantPanelSkeleton";
+import AssistantPanelHeader from "./AssistantPanelHeader";
 
 function scrollToBottom(scrollRef: RefObject<HTMLDivElement | null>) {
   queueMicrotask(() => {
@@ -112,24 +113,7 @@ export default function AssistantPanelInner({ context }: AssistantPanelInnerProp
     >
       <AvailableModelsSuspenseProvider>
         <div className="fixed inset-x-0 bottom-0 z-50 w-full h-[60dvh] max-h-[70dvh] bg-background border-t sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-w-[calc(100vw-2rem)] sm:h-[32rem] sm:max-h-[calc(100dvh-2rem)] sm:border border-edge rounded-t-xl sm:rounded-xl shadow-xl flex flex-col lg:w-[28rem] lg:h-[36rem]">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-edge">
-        <h3 className="font-semibold text-sm lg:text-base">Study Assistant</h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleClear}
-            className="text-xs text-muted hover:text-foreground"
-          >
-            Clear
-          </button>
-          <button
-            onClick={() => setOpen(false)}
-            className="text-muted hover:text-foreground text-lg leading-none"
-            aria-label="Close assistant"
-          >
-            &times;
-          </button>
-        </div>
-      </div>
+      <AssistantPanelHeader onClose={() => setOpen(false)} onClear={handleClear} />
 
       <div className="px-3 py-2 border-b border-edge flex gap-2 items-center">
         <span className="text-xs text-muted truncate flex-1">

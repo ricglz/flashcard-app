@@ -1,5 +1,7 @@
 "use client";
 
+import AssistantPanelHeader from "./AssistantPanelHeader";
+
 type Props = {
   setName: string;
   onClose: () => void;
@@ -12,16 +14,7 @@ export default function AssistantPanelSkeleton({ setName, onClose }: Props) {
       role="status"
       aria-label="Loading study assistant"
     >
-      <div className="flex items-center justify-between px-4 py-2 border-b border-edge">
-        <h3 className="font-semibold text-sm lg:text-base">Study Assistant</h3>
-        <button
-          onClick={onClose}
-          className="text-muted hover:text-foreground text-lg leading-none"
-          aria-label="Close assistant"
-        >
-          &times;
-        </button>
-      </div>
+      <AssistantPanelHeader onClose={onClose} onClear={() => {}} />
 
       <div className="px-3 py-2 border-b border-edge flex gap-2 items-center">
         <span className="text-xs text-muted truncate flex-1">{setName}</span>
