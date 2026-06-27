@@ -6,7 +6,7 @@ export default function CardPreview({
   card,
   fieldDefinitions,
 }: {
-  card: Record<string, string>;
+  card: WizardState["cards"][number];
   fieldDefinitions: WizardState["fieldDefinitions"];
 }) {
   const sorted = [...fieldDefinitions].sort((a, b) => a.order - b.order);
@@ -15,7 +15,7 @@ export default function CardPreview({
     <div className="bg-card-bg border-2 border-card-border rounded-xl p-8 shadow-sm">
       <div className="space-y-4">
         {sorted.map((fd) => {
-          const value = card[fd.name] ?? "";
+          const value = card.fields[fd.name] ?? "";
           const ttsConfig = getTtsConfig(fd);
           return (
             <div key={fd.name} className="text-center">

@@ -1,8 +1,12 @@
 import MarkdownContent from "./MarkdownContent";
 import { sortedEntries } from "@/lib/objects";
+import { countTokenAnnotations } from "@/lib/tokenAnnotations";
+import type { TokenAnnotations } from "@/lib/types";
+import { Badge } from "./ui/Badge";
 
 export type PreviewCard = {
   fields: Record<string, string>;
+  tokenAnnotations?: TokenAnnotations;
   rationale?: string;
   selected: boolean;
 };
@@ -59,6 +63,11 @@ export default function CardPreviewList({
                 <div className="min-w-0 text-xs text-muted mt-1 italic break-words">
                   <MarkdownContent compact>{card.rationale}</MarkdownContent>
                 </div>
+              )}
+              {countTokenAnnotations(card.tokenAnnotations) > 0 && (
+                <Badge variant="info" size="sm" className="mt-1">
+                  {countTokenAnnotations(card.tokenAnnotations)} annotations
+                </Badge>
               )}
             </div>
           </div>

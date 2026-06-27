@@ -74,7 +74,7 @@ export default function StepReview({ state, isSubmitting, canSubmit, onSubmit }:
                   <td className="px-3 py-2 text-muted">{i + 1}</td>
                   {sorted.map((fd) => (
                     <td key={fd.name} className="px-3 py-2">
-                      {card[fd.name] ?? ""}
+                      {card.fields[fd.name] ?? ""}
                     </td>
                   ))}
                 </tr>

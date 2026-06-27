@@ -64,7 +64,11 @@ export default function WizardShell({
       if (state.cards.length > 0) {
         const cardResult = await batchCreateCards({
           setId,
-          cards: state.cards.map((fields, i) => ({ fields, order: i })),
+          cards: state.cards.map((card, i) => ({
+            fields: card.fields,
+            ...(card.tokenAnnotations === undefined ? {} : { tokenAnnotations: card.tokenAnnotations }),
+            order: i,
+          })),
         });
         if (!cardResult.ok) {
           setSubmitError(cardResult.error.message);

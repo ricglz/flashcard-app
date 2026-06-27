@@ -13,7 +13,10 @@ export default function CsvPath({
       <CsvImporter
         onImport={(result) => {
           if (!result.ok) return;
-          dispatch({ type: "SET_CARDS", payload: result.cards });
+          dispatch({
+            type: "SET_CARDS",
+            payload: result.cards.map((fields) => ({ fields })),
+          });
           dispatch({ type: "SET_FIELD_DEFINITIONS", payload: result.fieldDefinitions });
         }}
       />

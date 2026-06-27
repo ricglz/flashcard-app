@@ -88,7 +88,15 @@ export default function ManualPath({
           <label className="block text-sm font-medium mb-2">Add cards</label>
           <CardForm
             fieldDefinitions={state.fieldDefinitions}
-            onSubmit={(fields) => dispatch({ type: "ADD_CARD", payload: fields })}
+            onSubmit={(fields, tokenAnnotations) =>
+              dispatch({
+                type: "ADD_CARD",
+                payload: {
+                  fields,
+                  ...(Object.keys(tokenAnnotations).length > 0 ? { tokenAnnotations } : {}),
+                },
+              })
+            }
           />
         </div>
       )}
@@ -120,7 +128,7 @@ export default function ManualPath({
                     <td className="px-3 py-2 text-muted">{i + 1}</td>
                     {state.fieldDefinitions.map((fd) => (
                       <td key={fd.name} className="px-3 py-2">
-                        {card[fd.name] ?? ""}
+                        {card.fields[fd.name] ?? ""}
                       </td>
                     ))}
                     <td className="px-3 py-2">

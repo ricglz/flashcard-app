@@ -31,7 +31,7 @@ const duplicateOrderField: FieldDefinition = {
   order: 0,
 };
 
-const sampleCard = { Character: "你" };
+const sampleCard = { fields: { Character: "你" } };
 const validStep2State = {
   step: 2 as const,
   name: "Test",
@@ -89,21 +89,28 @@ describe("wizardReducer", () => {
     const state = stateWith({ cards: [sampleCard] });
     const result = wizardReducer(state, {
       type: "ADD_CARD",
-      payload: { Character: "好" },
+      payload: { fields: { Character: "好" } },
     });
     expect(result.cards).toHaveLength(2);
-    expect(result.cards[1]).toEqual({ Character: "好" });
+    expect(result.cards[1]).toEqual({ fields: { Character: "好" } });
   });
 
   it("removes a card by index", () => {
     const state = stateWith({
-      cards: [{ a: "1" }, { a: "2" }, { a: "3" }],
+      cards: [
+        { fields: { a: "1" } },
+        { fields: { a: "2" } },
+        { fields: { a: "3" } },
+      ],
     });
     const result = wizardReducer(state, {
       type: "REMOVE_CARD",
       payload: 1,
     });
-    expect(result.cards).toEqual([{ a: "1" }, { a: "3" }]);
+    expect(result.cards).toEqual([
+      { fields: { a: "1" } },
+      { fields: { a: "3" } },
+    ]);
   });
 
   it("does not advance with NEXT_STEP when current step is invalid", () => {
@@ -310,10 +317,10 @@ describe("wizardReducer — mismatched card fields", () => {
     });
     const result = wizardReducer(state, {
       type: "SET_CARDS",
-      payload: [{ UnknownField: "value" }],
+      payload: [{ fields: { UnknownField: "value" } }],
     });
     expect(result.step).toBe(2);
-    expect(result.cards).toEqual([{ UnknownField: "value" }]);
+    expect(result.cards).toEqual([{ fields: { UnknownField: "value" } }]);
   });
 });
 

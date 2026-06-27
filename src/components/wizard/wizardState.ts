@@ -1,8 +1,15 @@
 import type { FieldDefinition } from "@/lib/types";
+import type { TokenAnnotations } from "@/lib/types";
 import { validateCardFields } from "../../../convex/domain/cardFields";
 import { validateFieldDefinitions, validateSetName } from "../../../convex/domain/fieldDefinitions";
+import { validateTokenAnnotationsForCard } from "../../../convex/domain/tokenAnnotations";
 
 export type SourceMethod = "csv" | "manual" | "ai";
+
+export type WizardCard = {
+  fields: Record<string, string>;
+  tokenAnnotations?: TokenAnnotations;
+};
 
 export type WizardState = {
   step: 1 | 2 | 3 | 4;
@@ -10,7 +17,7 @@ export type WizardState = {
   description: string;
   sourceMethod: SourceMethod | null;
   fieldDefinitions: FieldDefinition[];
-  cards: Record<string, string>[];
+  cards: WizardCard[];
 };
 
 export type WizardAction =
@@ -18,8 +25,8 @@ export type WizardAction =
   | { type: "SET_DESCRIPTION"; payload: string }
   | { type: "SET_SOURCE_METHOD"; payload: SourceMethod }
   | { type: "SET_FIELD_DEFINITIONS"; payload: FieldDefinition[] }
-  | { type: "SET_CARDS"; payload: Record<string, string>[] }
-  | { type: "ADD_CARD"; payload: Record<string, string> }
+  | { type: "SET_CARDS"; payload: WizardCard[] }
+  | { type: "ADD_CARD"; payload: WizardCard }
   | { type: "REMOVE_CARD"; payload: number }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -155,9 +162,19 @@ export function validateWizardStep(state: WizardState, step: WizardState["step"]
       issues.push({ step, field: "cards", message: "Add at least one card" });
     }
     for (const card of state.cards) {
-      const result = validateCardFields(state.fieldDefinitions.map((fd) => fd.name), card);
+      const fieldNames = state.fieldDefinitions.map((fd) => fd.name);
+      const result = validateCardFields(fieldNames, card.fields);
       if (!result.ok) {
         issues.push({ step, field: "cards", message: result.error.message });
+        break;
+      }
+      const annotationResult = validateTokenAnnotationsForCard({
+        validFieldNames: fieldNames,
+        fields: result.value,
+        tokenAnnotations: card.tokenAnnotations,
+      });
+      if (!annotationResult.ok) {
+        issues.push({ step, field: "cards", message: annotationResult.error.message });
         break;
       }
     }

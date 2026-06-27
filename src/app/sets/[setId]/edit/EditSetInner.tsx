@@ -123,10 +123,11 @@ export default function EditSetInner({
           <h2 className="text-lg font-semibold mb-4">Add Card</h2>
           <CardForm
             fieldDefinitions={sortedFieldDefs}
-            onSubmit={async (fields) => {
+            onSubmit={async (fields, tokenAnnotations) => {
               const result = await createCard({
                 setId: set._id,
                 fields,
+                ...(Object.keys(tokenAnnotations).length > 0 ? { tokenAnnotations } : {}),
                 order: cards.length,
               });
               if (!result.ok) setError(result.error.message);

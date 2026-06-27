@@ -11,7 +11,7 @@ import { AiTargetCountField } from "@/components/ai-generation/AiTargetCountFiel
 import AiCardPreview from "./AiCardPreview";
 import AiErrorMessage from "@/components/AiErrorMessage";
 import { Spinner } from "@/components/ui/Spinner";
-import { includedCardFields } from "@/lib/generatedDraftCards";
+import { includedCards } from "@/lib/generatedDraftCards";
 import { useGeneratedDraftCards } from "@/hooks/useGeneratedDraftCards";
 import type { WizardAction, WizardState } from "./wizardState";
 import type { FieldDefinition } from "@/lib/types";
@@ -54,7 +54,7 @@ export default function AiPath({
   } = useGeneratedDraftCards({
     onError: setError,
     onCardsChange: (cards) => {
-      dispatch({ type: "SET_CARDS", payload: includedCardFields(cards) });
+      dispatch({ type: "SET_CARDS", payload: includedCards(cards) });
     },
     onPayloadApply: (draft) => {
       dispatch({
