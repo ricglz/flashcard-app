@@ -2,7 +2,13 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { validateCardFields } from "../domain/cardFields";
 import { invalidInput, type CommonFailure, type DomainResult } from "../domain/result";
+import {
+  stripEmptyTokenAnnotations,
+  validateTokenAnnotationsForCard,
+  type TokenAnnotationValidationFailure,
+} from "../domain/tokenAnnotations";
 import type { FlashcardOrigin } from "../../src/lib/types";
+import type { TokenAnnotations } from "../../src/lib/types";
 import {
   enrollCardsForEnabledSetUsers,
   ensureSrsCardForCard,
@@ -13,6 +19,7 @@ export const MAX_CARDS_PER_BATCH = 200;
 
 export type CardInsertInput = {
   fields: Record<string, string>;
+  tokenAnnotations: TokenAnnotations;
   order: number;
 };
 
@@ -102,17 +109,30 @@ async function insertCards(
     cards: readonly CardInsertInput[];
     origin: FlashcardOrigin;
   },
-): Promise<DomainResult<Id<"flashcards">[], CommonFailure>> {
+): Promise<DomainResult<Id<"flashcards">[], CommonFailure | TokenAnnotationValidationFailure>> {
   const validatedCards: CardInsertInput[] = [];
   for (const card of cards) {
     const validated = validateCardFields(fieldNames, card.fields);
     if (!validated.ok) return { ok: false, error: invalidInput(validated.error.message) };
-    validatedCards.push({ fields: validated.value, order: card.order });
+    const validatedAnnotations = validateTokenAnnotationsForCard({
+      validFieldNames: fieldNames,
+      fields: validated.value,
+      tokenAnnotations: card.tokenAnnotations,
+    });
+    if (!validatedAnnotations.ok) return validatedAnnotations;
+    const tokenAnnotations = stripEmptyTokenAnnotations(validatedAnnotations.value) ?? {};
+    validatedCards.push({ fields: validated.value, tokenAnnotations, order: card.order });
   }
 
   const ids: Id<"flashcards">[] = [];
   for (const card of validatedCards) {
-    ids.push(await ctx.db.insert("flashcards", { setId, ...card, origin }));
+    ids.push(await ctx.db.insert("flashcards", {
+      setId,
+      fields: card.fields,
+      ...(Object.keys(card.tokenAnnotations).length === 0 ? {} : { tokenAnnotations: card.tokenAnnotations }),
+      order: card.order,
+      origin,
+    }));
   }
   return { ok: true, value: ids };
 }
@@ -130,7 +150,7 @@ export async function appendCardsToSet(
     origin: FlashcardOrigin;
     srsEnrollment: CardCreationSrsEnrollment;
   },
-): Promise<DomainResult<CreatedCards, CommonFailure>> {
+): Promise<DomainResult<CreatedCards, CommonFailure | TokenAnnotationValidationFailure>> {
   const limitCheck = validateCardSetLimit(set.cardCount, cards.length);
   if (!limitCheck.ok) return limitCheck;
 
@@ -175,7 +195,7 @@ export async function appendGeneratedCardsToSet(
     cards: readonly CardInsertInput[];
     srsEnrollment: CardCreationSrsEnrollment;
   },
-): Promise<DomainResult<CreatedCards, CommonFailure>> {
+): Promise<DomainResult<CreatedCards, CommonFailure | TokenAnnotationValidationFailure>> {
   const appended = await appendCardsToSet(ctx, {
     set,
     cards,
@@ -207,7 +227,7 @@ export async function createInitialCardsForSet(
     origin: FlashcardOrigin;
     srsEnrollment: CardCreationSrsEnrollment;
   },
-): Promise<DomainResult<CreatedCards, CommonFailure>> {
+): Promise<DomainResult<CreatedCards, CommonFailure | TokenAnnotationValidationFailure>> {
   const limitCheck = validateCardSetLimit(0, cards.length);
   if (!limitCheck.ok) return limitCheck;
 
@@ -259,17 +279,40 @@ async function insertCardsWithOrigins(
     cards: readonly CardInsertInputWithOrigin[];
     defaultOrigin: FlashcardOrigin;
   },
-): Promise<DomainResult<Id<"flashcards">[], CommonFailure>> {
-  const validatedCards: { fields: Record<string, string>; order: number; origin: FlashcardOrigin }[] = [];
+): Promise<DomainResult<Id<"flashcards">[], CommonFailure | TokenAnnotationValidationFailure>> {
+  const validatedCards: {
+    fields: Record<string, string>;
+    tokenAnnotations: TokenAnnotations;
+    order: number;
+    origin: FlashcardOrigin;
+  }[] = [];
   for (const card of cards) {
     const validated = validateCardFields(fieldNames, card.fields);
     if (!validated.ok) return { ok: false, error: invalidInput(validated.error.message) };
-    validatedCards.push({ fields: validated.value, order: card.order, origin: card.origin ?? defaultOrigin });
+    const validatedAnnotations = validateTokenAnnotationsForCard({
+      validFieldNames: fieldNames,
+      fields: validated.value,
+      tokenAnnotations: card.tokenAnnotations,
+    });
+    if (!validatedAnnotations.ok) return validatedAnnotations;
+    const tokenAnnotations = stripEmptyTokenAnnotations(validatedAnnotations.value) ?? {};
+    validatedCards.push({
+      fields: validated.value,
+      tokenAnnotations,
+      order: card.order,
+      origin: card.origin ?? defaultOrigin,
+    });
   }
 
   const ids: Id<"flashcards">[] = [];
   for (const card of validatedCards) {
-    ids.push(await ctx.db.insert("flashcards", { setId, fields: card.fields, order: card.order, origin: card.origin }));
+    ids.push(await ctx.db.insert("flashcards", {
+      setId,
+      fields: card.fields,
+      ...(Object.keys(card.tokenAnnotations).length === 0 ? {} : { tokenAnnotations: card.tokenAnnotations }),
+      order: card.order,
+      origin: card.origin,
+    }));
   }
   return { ok: true, value: ids };
 }
@@ -287,7 +330,7 @@ export async function createInitialCardsForSetWithOrigins(
     defaultOrigin: FlashcardOrigin;
     srsEnrollment: CardCreationSrsEnrollment;
   },
-): Promise<DomainResult<CreatedCards, CommonFailure>> {
+): Promise<DomainResult<CreatedCards, CommonFailure | TokenAnnotationValidationFailure>> {
   const limitCheck = validateCardSetLimit(0, cards.length);
   if (!limitCheck.ok) return limitCheck;
 

@@ -78,6 +78,26 @@ describe("flashcards.create", () => {
     expect(cards[0]!.fields).toEqual({ Front: "Question" });
   });
 
+  it("stores valid token annotations", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    await unwrap(await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "你好", Back: "hello" },
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 2, gloss: "hello", pinyin: "ni hao" }],
+      },
+      order: 0,
+    }));
+
+    const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 2, gloss: "hello", pinyin: "ni hao" }],
+    });
+  });
+
   it("rejects unknown fields", async () => {
     const t = convexTest(schema, modules);
     const as = t.withIdentity(TEST_USER);
@@ -89,6 +109,36 @@ describe("flashcards.create", () => {
       order: 0,
     });
     expect(result).toMatchObject({ ok: false, error: { message: "Unknown field: Frnot" } });
+  });
+
+  it("rejects invalid token annotation spans", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+
+    const result = await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "你", Back: "you" },
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 2, gloss: "secret" }],
+      },
+      order: 0,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "annotations_invalid_for_field",
+        fieldName: "Front",
+        reason: {
+          kind: "span_out_of_bounds",
+          start: 0,
+          end: 2,
+          length: 1,
+        },
+      },
+    });
+    expect(result.ok ? "" : result.error.message).not.toContain("secret");
   });
 
   it("rejects empty or blank field values", async () => {
@@ -275,6 +325,96 @@ describe("flashcards.update", () => {
 
     const cards = await unwrap(await as.query(api.flashcards.list, { setId }));
     expect(cards[0]!.order).toBe(2);
+  });
+
+  it("preserves annotations on order-only updates and drops changed field annotations when omitted", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+    const cardId = await unwrap(await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "你好", Back: "hello" },
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 2, gloss: "hello" }],
+        Back: [{ start: 0, end: 5, gloss: "meaning" }],
+      },
+      order: 0,
+    }));
+
+    await unwrap(await as.mutation(api.flashcards.update, {
+      id: cardId,
+      order: 2,
+    }));
+    let cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 2, gloss: "hello" }],
+      Back: [{ start: 0, end: 5, gloss: "meaning" }],
+    });
+
+    await unwrap(await as.mutation(api.flashcards.update, {
+      id: cardId,
+      fields: { Front: "再见", Back: "hello" },
+    }));
+    cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Back: [{ start: 0, end: 5, gloss: "meaning" }],
+    });
+  });
+
+  it("merges explicit annotation updates and supports explicit wipes", async () => {
+    const t = convexTest(schema, modules);
+    const as = t.withIdentity(TEST_USER);
+    const setId = await createSet(as);
+    const cardId = await unwrap(await as.mutation(api.flashcards.create, {
+      setId,
+      fields: { Front: "你好", Back: "hello" },
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 2, gloss: "hello" }],
+        Back: [{ start: 0, end: 5, gloss: "meaning" }],
+      },
+      order: 0,
+    }));
+
+    await unwrap(await as.mutation(api.flashcards.update, {
+      id: cardId,
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 1, gloss: "you" }],
+      },
+    }));
+    let cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 1, gloss: "you" }],
+      Back: [{ start: 0, end: 5, gloss: "meaning" }],
+    });
+
+    await unwrap(await as.mutation(api.flashcards.update, {
+      id: cardId,
+      fields: { Front: "再见", Back: "hello" },
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 2, gloss: "goodbye" }],
+      },
+    }));
+    cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 2, gloss: "goodbye" }],
+      Back: [{ start: 0, end: 5, gloss: "meaning" }],
+    });
+
+    await unwrap(await as.mutation(api.flashcards.update, {
+      id: cardId,
+      tokenAnnotations: { Back: [] },
+    }));
+    cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 2, gloss: "goodbye" }],
+    });
+
+    await unwrap(await as.mutation(api.flashcards.update, {
+      id: cardId,
+      tokenAnnotations: {},
+    }));
+    cards = await unwrap(await as.query(api.flashcards.list, { setId }));
+    expect(cards[0]!.tokenAnnotations).toBeUndefined();
   });
 });
 

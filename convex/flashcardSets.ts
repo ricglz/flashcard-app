@@ -450,6 +450,7 @@ export const fork = mutation({
             },
             cards: activeSourceCards.map((card) => ({
               fields: card.fields,
+              tokenAnnotations: card.tokenAnnotations ?? {},
               order: card.order,
             })),
             origin: { kind: "forked", sourceSetId: args.sourceSetId },

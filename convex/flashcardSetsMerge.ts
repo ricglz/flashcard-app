@@ -16,10 +16,12 @@ import {
   toDomainResultAsync,
 } from "./domain/effect";
 import type { FieldDefinition } from "../src/lib/types";
+import type { TokenAnnotations } from "../src/lib/types";
 import { getFieldDefinitions } from "./lib/typed";
 import { getDefaultFieldLayout } from "../src/lib/types";
 import { createInitialCardsForSetWithOrigins, MAX_CARDS_PER_SET } from "./lib/cardCreation";
 import { internal } from "./_generated/api";
+import type { TokenAnnotationValidationFailure } from "./domain/tokenAnnotations";
 
 type MergeResult = {
   setId: Id<"flashcardSets">;
@@ -40,7 +42,10 @@ export const merge = mutation({
     sourceSetIds: v.array(v.id("flashcardSets")),
     archiveSource: v.boolean(),
   },
-  handler: (ctx, args): Promise<DomainResult<MergeResult, CommonFailure>> => toDomainResultAsync(
+  handler: (
+    ctx,
+    args,
+  ): Promise<DomainResult<MergeResult, CommonFailure | TokenAnnotationValidationFailure>> => toDomainResultAsync(
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
       const tokenIdentifier = identity.tokenIdentifier;
@@ -96,7 +101,12 @@ export const merge = mutation({
         }
       }
 
-      type CardWithSource = { fields: Record<string,string>; order: number; sourceSetId: Id<"flashcardSets"> };
+      type CardWithSource = {
+        fields: Record<string,string>;
+        tokenAnnotations?: TokenAnnotations;
+        order: number;
+        sourceSetId: Id<"flashcardSets">;
+      };
       const dedupMap = new Map<string, CardWithSource>();
       let skippedDuplicateCount = 0;
 
@@ -129,7 +139,12 @@ export const merge = mutation({
         for (const card of active) {
           const key = JSON.stringify(Object.keys(card.fields).sort().map(k => [k, card.fields[k]]));
           if (!dedupMap.has(key)) {
-            dedupMap.set(key, { fields: card.fields, order: card.order, sourceSetId: set._id });
+            dedupMap.set(key, {
+              fields: card.fields,
+              tokenAnnotations: card.tokenAnnotations,
+              order: card.order,
+              sourceSetId: set._id,
+            });
           } else {
             skippedDuplicateCount++;
           }
@@ -172,6 +187,7 @@ export const merge = mutation({
 
       const cardsWithOrigin = uniqueCards.map((c, idx) => ({
         fields: c.fields,
+        tokenAnnotations: c.tokenAnnotations ?? {},
         order: idx,
         origin: { kind: "merged" as const, sourceSetId: c.sourceSetId },
       }));

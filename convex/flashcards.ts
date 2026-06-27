@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import * as Effect from "effect/Effect";
 import { assertOwnerEffect, requireSetContentAccessEffect } from "./userSets";
@@ -9,10 +9,26 @@ import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { deleteAllMatching, DELETION_BATCH_SIZE } from "./lib/batch";
 import {
+  dropAnnotationsForChangedFields,
+  mergeTokenAnnotations,
+  validateTokenAnnotationsForCardEffect,
+  type TokenAnnotationValidationFailure,
+} from "./domain/tokenAnnotations";
+import {
   appendCardsToSet,
   MAX_CARDS_PER_SET,
   validateCardBatchSize,
 } from "./lib/cardCreation";
+import { tokenAnnotationValidator } from "./schema";
+
+const updateArgsValidator = {
+  id: v.id("flashcards"),
+  fields: v.optional(v.record(v.string(), v.string())),
+  tokenAnnotations: v.optional(v.record(v.string(), v.array(tokenAnnotationValidator))),
+  order: v.optional(v.number()),
+};
+
+type FlashcardUpdatePatch = Partial<Omit<ObjectType<typeof updateArgsValidator>, "id">>;
 
 function validateAgainstSetEffect(
   set: { fieldDefinitions: Array<{ name: string }> },
@@ -54,6 +70,7 @@ export const create = mutation({
   args: {
     setId: v.id("flashcardSets"),
     fields: v.record(v.string(), v.string()),
+    tokenAnnotations: v.optional(v.record(v.string(), v.array(tokenAnnotationValidator))),
     order: v.number(),
   },
   handler: (ctx, args) => toDomainResultAsync(
@@ -65,7 +82,11 @@ export const create = mutation({
         yield* Effect.promise(() =>
           appendCardsToSet(ctx, {
             set,
-            cards: [{ fields: args.fields, order: args.order }],
+            cards: [{
+              fields: args.fields,
+              tokenAnnotations: args.tokenAnnotations ?? {},
+              order: args.order,
+            }],
             origin: { kind: "manual" },
             srsEnrollment: { kind: "enabledUsersForSet" },
           }),
@@ -84,6 +105,7 @@ export const batchCreate = mutation({
     cards: v.array(
       v.object({
         fields: v.record(v.string(), v.string()),
+        tokenAnnotations: v.optional(v.record(v.string(), v.array(tokenAnnotationValidator))),
         order: v.number(),
       }),
     ),
@@ -98,7 +120,11 @@ export const batchCreate = mutation({
         yield* Effect.promise(() =>
           appendCardsToSet(ctx, {
             set,
-            cards: args.cards,
+            cards: args.cards.map((card) => ({
+              fields: card.fields,
+              tokenAnnotations: card.tokenAnnotations ?? {},
+              order: card.order,
+            })),
             origin: { kind: "manual" },
             srsEnrollment: { kind: "enabledUsersForSet" },
           }),
@@ -110,20 +136,52 @@ export const batchCreate = mutation({
 });
 
 export const update = mutation({
-  args: {
-    id: v.id("flashcards"),
-    fields: v.optional(v.record(v.string(), v.string())),
-    order: v.optional(v.number()),
-  },
+  args: updateArgsValidator,
   handler: (ctx, args) => toDomainResultAsync(
     Effect.gen(function* () {
       const identity = yield* requireAuth(ctx);
       const card = yield* requireEntity(ctx.db.get(args.id), "Card not found");
       yield* assertOwnerEffect(ctx, identity.tokenIdentifier, card.setId);
-      const patch: { fields?: Record<string, string>; order?: number } = {};
+      const patch: FlashcardUpdatePatch = {};
+      let nextFields = card.fields;
+      const set = args.fields !== undefined || args.tokenAnnotations !== undefined
+        ? yield* requireEntity(ctx.db.get(card.setId), "Set not found")
+        : null;
+      const validFieldNames = set?.fieldDefinitions.map((field) => field.name) ?? [];
+
       if (args.fields !== undefined) {
-        const set = yield* requireEntity(ctx.db.get(card.setId), "Set not found");
+        if (set === null) return yield* Effect.fail(invalidInput("Set not found."));
         patch.fields = yield* validateAgainstSetEffect(set, args.fields);
+        nextFields = patch.fields;
+      }
+
+      if (args.tokenAnnotations !== undefined) {
+        const validated = yield* validateTokenAnnotationsForCardEffect({
+          validFieldNames,
+          fields: nextFields,
+          tokenAnnotations: args.tokenAnnotations,
+        });
+        const existingAnnotations = args.fields === undefined
+          ? card.tokenAnnotations
+          : dropAnnotationsForChangedFields(
+            card.fields,
+            nextFields,
+            card.tokenAnnotations,
+          ).tokenAnnotations;
+        patch.tokenAnnotations = mergeTokenAnnotations(existingAnnotations, validated) ?? undefined;
+      } else if (args.fields !== undefined) {
+        const dropped = dropAnnotationsForChangedFields(
+          card.fields,
+          nextFields,
+          card.tokenAnnotations,
+        );
+        if (dropped.droppedFieldNames.length > 0) {
+          console.warn("[flashcards] Dropped token annotations after field text change", {
+            cardId: args.id,
+            fieldNames: dropped.droppedFieldNames,
+          });
+        }
+        patch.tokenAnnotations = dropped.tokenAnnotations;
       }
       if (args.order !== undefined) patch.order = args.order;
       yield* Effect.promise(() => ctx.db.patch(args.id, patch));
@@ -193,5 +251,8 @@ export const remove = mutation({
   ),
 });
 
-export type FlashcardMutationFailure = CommonFailure | CardFieldsValidationFailure;
+export type FlashcardMutationFailure =
+  | CommonFailure
+  | CardFieldsValidationFailure
+  | TokenAnnotationValidationFailure;
 export type FlashcardListFailure = CommonFailure;

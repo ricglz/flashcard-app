@@ -104,6 +104,36 @@ describe("createGeneratedSetForTool", () => {
     expect(set.cardCount).toBe(2);
   });
 
+  it("passes token annotations through generated-set creation", async () => {
+    const t = convexTest(schema, modules);
+
+    const created = await unwrap(await t.mutation(internal.tooling.createGeneratedSetForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      name: "Generated",
+      sourceSetIds: [],
+      sourceScope: "custom",
+      fieldDefinitions: fieldDefs,
+      cards: [
+        {
+          fields: { Front: "你好", Back: "hello" },
+          tokenAnnotations: {
+            Front: [{ start: 0, end: 2, gloss: "hello" }],
+          },
+        },
+      ],
+      addToSrs: false,
+    }));
+
+    const cards = await unwrap(
+      await t.withIdentity(TEST_USER).query(api.flashcards.list, {
+        setId: created.setId,
+      }),
+    );
+    expect(cards[0]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 2, gloss: "hello" }],
+    });
+  });
+
   it("honors addToSrs when creating generated sets", async () => {
     const t = convexTest(schema, modules);
 
@@ -148,6 +178,30 @@ describe("appendGeneratedCardsForTool", () => {
     expect(cards[3]!.order).toBe(3);
     expect(cards[4]!.order).toBe(4);
     expect(cards[3]!.fields.Front).toBe("New Q0");
+  });
+
+  it("passes token annotations through generated-card append", async () => {
+    const t = convexTest(schema, modules);
+    const { setId } = await createSetWithCards(t, { cardCount: 1 });
+
+    await unwrap(await t.mutation(internal.tooling.appendGeneratedCardsForTool, {
+      userId: TEST_USER.tokenIdentifier,
+      targetSetId: setId,
+      fieldDefinitions: fieldDefs,
+      cards: [
+        {
+          fields: { Front: "你好", Back: "hello" },
+          tokenAnnotations: {
+            Front: [{ start: 0, end: 2, gloss: "hello" }],
+          },
+        },
+      ],
+    }));
+
+    const cards = await unwrap(await t.withIdentity(TEST_USER).query(api.flashcards.list, { setId }));
+    expect(cards[1]!.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 2, gloss: "hello" }],
+    });
   });
 
   it("increments set cardCount", async () => {

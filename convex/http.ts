@@ -7,6 +7,7 @@ import {
   WeakCardsRequestSchema,
   GeneratedSetPayloadSchema,
 } from "../src/lib/aiToolingSchemas";
+import { cloneTokenAnnotations } from "../src/lib/tokenAnnotations";
 import {
   domainResultToHttpEffect,
   ForbiddenError,
@@ -103,8 +104,11 @@ http.route({
             ...rest,
             sourceSetIds: [...sourceSetIds],
             fieldDefinitions: [...fieldDefinitions],
-            cards: cards.map(({ sourceCardIds, ...c }) => ({
+            cards: cards.map(({ sourceCardIds, tokenAnnotations, ...c }) => ({
               ...c,
+              ...(tokenAnnotations === undefined
+                ? {}
+                : { tokenAnnotations: cloneTokenAnnotations(tokenAnnotations) }),
               sourceCardIds: sourceCardIds && [...sourceCardIds],
             })),
             userId: auth.userId,
@@ -138,8 +142,11 @@ http.route({
             ...rest,
             sourceSetIds: [...sourceSetIds],
             fieldDefinitions: [...fieldDefinitions],
-            cards: cards.map(({ sourceCardIds, ...c }) => ({
+            cards: cards.map(({ sourceCardIds, tokenAnnotations, ...c }) => ({
               ...c,
+              ...(tokenAnnotations === undefined
+                ? {}
+                : { tokenAnnotations: cloneTokenAnnotations(tokenAnnotations) }),
               sourceCardIds: sourceCardIds && [...sourceCardIds],
             })),
             userId: auth.userId,

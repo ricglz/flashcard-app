@@ -3,7 +3,12 @@
 import { v } from "convex/values";
 import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { fieldDefinitionValidator, sourceScopeValidator, weakContextMethodologyValidator } from "./schema";
+import {
+  fieldDefinitionValidator,
+  sourceScopeValidator,
+  tokenAnnotationValidator,
+  weakContextMethodologyValidator,
+} from "./schema";
 import { renderRemedialPrompt } from "./lib/remedialPrompt";
 import { renderFreeformPrompt } from "./lib/freeformPrompt";
 import { igniteModel, loadModels, Message, type LlmCompletionOpts } from "multi-llm-ts";
@@ -16,6 +21,8 @@ import { GeneratedSetPayloadSchema, type GeneratedSetPayload } from "../src/lib/
 import { DEFAULT_MODELS } from "../src/lib/aiDefaults";
 import type { CommonFailure, DomainResult } from "./domain/result";
 import { requireAuth, toDomainResultAsync } from "./domain/effect";
+import type { TokenAnnotationValidationFailure } from "./domain/tokenAnnotations";
+import { cloneTokenAnnotations } from "../src/lib/tokenAnnotations";
 import {
   validateWeakCardsReviewFilter,
   weakCardsReviewFilterValidator,
@@ -50,6 +57,12 @@ const GENERATED_SET_STRUCTURE = z.object({
   cards: z.array(
     z.object({
       fields: z.record(z.string(), z.string()),
+      tokenAnnotations: z.record(z.string(), z.array(z.object({
+        start: z.number(),
+        end: z.number(),
+        gloss: z.string(),
+        pinyin: z.string().optional(),
+      }))).optional(),
       sourceCardIds: z.array(z.string()).optional(),
       rationale: z.string().optional(),
     }),
@@ -75,6 +88,7 @@ const REPAIR_COMPLETION_OPTS: LlmCompletionOpts = {
 
 const generatedCardValidator = v.object({
   fields: v.record(v.string(), v.string()),
+  tokenAnnotations: v.optional(v.record(v.string(), v.array(tokenAnnotationValidator))),
   sourceCardIds: v.optional(v.array(v.id("flashcards"))),
   rationale: v.optional(v.string()),
 });
@@ -92,6 +106,7 @@ const generatedSetPayloadValidator = v.object({
 
 type AiFailure =
   | CommonFailure
+  | TokenAnnotationValidationFailure
   | { readonly _tag: "LlmRateLimited"; readonly message: string; readonly retryAfterSeconds?: number }
   | { readonly _tag: "LlmInvalidPayload"; readonly message: string; readonly raw?: string; readonly issueCount?: number }
   | { readonly _tag: "LlmError"; readonly message: string };
@@ -490,10 +505,13 @@ function generateAndValidateJson(
               ...payload,
               sourceSetIds: [...payload.sourceSetIds],
               fieldDefinitions: [...payload.fieldDefinitions],
-              cards: payload.cards.map(c => ({
-                ...c,
-                fields: { ...c.fields },
-                sourceCardIds: c.sourceCardIds ? [...c.sourceCardIds] : undefined,
+              cards: payload.cards.map(({ sourceCardIds, tokenAnnotations, ...card }) => ({
+                ...card,
+                fields: { ...card.fields },
+                ...(tokenAnnotations === undefined
+                  ? {}
+                  : { tokenAnnotations: cloneTokenAnnotations(tokenAnnotations) }),
+                sourceCardIds: sourceCardIds ? [...sourceCardIds] : undefined,
               })),
               userId: opts.userId,
             },
@@ -645,6 +663,9 @@ export const refineGeneratedSet = action({
           cards: args.draft.cards.map((card) => ({
             ...card,
             fields: { ...card.fields },
+            ...(card.tokenAnnotations === undefined
+              ? {}
+              : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
             sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
           })),
         },

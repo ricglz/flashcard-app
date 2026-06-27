@@ -7,9 +7,11 @@ import {
   ratingValidator,
   sourceScopeValidator,
   srsCardStatusValidator,
+  tokenAnnotationValidator,
   weakContextMethodologyValidator,
 } from "./schema";
 import { validateCardFields } from "./domain/cardFields";
+import { validateTokenAnnotationsForCard } from "./domain/tokenAnnotations";
 import {
   invalidInput,
   fail,
@@ -27,6 +29,7 @@ import {
   MAX_CARDS_PER_SET,
 } from "./lib/cardCreation";
 import { schemaFingerprint } from "../src/lib/aiToolingSchemas";
+import { cloneTokenAnnotations } from "../src/lib/tokenAnnotations";
 import type {
   GeneratedSetPayload,
   SetsListResponse,
@@ -76,6 +79,7 @@ const weakCardsScopeValidator = v.union(
 
 const generatedCardValidator = v.object({
   fields: v.record(v.string(), v.string()),
+  tokenAnnotations: v.optional(v.record(v.string(), v.array(tokenAnnotationValidator))),
   sourceCardIds: v.optional(v.array(v.id("flashcards"))),
   rationale: v.optional(v.string()),
 });
@@ -459,6 +463,16 @@ async function validateGeneratedPayload(ctx: QueryCtx | MutationCtx, userId: str
   for (const [index, card] of normalized.cards.entries()) {
     const validation = validateCardFields(expectedFieldNames, card.fields);
     if (!validation.ok) issues.push(`Card ${index + 1}: ${validation.error.message}`);
+    if (validation.ok && card.tokenAnnotations !== undefined) {
+      const annotationValidation = validateTokenAnnotationsForCard({
+        validFieldNames: expectedFieldNames,
+        fields: validation.value,
+        tokenAnnotations: card.tokenAnnotations,
+      });
+      if (!annotationValidation.ok) {
+        issues.push(`Card ${index + 1}: ${annotationValidation.error.message}`);
+      }
+    }
     if (card.sourceCardIds) {
       for (const cardId of card.sourceCardIds) {
         if (!sourceCardMap.has(cardId)) issues.push(`Card ${index + 1}: source card not found.`);
@@ -539,6 +553,7 @@ export const createGeneratedSetForTool = internalMutation({
       set: { _id: setId, cardCount: normalized.cards.length, fieldDefinitions, updatedAt: now },
       cards: normalized.cards.map((card, index) => ({
         fields: card.fields,
+        tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) ?? {},
         order: index,
       })),
       origin: { kind: "ai_generated" },
@@ -597,6 +612,7 @@ export const appendGeneratedCardsForTool = internalMutation({
       set: targetSet,
       cards: args.cards.map((card, index) => ({
         fields: card.fields,
+        tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) ?? {},
         order: maxOrder + 1 + index,
       })),
       srsEnrollment: { kind: "enabledUsersForSet" },

@@ -16,17 +16,22 @@ import type * as domain_cardFields from "../domain/cardFields.js";
 import type * as domain_effect from "../domain/effect.js";
 import type * as domain_fieldDefinitions from "../domain/fieldDefinitions.js";
 import type * as domain_result from "../domain/result.js";
+import type * as domain_srsReviewAction from "../domain/srsReviewAction.js";
 import type * as domain_srsSettings from "../domain/srsSettings.js";
 import type * as domain_studySessionSetup from "../domain/studySessionSetup.js";
+import type * as domain_tokenAnnotations from "../domain/tokenAnnotations.js";
 import type * as flashcardSets from "../flashcardSets.js";
 import type * as flashcardSetsMerge from "../flashcardSetsMerge.js";
 import type * as flashcards from "../flashcards.js";
 import type * as http from "../http.js";
 import type * as internalCleanup from "../internalCleanup.js";
 import type * as lib_batch from "../lib/batch.js";
+import type * as lib_cardCreation from "../lib/cardCreation.js";
+import type * as lib_clientTimestamp from "../lib/clientTimestamp.js";
 import type * as lib_freeformPrompt from "../lib/freeformPrompt.js";
 import type * as lib_httpEffect from "../lib/httpEffect.js";
 import type * as lib_remedialPrompt from "../lib/remedialPrompt.js";
+import type * as lib_srsEnrollment from "../lib/srsEnrollment.js";
 import type * as lib_typed from "../lib/typed.js";
 import type * as migrations from "../migrations.js";
 import type * as progress from "../progress.js";
@@ -40,6 +45,7 @@ import type * as tooling from "../tooling.js";
 import type * as userSets from "../userSets.js";
 import type * as userSettings from "../userSettings.js";
 import type * as weakAnalysis from "../weakAnalysis.js";
+import type * as weakCardsReviewFilter from "../weakCardsReviewFilter.js";
 
 import type {
   ApiFromModules,
@@ -56,17 +62,22 @@ declare const fullApi: ApiFromModules<{
   "domain/effect": typeof domain_effect;
   "domain/fieldDefinitions": typeof domain_fieldDefinitions;
   "domain/result": typeof domain_result;
+  "domain/srsReviewAction": typeof domain_srsReviewAction;
   "domain/srsSettings": typeof domain_srsSettings;
   "domain/studySessionSetup": typeof domain_studySessionSetup;
+  "domain/tokenAnnotations": typeof domain_tokenAnnotations;
   flashcardSets: typeof flashcardSets;
   flashcardSetsMerge: typeof flashcardSetsMerge;
   flashcards: typeof flashcards;
   http: typeof http;
   internalCleanup: typeof internalCleanup;
   "lib/batch": typeof lib_batch;
+  "lib/cardCreation": typeof lib_cardCreation;
+  "lib/clientTimestamp": typeof lib_clientTimestamp;
   "lib/freeformPrompt": typeof lib_freeformPrompt;
   "lib/httpEffect": typeof lib_httpEffect;
   "lib/remedialPrompt": typeof lib_remedialPrompt;
+  "lib/srsEnrollment": typeof lib_srsEnrollment;
   "lib/typed": typeof lib_typed;
   migrations: typeof migrations;
   progress: typeof progress;
@@ -80,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   userSets: typeof userSets;
   userSettings: typeof userSettings;
   weakAnalysis: typeof weakAnalysis;
+  weakCardsReviewFilter: typeof weakCardsReviewFilter;
 }>;
 
 /**
