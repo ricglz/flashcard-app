@@ -13,7 +13,7 @@ vi.mock("@/lib/tts", async (importOriginal) => {
     ...actual,
     speakSequence: vi.fn(() => Promise.resolve({ ok: true, status: "ended" })),
     cancelTts: vi.fn(),
-    ensureVoices: vi.fn(() => Promise.resolve([])),
+    preloadTtsVoices: vi.fn(),
   };
 });
 

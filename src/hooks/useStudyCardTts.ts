@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TtsEvent } from "@/lib/tts";
-import { cancelTts, ensureVoices, speakSequence } from "@/lib/tts";
+import { cancelTts, preloadTtsVoices, speakSequence } from "@/lib/tts";
 import { isTtsProblem } from "./useTtsInteraction";
 import type { RevealTtsItem } from "@/components/studyCardTts";
 
@@ -83,20 +83,15 @@ export function useStudyCardTts({ frontItems, revealItems, frontKey, revealKey, 
     runIdRef.current += 1;
     const currentRun = runIdRef.current;
     const currentKey = frontKey;
-    let cancelled = false;
-    void ensureVoices().then(() => {
-      if (cancelled) return;
-      if (runIdRef.current !== currentRun) return;
-      void speakSequence([...frontItems], {
-        rate: rateRef.current,
-        onEvent: (e) => {
-          if (runIdRef.current !== currentRun) return;
-          handleTtsEventForKey(currentKey)(e);
-        },
-      });
+    preloadTtsVoices();
+    void speakSequence([...frontItems], {
+      rate: rateRef.current,
+      onEvent: (e) => {
+        if (runIdRef.current !== currentRun) return;
+        handleTtsEventForKey(currentKey)(e);
+      },
     });
     return () => {
-      cancelled = true;
       runIdRef.current += 1;
       cancelTts();
     };
