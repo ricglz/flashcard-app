@@ -111,7 +111,7 @@ export default function AssistantPanelInner({ context }: AssistantPanelInnerProp
       }
     >
       <AvailableModelsSuspenseProvider>
-        <div className="fixed bottom-4 right-4 z-50 w-96 lg:w-[28rem] max-w-[calc(100vw-2rem)] h-[32rem] lg:h-[36rem] max-h-[calc(100vh-2rem)] bg-background border border-edge rounded-xl shadow-xl flex flex-col">
+        <div className="fixed inset-x-0 bottom-0 z-50 w-full h-[60dvh] max-h-[70dvh] bg-background border-t sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-w-[calc(100vw-2rem)] sm:h-[32rem] sm:max-h-[calc(100dvh-2rem)] sm:border border-edge rounded-t-xl sm:rounded-xl shadow-xl flex flex-col lg:w-[28rem] lg:h-[36rem]">
       <div className="flex items-center justify-between px-4 py-2 border-b border-edge">
         <h3 className="font-semibold text-sm lg:text-base">Study Assistant</h3>
         <div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function AssistantPanelInner({ context }: AssistantPanelInnerProp
         <AssistantModelSelect value={model} onChange={setModel} />
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && !streaming && (
           <p className="text-center text-muted text-sm lg:text-base py-8">
             Ask a question about this card or your study material.

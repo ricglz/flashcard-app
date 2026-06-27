@@ -8,7 +8,7 @@ type Props = {
 export default function AssistantPanelSkeleton({ setName, onClose }: Props) {
   return (
     <div
-      className="fixed bottom-4 right-4 z-50 w-96 lg:w-[28rem] max-w-[calc(100vw-2rem)] h-[32rem] lg:h-[36rem] max-h-[calc(100vh-2rem)] bg-background border border-edge rounded-xl shadow-xl flex flex-col"
+      className="fixed inset-x-0 bottom-0 z-50 w-full h-[60dvh] max-h-[70dvh] bg-background border-t sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-96 sm:max-w-[calc(100vw-2rem)] sm:h-[32rem] sm:max-h-[calc(100dvh-2rem)] sm:border border-edge rounded-t-xl sm:rounded-xl shadow-xl flex flex-col lg:w-[28rem] lg:h-[36rem]"
       role="status"
       aria-label="Loading study assistant"
     >
@@ -28,7 +28,7 @@ export default function AssistantPanelSkeleton({ setName, onClose }: Props) {
         <div className="h-7 w-36 rounded-lg bg-surface-hover animate-pulse" />
       </div>
 
-      <div className="flex-1 overflow-hidden p-3 space-y-3">
+      <div className="min-h-0 flex-1 overflow-hidden p-3 space-y-3">
         <div className="mx-auto mt-8 h-4 w-48 rounded bg-surface-hover animate-pulse" />
         <div className="space-y-2 pt-6">
           <div className="h-10 w-4/5 rounded-lg bg-surface-hover animate-pulse" />
