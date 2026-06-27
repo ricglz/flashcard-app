@@ -138,7 +138,7 @@ describe("CsvPath", () => {
 
     expect(dispatch).toHaveBeenNthCalledWith(1, {
       type: "SET_CARDS",
-      payload: [{ Character: "你", Meaning: "you" }],
+      payload: [{ fields: { Character: "你", Meaning: "you" } }],
     });
     expect(dispatch).toHaveBeenNthCalledWith(2, {
       type: "SET_FIELD_DEFINITIONS",
@@ -159,7 +159,7 @@ describe("CsvPath", () => {
         { name: "Character", role: "primary", metadata: {}, order: 0 },
         { name: "Meaning", role: "definition", metadata: {}, order: 1 },
       ],
-      cards: [{ Character: "你", Meaning: "you" }],
+      cards: [{ fields: { Character: "你", Meaning: "you" } }],
     };
 
     render(<CsvPath state={state} dispatch={vi.fn()} />);

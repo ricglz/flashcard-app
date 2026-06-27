@@ -46,8 +46,16 @@ describe("field definition draft helpers", () => {
   });
 
   it("removes deleted field values from draft cards", () => {
-    expect(removeFieldValueFromCards([{ Front: "Q", Back: "A" }], "Back")).toEqual([
-      { Front: "Q" },
+    expect(
+      removeFieldValueFromCards(
+        [{
+          fields: { Front: "Q", Back: "A" },
+          tokenAnnotations: { Back: [{ start: 0, end: 1, gloss: "answer" }] },
+        }],
+        "Back",
+      ),
+    ).toEqual([
+      { fields: { Front: "Q" }, tokenAnnotations: undefined },
     ]);
   });
 });

@@ -1,6 +1,8 @@
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import type { api } from "../../convex/_generated/api";
 import type { GeneratedSetPayload } from "./aiToolingSchemas";
+import { cloneTokenAnnotations } from "./tokenAnnotations";
+import type { TokenAnnotations } from "./types";
 import {
   formatRefinementCountMismatch,
   getCardsForRefinement,
@@ -11,7 +13,12 @@ import {
 
 type RefineDraft = FunctionArgs<typeof api.ai.refineGeneratedSet>["draft"];
 type RefineResult = FunctionReturnType<typeof api.ai.refineGeneratedSet>;
-export type DraftCard = Pick<GeneratedSetPayload["cards"][number], "fields" | "sourceCardIds" | "rationale">;
+export type DraftCard = Omit<
+  Pick<GeneratedSetPayload["cards"][number], "fields" | "sourceCardIds" | "rationale">,
+  never
+> & {
+  tokenAnnotations?: TokenAnnotations;
+};
 type SelectableDraftCard = DraftCard & { selected: boolean };
 type AppliedRefinement<T extends SelectableDraftCard> = {
   kind: "applied";
@@ -22,6 +29,19 @@ type UnappliedRefinement = Extract<RefinementResult, { kind: "not_applied" }> & 
   message: string;
 };
 type RefinedPayloadMergeResult<T extends SelectableDraftCard> = AppliedRefinement<T> | UnappliedRefinement;
+
+function cloneDraftCards(
+  cards: ReadonlyArray<GeneratedSetPayload["cards"][number]>,
+): DraftCard[] {
+  return cards.map((card) => ({
+    fields: { ...card.fields },
+    ...(card.tokenAnnotations === undefined
+      ? {}
+      : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
+    sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
+    rationale: card.rationale,
+  }));
+}
 
 export function cloneFieldDefinitionsForAction(
   fieldDefinitions: GeneratedSetPayload["fieldDefinitions"],
@@ -38,8 +58,9 @@ export function cloneFieldDefinitionsForAction(
 
 export function cloneGeneratedSetForAction(
   payload: GeneratedSetPayload,
-  cards: ReadonlyArray<DraftCard> = payload.cards,
+  cards?: ReadonlyArray<DraftCard>,
 ): RefineDraft {
+  const sourceCards = cards ?? cloneDraftCards(payload.cards);
   return {
     name: payload.name,
     description: payload.description,
@@ -47,8 +68,11 @@ export function cloneGeneratedSetForAction(
     sourceScope: payload.sourceScope,
     weakContextMethodology: payload.weakContextMethodology,
     fieldDefinitions: cloneFieldDefinitionsForAction(payload.fieldDefinitions),
-    cards: cards.map((card) => ({
+    cards: sourceCards.map((card) => ({
       fields: { ...card.fields },
+      ...(card.tokenAnnotations === undefined
+        ? {}
+        : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
       sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
       rationale: card.rationale,
     })),
@@ -69,6 +93,9 @@ export function cloneGeneratedCardsForPayload(
 ): GeneratedSetPayload["cards"] {
   return cards.map((card) => ({
     fields: { ...card.fields },
+    ...(card.tokenAnnotations === undefined
+      ? {}
+      : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
     sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
     rationale: card.rationale,
   }));

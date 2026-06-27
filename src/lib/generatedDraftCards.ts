@@ -2,8 +2,11 @@ import type { GeneratedSetPayload } from "./aiToolingSchemas";
 import type { DraftCard } from "./generatedSetDraft";
 import type { FunctionArgs } from "convex/server";
 import type { api } from "../../convex/_generated/api";
+import { cloneTokenAnnotations } from "./tokenAnnotations";
+import type { TokenAnnotations } from "./types";
 
-export type GeneratedDraftCard = GeneratedSetPayload["cards"][number] & {
+export type GeneratedDraftCard = Omit<GeneratedSetPayload["cards"][number], "tokenAnnotations"> & {
+  tokenAnnotations?: TokenAnnotations;
   selected: boolean;
 };
 
@@ -14,6 +17,9 @@ export function generatedCardsFromPayload(
 ): GeneratedDraftCard[] {
   return payload.cards.map((card) => ({
     fields: { ...card.fields },
+    ...(card.tokenAnnotations === undefined
+      ? {}
+      : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
     sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
     rationale: card.rationale,
     selected: true,
@@ -27,6 +33,9 @@ export function selectedCardsForConfirm(
     .filter((card) => card.selected)
     .map((card) => ({
       fields: { ...card.fields },
+      ...(card.tokenAnnotations === undefined
+        ? {}
+        : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
       sourceCardIds: card.sourceCardIds ? [...card.sourceCardIds] : undefined,
       rationale: card.rationale,
     }));
@@ -34,21 +43,33 @@ export function selectedCardsForConfirm(
 
 export function selectedCardsForAppend(
   cards: readonly GeneratedDraftCard[],
-): Pick<DraftCard, "fields" | "rationale">[] {
+): Pick<DraftCard, "fields" | "tokenAnnotations" | "rationale">[] {
   return cards
     .filter((card) => card.selected)
     .map((card) => ({
       fields: { ...card.fields },
+      ...(card.tokenAnnotations === undefined
+        ? {}
+        : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
       rationale: card.rationale,
     }));
 }
 
-export function includedCardFields(
+export function includedCards(
   cards: readonly GeneratedDraftCard[],
-): Record<string, string>[] {
+): Array<{ fields: Record<string, string>; tokenAnnotations?: GeneratedDraftCard["tokenAnnotations"] }> {
   return cards
     .filter((card) => card.selected)
-    .map((card) => ({ ...card.fields }));
+    .map((card) => ({
+      fields: { ...card.fields },
+      ...(card.tokenAnnotations === undefined
+        ? {}
+        : { tokenAnnotations: cloneTokenAnnotations(card.tokenAnnotations) }),
+    }));
+}
+
+export function includedCardFields(cards: readonly GeneratedDraftCard[]): Record<string, string>[] {
+  return includedCards(cards).map((card) => card.fields);
 }
 
 export function toggleDraftCardSelection(
@@ -71,9 +92,12 @@ export function editDraftCardField(
   const card = cards[index];
   if (!card) return [...cards];
   const nextCards = [...cards];
+  const remainingAnnotations = { ...(card.tokenAnnotations ?? {}) };
+  delete remainingAnnotations[key];
   nextCards[index] = {
     ...card,
     fields: { ...card.fields, [key]: value },
+    tokenAnnotations: Object.keys(remainingAnnotations).length > 0 ? remainingAnnotations : undefined,
   };
   return nextCards;
 }

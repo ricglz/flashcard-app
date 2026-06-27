@@ -1,4 +1,5 @@
 import type { FieldDefinition } from "@/lib/types";
+import type { TokenAnnotations } from "@/lib/types";
 
 export function normalizeFieldOrder(fields: readonly FieldDefinition[]): FieldDefinition[] {
   return fields.map((field, index) => ({ ...field, order: index }));
@@ -53,11 +54,25 @@ export function toggleFieldDefinitionTts(
   });
 }
 
-export function removeFieldValueFromCards(
-  cards: readonly Record<string, string>[],
+export type DraftCardWithAnnotations = {
+  fields: Record<string, string>;
+  tokenAnnotations?: TokenAnnotations;
+};
+
+export function removeFieldValueFromCards<Card extends DraftCardWithAnnotations>(
+  cards: readonly Card[],
   fieldName: string,
-): Record<string, string>[] {
-  return cards.map((card) =>
-    Object.fromEntries(Object.entries(card).filter(([key]) => key !== fieldName)),
-  );
+): Card[] {
+  return cards.map((card) => {
+    const fields = Object.fromEntries(
+      Object.entries(card.fields).filter(([key]) => key !== fieldName),
+    );
+    const tokenAnnotations = { ...(card.tokenAnnotations ?? {}) };
+    delete tokenAnnotations[fieldName];
+    return {
+      ...card,
+      fields,
+      tokenAnnotations: Object.keys(tokenAnnotations).length > 0 ? tokenAnnotations : undefined,
+    };
+  });
 }

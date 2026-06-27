@@ -41,6 +41,18 @@ export const FieldDefinitionSchema = Schema.Struct({
 export const CardRatingSchema = Schema.Literal(...CARD_RATINGS);
 export const SrsCardStatusSchema = Schema.Literal("new", "learning", "review");
 
+export const TokenAnnotationSchema = Schema.Struct({
+  start: Schema.Number,
+  end: Schema.Number,
+  gloss: Schema.String,
+  pinyin: Schema.optional(Schema.String),
+});
+
+export const TokenAnnotationsSchema = Schema.Record({
+  key: Schema.String,
+  value: Schema.Array(TokenAnnotationSchema),
+});
+
 export const CliScopeSchema = Schema.Literal(
   "sets:read",
   "weak_context:read",
@@ -236,6 +248,7 @@ export const GeneratedSetPayloadSchema = Schema.Struct({
   cards: Schema.Array(
     Schema.Struct({
       fields: Schema.Record({ key: Schema.String, value: Schema.String }),
+      tokenAnnotations: Schema.optional(TokenAnnotationsSchema),
       sourceCardIds: Schema.optional(Schema.Array(ConvexId("flashcards"))),
       rationale: Schema.optional(Schema.String),
     })

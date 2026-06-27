@@ -29,6 +29,9 @@ const payload: GeneratedSetPayload = {
   cards: [
     {
       fields: { Front: "hola", Back: "hello" },
+      tokenAnnotations: {
+        Front: [{ start: 0, end: 4, gloss: "hello" }],
+      },
       sourceCardIds: [sourceCardId],
       rationale: "Common greeting",
     },
@@ -47,6 +50,9 @@ describe("generated draft cards", () => {
     expect(cards).toEqual([
       {
         fields: { Front: "hola", Back: "hello" },
+        tokenAnnotations: {
+          Front: [{ start: 0, end: 4, gloss: "hello" }],
+        },
         sourceCardIds: [sourceCardId],
         rationale: "Common greeting",
         selected: true,
@@ -58,6 +64,7 @@ describe("generated draft cards", () => {
       },
     ]);
     expect(cards[0]?.fields).not.toBe(payload.cards[0]?.fields);
+    expect(cards[0]?.tokenAnnotations?.Front).not.toBe(payload.cards[0]?.tokenAnnotations?.Front);
     expect(cards[0]?.sourceCardIds).not.toBe(payload.cards[0]?.sourceCardIds);
   });
 
@@ -67,6 +74,9 @@ describe("generated draft cards", () => {
     expect(selectedCardsForConfirm(cards)).toEqual([
       {
         fields: { Front: "hola", Back: "hello" },
+        tokenAnnotations: {
+          Front: [{ start: 0, end: 4, gloss: "hello" }],
+        },
         sourceCardIds: [sourceCardId],
         rationale: "Common greeting",
       },
@@ -79,6 +89,9 @@ describe("generated draft cards", () => {
     expect(selectedCardsForAppend(cards)).toEqual([
       {
         fields: { Front: "hola", Back: "hello" },
+        tokenAnnotations: {
+          Front: [{ start: 0, end: 4, gloss: "hello" }],
+        },
         rationale: "Common greeting",
       },
       {
@@ -93,8 +106,18 @@ describe("generated draft cards", () => {
     const edited = editDraftCardField(cards, 0, "Back", "hi");
 
     expect(edited[0]?.fields).toEqual({ Front: "hola", Back: "hi" });
+    expect(edited[0]?.tokenAnnotations).toEqual({
+      Front: [{ start: 0, end: 4, gloss: "hello" }],
+    });
     expect(cards[0]?.fields).toEqual({ Front: "hola", Back: "hello" });
     expect(edited[1]).toEqual(cards[1]);
+  });
+
+  it("drops annotations for an edited field", () => {
+    const cards = generatedCardsFromPayload(payload);
+    const edited = editDraftCardField(cards, 0, "Front", "ola");
+
+    expect(edited[0]?.tokenAnnotations).toBeUndefined();
   });
 
   it("returns copied selected fields for wizard state", () => {

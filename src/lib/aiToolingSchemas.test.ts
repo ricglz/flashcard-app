@@ -4,6 +4,7 @@ import * as Schema from "effect/Schema";
 import {
   CurrentCardNoteToolParamsSchema,
   FieldDefinitionSchema,
+  GeneratedSetPayloadSchema,
   SetsListResponseSchema,
   WeakCardsReviewFilterSchema,
 } from "./aiToolingSchemas";
@@ -48,6 +49,52 @@ describe("AI tooling field definition schema", () => {
       role: "front",
       metadata: {},
       order: 0,
+    });
+
+    expect(Either.isLeft(decoded)).toBe(true);
+  });
+});
+
+describe("generated set payload schema", () => {
+  it("accepts optional token annotations on cards", () => {
+    const decoded = Schema.decodeUnknownEither(GeneratedSetPayloadSchema)({
+      name: "Generated",
+      sourceSetIds: ["abc123def456ghi7"],
+      sourceScope: "custom",
+      fieldDefinitions: [
+        { name: "Front", role: "primary", metadata: {}, order: 0 },
+      ],
+      cards: [
+        {
+          fields: { Front: "你好" },
+          tokenAnnotations: {
+            Front: [{ start: 0, end: 2, gloss: "hello" }],
+          },
+        },
+      ],
+      addToSrs: true,
+    });
+
+    expect(Either.isRight(decoded)).toBe(true);
+  });
+
+  it("rejects malformed token annotation arrays", () => {
+    const decoded = Schema.decodeUnknownEither(GeneratedSetPayloadSchema)({
+      name: "Generated",
+      sourceSetIds: ["abc123def456ghi7"],
+      sourceScope: "custom",
+      fieldDefinitions: [
+        { name: "Front", role: "primary", metadata: {}, order: 0 },
+      ],
+      cards: [
+        {
+          fields: { Front: "你好" },
+          tokenAnnotations: {
+            Front: [{ start: 0, gloss: "hello" }],
+          },
+        },
+      ],
+      addToSrs: true,
     });
 
     expect(Either.isLeft(decoded)).toBe(true);
