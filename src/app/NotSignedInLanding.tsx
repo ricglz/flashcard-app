@@ -1,18 +1,19 @@
 import { SignInButton } from "@clerk/nextjs";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function NotSignedInLanding() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Flashcard App</h1>
-        <div className="flex items-center gap-4">
+      <PageHeader
+        title="Flashcard App"
+        actions={
           <SignInButton mode="modal">
             <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors">
               Sign In
             </button>
           </SignInButton>
-        </div>
-      </header>
+        }
+      />
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
         <div className="text-center py-20">

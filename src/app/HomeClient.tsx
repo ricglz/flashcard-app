@@ -7,6 +7,7 @@ import SrsQueueStatus from "@/components/SrsQueueStatus";
 import StreakBadge from "@/components/StreakBadge";
 import DailyGoalRing from "@/components/DailyGoalRing";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type Props = {
   preloadedStats: Preloaded<typeof api.srsReviewQueue.getQueueStats>;
@@ -23,21 +24,23 @@ export default function HomeClient({
 }: Props) {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Flashcard App</h1>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/settings"
-            className="text-muted hover:text-foreground transition-colors"
-            aria-label="Settings"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-          </Link>
-          <UserButton />
-        </div>
-      </header>
+      <PageHeader
+        title="Flashcard App"
+        actions={
+          <>
+            <Link
+              href="/settings"
+              className="text-muted hover:text-foreground transition-colors"
+              aria-label="Settings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+              </svg>
+            </Link>
+            <UserButton />
+          </>
+        }
+      />
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
         <SrsQueueStatus
