@@ -19,7 +19,8 @@ import { getFailureMessage } from "@/lib/domainResultMessage";
 import { formatDate } from "@/lib/formatDate";
 import type { TypedSetWithViewer } from "@/hooks/convex/useTypedFlashcardSet";
 import CardsTable from "./CardsTable";
-import SetDetailHeader from "./SetDetailHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { LinkButton } from "@/components/ui/LinkButton";
 import VisitorActions from "./VisitorActions";
 import AiAppendFlow from "./AiAppendFlow";
 import ForkSyncBanner from "./ForkSyncBanner";
@@ -91,13 +92,25 @@ export default function SetDetailInner({
 
   return (
     <div className="min-h-screen">
-      <SetDetailHeader
-        setId={setId}
-        isMember={isMember}
-        isOwner={isOwner}
-        aiAvailable={ai.available}
-        onBack={() => router.back()}
-        onAiGenerate={() => setShowAiAppend(true)}
+      <PageHeader
+        backLabel="Back"
+        actions={
+          <>
+            {isOwner && ai.available && (
+              <Button variant="secondary" onClick={() => setShowAiAppend(true)}>
+                AI Generate
+              </Button>
+            )}
+            {isMember && (
+              <LinkButton href={`/study/${setId}`}>Study</LinkButton>
+            )}
+            {isOwner && (
+              <LinkButton href={`/sets/${setId}/edit`} variant="secondary">
+                Edit
+              </LinkButton>
+            )}
+          </>
+        }
       />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">

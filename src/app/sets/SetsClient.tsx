@@ -7,7 +7,9 @@ import type { Preloaded } from "convex/react";
 import type { api } from "../../../convex/_generated/api";
 import FlashcardSetList from "@/components/FlashcardSetList";
 import QuickCreateForm from "@/components/QuickCreateForm";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { LinkButton } from "@/components/ui/LinkButton";
 
 type Props = {
   preloadedSets: Preloaded<typeof api.flashcardSets.list>;
@@ -19,38 +21,22 @@ export default function SetsClient({ preloadedSets }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-4">
-          <Link
-            href="/"
-            className="shrink-0 text-sm text-muted hover:text-foreground"
-          >
-            &larr; Dashboard
-          </Link>
-          <h1 className="min-w-0 text-xl font-bold break-words">My Sets</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          <button
-            onClick={() => setShowQuickCreate(true)}
-            className="px-3 sm:px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
-          >
-            Quick Create
-          </button>
-          <Link
-            href="/sets/merge"
-            className="px-3 sm:px-4 py-2 border border-edge rounded-lg hover:bg-surface-hover text-sm transition-colors"
-          >
-            Merge sets
-          </Link>
-          <Link
-            href="/sets/new"
-            className="px-3 sm:px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover text-sm transition-colors"
-          >
-            New Set
-          </Link>
-          <UserButton />
-        </div>
-      </header>
+      <PageHeader
+        title="My Sets"
+        backLabel="Dashboard"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowQuickCreate(true)}>
+              Quick Create
+            </Button>
+            <LinkButton href="/sets/merge" variant="secondary">
+              Merge sets
+            </LinkButton>
+            <LinkButton href="/sets/new">New Set</LinkButton>
+            <UserButton />
+          </>
+        }
+      />
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full">
         <FlashcardSetList preloaded={preloadedSets} />

@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { usePreloadedQuery, useMutation } from "convex/react";
 import type { Preloaded } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { getDisplayableFields } from "@/lib/types";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type Props = {
   preloadedSets: Preloaded<typeof api.flashcardSets.list>;
@@ -77,15 +77,7 @@ export default function MergeClient({ preloadedSets }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex items-center gap-4">
-          <Link href="/sets" className="shrink-0 text-sm text-muted hover:text-foreground">
-            &larr; Sets
-          </Link>
-          <h1 className="min-w-0 text-xl font-bold break-words">Merge Sets</h1>
-        </div>
-        <UserButton />
-      </header>
+      <PageHeader title="Merge Sets" backLabel="Sets" actions={<UserButton />} />
 
       <main className="flex-1 p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-6">
         <p className="text-sm text-muted">

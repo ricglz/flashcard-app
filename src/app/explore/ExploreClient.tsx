@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useUrlState, zEnum } from "@/hooks/useUrlState";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +10,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
 import { SetCard } from "./SetCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import FilterBar, {
   collectLanguages,
   detectLanguage,
@@ -31,7 +31,6 @@ const sortSchema = zEnum(SORT_OPTIONS);
 
 export default function ExploreClient() {
   const [searchInput, setSearchInput] = useState("");
-  const router = useRouter();
   const [sortBy, setSortBy] = useUrlState("sort", sortSchema, "updated");
   const [cardCountRange, setCardCountRange] = useState<CardCountRange>("any");
   const [languageTag, setLanguageTag] = useState<string | null>(null);
@@ -97,16 +96,7 @@ export default function ExploreClient() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          &larr; Back
-        </button>
-        <h1 className="text-xl font-bold">Explore Sets</h1>
-        <div className="w-14" />
-      </header>
+      <PageHeader title="Explore Sets" backLabel="Back" />
 
       <main className="max-w-5xl mx-auto p-4 sm:p-6">
         <div className="flex gap-3 mb-4">
