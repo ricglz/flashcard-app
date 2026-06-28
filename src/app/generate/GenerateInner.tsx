@@ -16,7 +16,7 @@ import GeneratePreviewActions from "./GeneratePreviewActions";
 import AiRefinementPanel from "@/components/AiRefinementPanel";
 import AiErrorMessage from "@/components/AiErrorMessage";
 import CardPreviewList from "@/components/CardPreviewList";
-import PageHeader from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Spinner } from "@/components/ui/Spinner";
 
 type Step = "config" | "loading" | "preview" | "done";
@@ -198,7 +198,7 @@ export default function GenerateInner({ userSets }: { userSets: UserSets }) {
 
   return (
     <div className="min-h-screen">
-      <PageHeader title="AI Card Generation" onBack={() => router.back()} backDisabled={isRefining} />
+      <PageHeader title="AI Card Generation" backLabel="Back" backDisabled={isRefining} />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         <div className="mb-4">

@@ -6,7 +6,7 @@ import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { METHODOLOGIES, METHODOLOGY_LABELS, type Methodology } from "@/lib/types";
 import {
   formatWeakCardsReviewFilter,
@@ -16,7 +16,7 @@ import { LinkButton } from "@/components/ui/LinkButton";
 import { Alert } from "@/components/ui/Alert";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
-import PageHeader from "@/components/PageHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getFailureMessage } from "@/lib/domainResultMessage";
 import type { Id } from "../../../convex/_generated/dataModel";
 import WeakCardsList from "./WeakCardsList";
@@ -117,7 +117,7 @@ export default function WeakSpotsClient({
 
   return (
     <div className="min-h-screen">
-      <PageHeader title="Weak Spots" onBack={() => router.back()} />
+      <PageHeader title="Weak Spots" backLabel="Back" />
 
       <main className="max-w-3xl mx-auto p-4 sm:p-6">
         {!userSetsResult.ok && <Alert variant="danger" className="mb-4">Could not load your sets: {getFailureMessage(userSetsResult.error)}</Alert>}
