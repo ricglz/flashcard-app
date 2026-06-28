@@ -6,7 +6,7 @@ import type { Preloaded } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useOfflinePreloadedQuery } from "@/hooks/useOfflinePreloadedQuery";
 import { useAiAvailablePreloaded } from "@/hooks/useAiAvailable";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { METHODOLOGIES, METHODOLOGY_LABELS, type Methodology } from "@/lib/types";
 import {
   formatWeakCardsReviewFilter,

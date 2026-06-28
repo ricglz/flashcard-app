@@ -1,12 +1,11 @@
-import { BackHeader } from "@/components/ui/BackHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function SrsReviewLoading() {
   return (
     <div className="min-h-screen flex flex-col">
-      <BackHeader
-        href="/"
-        label="Dashboard"
-        right={
+      <PageHeader
+        backLabel="Dashboard"
+        actions={
           <div className="flex items-center gap-3">
             <div className="h-8 w-20 rounded bg-raised animate-pulse" />
             <div className="h-8 w-8 rounded bg-raised animate-pulse" />
