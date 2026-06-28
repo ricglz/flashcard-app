@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../../../convex/_generated/api";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CardForm from "@/components/CardForm";
 import CsvImporter from "@/components/CsvImporter";
 import type { TypedSetWithViewer } from "@/hooks/convex/useTypedFlashcardSet";
@@ -16,14 +16,13 @@ type Flashcards = Extract<
 >["value"];
 
 export default function EditSetInner({
-  setId,
   setData,
   cards,
 }: {
-  setId: string;
   setData: TypedSetWithViewer;
   cards: Flashcards;
 }) {
+  const router = useRouter();
   const updateSet = useMutation(api.flashcardSets.update);
   const createCard = useMutation(api.flashcards.create);
   const batchCreateCards = useMutation(api.flashcards.batchCreate);
@@ -41,12 +40,12 @@ export default function EditSetInner({
   return (
     <div className="min-h-screen">
       <header className="border-b px-4 sm:px-6 py-4">
-        <Link
-          href={`/sets/${setId}`}
+        <button
+          onClick={() => router.back()}
           className="text-sm text-muted hover:text-foreground"
         >
           &larr; Back to Set
-        </Link>
+        </button>
       </header>
 
       <main className="max-w-2xl mx-auto p-4 sm:p-6 space-y-8">

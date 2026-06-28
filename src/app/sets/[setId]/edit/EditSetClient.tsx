@@ -42,5 +42,5 @@ export default function EditSetClient({
     );
   }
 
-  return <EditSetInner setId={setId} setData={setResult.value} cards={cardsResult.value} />;
+  return <EditSetInner setData={setResult.value} cards={cardsResult.value} />;
 }
