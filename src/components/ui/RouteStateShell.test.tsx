@@ -1,15 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RouteStateShellWithHeader, RouteStateShellCentered } from "./RouteStateShell";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
+  usePathname: () => "/test",
+}));
+
 describe("RouteStateShellWithHeader", () => {
   it("renders header and centered children", () => {
+    Object.defineProperty(window.history, "length", { value: 2, configurable: true });
     render(
-      <RouteStateShellWithHeader backHref="/" backLabel="Dashboard">
+      <RouteStateShellWithHeader backLabel="Dashboard">
         <div>Body</div>
       </RouteStateShellWithHeader>
     );
-    expect(screen.getByRole("link", { name: "← Dashboard" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("button", { name: "← Dashboard" })).toBeInTheDocument();
     expect(screen.getByText("Body")).toBeInTheDocument();
     expect(screen.getByText("Body").closest("main")).toHaveClass("flex-1");
   });

@@ -105,6 +105,7 @@ const eslintConfig = defineConfig([
     rules: {
       "local/no-large-component-props": ["error", { max: 8 }],
       "local/no-passthrough-component-wrapper": "error",
+      "local/no-raw-page-header": "error",
     },
   },
   {

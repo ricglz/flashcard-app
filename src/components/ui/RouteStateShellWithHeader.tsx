@@ -1,25 +1,23 @@
 import type { ReactNode } from "react";
-import { BackHeader } from "./BackHeader";
+import { PageHeader } from "./PageHeader";
 import { CenteredState } from "./CenteredState";
 
 type RouteStateShellWithHeaderProps = {
-  backHref: string;
-  backLabel: string;
+  backLabel?: string;
   headerRight?: ReactNode;
   maxWidth?: "sm" | "md";
   children: ReactNode;
 };
 
 export function RouteStateShellWithHeader({
-  backHref,
-  backLabel,
+  backLabel = "Back",
   headerRight,
   maxWidth = "md",
   children,
 }: RouteStateShellWithHeaderProps) {
   return (
     <div className="min-h-screen flex flex-col">
-      <BackHeader href={backHref} label={backLabel} right={headerRight} />
+      <PageHeader backLabel={backLabel} actions={headerRight} />
       <CenteredState maxWidth={maxWidth}>{children}</CenteredState>
     </div>
   );

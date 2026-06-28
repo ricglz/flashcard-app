@@ -535,11 +535,60 @@ const noPassthroughComponentWrapper = {
   },
 };
 
+const noRawPageHeader = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Enforce use of PageHeader component instead of raw header markup.",
+    },
+    schema: [],
+    messages: {
+      rawHeader: "Use <PageHeader> from @/components/ui/PageHeader instead of raw <header className=\"border-b px-4 sm:px-6 py-4...\"> markup.",
+    },
+  },
+
+  create(context) {
+    const filename = context.getFilename();
+    if (filename.includes("src/components/ui/PageHeader.tsx")) {
+      return {};
+    }
+
+    function isHeaderWithClasses(node) {
+      if (node.type !== "JSXElement") return false;
+      const opening = node.openingElement;
+      const name = opening.name;
+      if (name.type !== "JSXIdentifier" || name.name !== "header") return false;
+      const classAttr = opening.attributes.find(
+        (attr) => attr.type === "JSXAttribute" && attr.name?.name === "className"
+      );
+      if (!classAttr) return false;
+      let value = "";
+      if (classAttr.value?.type === "Literal") {
+        value = classAttr.value.value || "";
+      } else if (classAttr.value?.type === "JSXExpressionContainer" && classAttr.value.expression.type === "Literal") {
+        value = classAttr.value.expression.value || "";
+      } else if (classAttr.value?.type === "JSXExpressionContainer" && classAttr.value.expression.type === "TemplateLiteral") {
+        value = classAttr.value.expression.quasis.map(q => q.value.cooked).join("");
+      }
+      return value.includes("border-b") && value.includes("px-4") && value.includes("sm:px-6") && value.includes("py-4");
+    }
+
+    return {
+      JSXElement(node) {
+        if (isHeaderWithClasses(node)) {
+          context.report({ node, messageId: "rawHeader" });
+        }
+      },
+    };
+  },
+};
+
 const localRules = {
   rules: {
     "no-large-component-props": noLargeComponentProps,
     "no-ignored-return-values": noIgnoredReturnValues,
     "no-passthrough-component-wrapper": noPassthroughComponentWrapper,
+    "no-raw-page-header": noRawPageHeader,
   },
 };
 
