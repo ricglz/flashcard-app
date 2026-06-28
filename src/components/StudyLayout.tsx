@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import SpeakerIcon from "@/components/SpeakerIcon";
 import TtsSpeedControl from "@/components/TtsSpeedControl";
 import { Alert } from "@/components/ui/Alert";
 import type { useTtsControls } from "@/hooks/useTtsControls";
 import { AssistantPanelProvider } from "@/contexts/AssistantPanelContext";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type StudyLayoutProps = {
   progress: { current: number; total: number; dismissed?: number };
@@ -23,46 +23,41 @@ export default function StudyLayout({
   children,
   assistant,
 }: StudyLayoutProps) {
-  const router = useRouter();
-
   return (
     <AssistantPanelProvider>
       <div className="min-h-screen flex flex-col">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="text-sm text-muted hover:text-foreground"
-          >
-            &larr; Back
-          </button>
+      <PageHeader
+        backLabel="Back"
+        leftExtra={
           <span className="text-sm text-muted">
             {progress.current + 1} / {progress.total}
             {progress.dismissed !== undefined && progress.dismissed > 0 && (
               <span className="ml-2">({progress.dismissed} dismissed)</span>
             )}
           </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <TtsSpeedControl speed={tts.speed} onSpeedChange={tts.onSpeedChange} />
-          <button
-            onClick={tts.onToggle}
-            className="text-sm text-muted hover:text-foreground transition-colors"
-            title={tts.ttsEnabled ? "Mute TTS" : "Unmute TTS"}
-            aria-label={tts.ttsEnabled ? "Mute TTS" : "Unmute TTS"}
-          >
-            <SpeakerIcon muted={!tts.ttsEnabled} />
-          </button>
-          {actionButton && (
+        }
+        actions={
+          <>
+            <TtsSpeedControl speed={tts.speed} onSpeedChange={tts.onSpeedChange} />
             <button
-              onClick={actionButton.onClick}
-              className="text-sm text-danger hover:text-danger-hover transition-colors"
+              onClick={tts.onToggle}
+              className="text-sm text-muted hover:text-foreground transition-colors"
+              title={tts.ttsEnabled ? "Mute TTS" : "Unmute TTS"}
+              aria-label={tts.ttsEnabled ? "Mute TTS" : "Unmute TTS"}
             >
-              {actionButton.label}
+              <SpeakerIcon muted={!tts.ttsEnabled} />
             </button>
-          )}
-        </div>
-      </header>
+            {actionButton && (
+              <button
+                onClick={actionButton.onClick}
+                className="text-sm text-danger hover:text-danger-hover transition-colors"
+              >
+                {actionButton.label}
+              </button>
+            )}
+          </>
+        }
+      />
 
       <div className="h-1 bg-raised">
         <div

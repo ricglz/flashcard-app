@@ -23,6 +23,7 @@ import {
   hasRequiredStudyFields,
 } from "./studyConfigState";
 import { Spinner } from "@/components/ui/Spinner";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type Flashcards = Extract<
   FunctionReturnType<typeof api.flashcards.list>,
@@ -129,10 +130,14 @@ export default function StudyConfigInner({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">&larr; Back</Link>
-        <Link href={`/sets/${setId}/edit`} className="text-sm text-muted hover:text-foreground">Edit Set</Link>
-      </header>
+      <PageHeader
+        backLabel="Back"
+        actions={
+          <Link href={`/sets/${setId}/edit`} className="text-sm text-muted hover:text-foreground">
+            Edit Set
+          </Link>
+        }
+      />
 
       <main className="max-w-md mx-auto p-4 sm:p-6 space-y-6">
         <h1 className="text-2xl font-bold">Study: {set.name}</h1>

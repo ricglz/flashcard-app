@@ -31,7 +31,7 @@ export default function SrsReviewComplete({
       : 0;
 
   return (
-    <RouteStateShellWithHeader backHref="/" backLabel="Dashboard">
+    <RouteStateShellWithHeader backLabel="Dashboard">
       <StateContent
         title="All done!"
         description={

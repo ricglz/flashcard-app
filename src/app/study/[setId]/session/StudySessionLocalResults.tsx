@@ -5,6 +5,7 @@ import type { CardRating } from "@/lib/types";
 import { computeScorePercent } from "@/lib/studyResults";
 import StudyResultsSummary from "@/components/StudyResultsSummary";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export type LocalStudyResult = {
   cardId: Id<"flashcards">;
@@ -35,11 +36,7 @@ export default function StudySessionLocalResults({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
-          &larr; Home
-        </Link>
-      </header>
+      <PageHeader backLabel="Home" />
 
       <main className="max-w-lg mx-auto p-4 sm:p-6 space-y-6">
         <div>

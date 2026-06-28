@@ -81,7 +81,7 @@ export default function BrowseInner({
 
   if (navigation.activeIds.length === 0) {
     return (
-      <RouteStateShellWithHeader backHref={`/study/${setId}?mode=browse`} backLabel="Back">
+      <RouteStateShellWithHeader backLabel="Back">
         <StateContent
           title={
             navigation.hiddenIds.size > 0

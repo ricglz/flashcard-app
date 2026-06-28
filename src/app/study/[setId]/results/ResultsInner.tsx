@@ -6,6 +6,7 @@ import Link from "next/link";
 import { computeScorePercent } from "@/lib/studyResults";
 import type { TypedSetWithViewer } from "@/hooks/convex/useTypedFlashcardSet";
 import StudyResultsSummary from "@/components/StudyResultsSummary";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type ResultsData = Extract<
   FunctionReturnType<typeof api.studySessions.getResults>,
@@ -33,11 +34,7 @@ export default function ResultsInner({
 
   return (
     <div className="min-h-screen">
-      <header className="border-b px-4 sm:px-6 py-4">
-        <Link href="/" className="text-sm text-muted hover:text-foreground">
-          &larr; Home
-        </Link>
-      </header>
+      <PageHeader backLabel="Home" />
 
       <main className="max-w-lg mx-auto p-4 sm:p-6 space-y-6">
         <h1 className="text-2xl font-bold">Session Results</h1>

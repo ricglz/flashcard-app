@@ -39,7 +39,7 @@ export default function FlaggedCardsInner({
 
   if (flaggedCardResult.length === 0 && navigation.hiddenIds.size === 0) {
     return (
-      <RouteStateShellWithHeader backHref="/" backLabel="Dashboard">
+      <RouteStateShellWithHeader backLabel="Dashboard">
         <StateContent
           title="No flagged cards yet"
           description={
@@ -60,7 +60,7 @@ export default function FlaggedCardsInner({
 
   if (navigation.activeIds.length === 0 && navigation.hiddenIds.size > 0) {
     return (
-      <RouteStateShellWithHeader backHref="/" backLabel="Dashboard">
+      <RouteStateShellWithHeader backLabel="Dashboard">
         <StateContent
           title="You've reviewed all flagged cards!"
           description={
